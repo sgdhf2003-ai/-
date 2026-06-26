@@ -16,8 +16,16 @@ const HEADERS = {
   settings: ["key", "value", "updatedAt"],
 };
 
-function doGet() {
-  return jsonOutput(readAll());
+function doGet(e) {
+  try {
+    const data = parseQuery(e);
+    const action = data.action || "readAll";
+    if (action === "setup") return jsonOutput(setupBackend(data));
+    if (action === "login") return jsonOutput(loginUser(data));
+    return jsonOutput(readAll());
+  } catch (error) {
+    return jsonOutput({ ok: false, error: error.message || String(error) });
+  }
 }
 
 function doPost(e) {
@@ -40,6 +48,10 @@ function doPost(e) {
 function parseBody(e) {
   if (!e || !e.postData || !e.postData.contents) return {};
   return JSON.parse(e.postData.contents);
+}
+
+function parseQuery(e) {
+  return e && e.parameter ? e.parameter : {};
 }
 
 function setupBackend(data) {

@@ -56,11 +56,11 @@ https://script.google.com/macros/s/AKfycb.../exec
 
 正式使用前，請先到 `Users` 分頁修改預設密碼。`status` 必須是 `啟用` 才能登入；改成 `停用` 就會禁止登入。
 
-登入 API 使用 POST JSON：
+登入 API 目前支援 GET 測試：
 
-`{ "action": "login", "username": "admin", "password": "admin123" }`
+`https://script.google.com/macros/s/你的部署ID/exec?action=login&username=admin&password=admin123`
 
-成功會回傳使用者資料與權限，不會回傳密碼。
+成功會回傳使用者資料與權限，不會回傳密碼。下一步接前端登入頁時，會先用這個穩定方式串接；正式上線前可再升級成更完整的安全代理/API，避免密碼出現在網址。
 
 ## 注意
 
