@@ -107,11 +107,21 @@ document.querySelector("#storeCancelButton")?.addEventListener("click", () => {
 document.querySelector("#loginForm")?.addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
-  const username = form.get("username").trim();
-  const password = form.get("password");
+  const username = String(form.get("username") || "").trim();
+  const password = String(form.get("password") || "");
   const submitButton = event.currentTarget.querySelector("button[type='submit']");
 
-  if (!getCloudApiUrl()) {
+  let apiUrl = getCloudApiUrl();
+  const inputUrl = String(document.querySelector("#loginApiUrlInput")?.value || "").trim();
+  
+  if (!apiUrl && inputUrl) {
+    apiUrl = inputUrl;
+    cloudConfig.apiUrl = inputUrl;
+    saveCloudConfig();
+    toast("已為您自動儲存 API 連線網址");
+  }
+
+  if (!apiUrl) {
     toast("請先在下方「API 連線設定」中儲存 Apps Script 網址");
     return;
   }
@@ -120,7 +130,7 @@ document.querySelector("#loginForm")?.addEventListener("submit", async (event) =
   submitButton.textContent = "登入中...";
 
   try {
-    const response = await fetch(getCloudApiUrl(), {
+    const response = await fetch(apiUrl, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({
