@@ -488,6 +488,16 @@ function render() {
   renderHome();
   renderCloudStatus();
   renderSalesOwnerAdmin();
+
+  const openReportLink = document.querySelector("#openOriginalReportLink");
+  if (openReportLink) {
+    let href = "https://script.google.com/macros/s/AKfycbwonMKbfTbmkacvvNFXbqZXIi42KcRpXLtcEaYrLqH2SPbbh7z-A9QPYR257uJ0V0ha/exec";
+    const permissions = state.currentPermissions || { canViewAllStores: true };
+    if (!permissions.canViewAllStores && state.currentUser && state.currentUser.salesOwner) {
+      href += "?salesperson=" + encodeURIComponent(state.currentUser.salesOwner);
+    }
+    openReportLink.href = href;
+  }
 }
 
 function fillRememberedCredentials() {
@@ -686,7 +696,7 @@ function renderHome() {
 
   const permissions = state.currentPermissions || { canViewAllStores: true };
   const salesReportCard = document.querySelector("#salesReportCard");
-  if (salesReportCard) salesReportCard.style.display = permissions.canViewAllStores ? "grid" : "none";
+  if (salesReportCard) salesReportCard.style.display = "grid";
 
   const adminCard = document.querySelector("#adminCard");
   if (adminCard) adminCard.style.display = permissions.canViewAllStores ? "grid" : "none";
@@ -1025,7 +1035,16 @@ function loadExternalFrame(view) {
   const frameId = frameByView[view];
   if (!frameId) return;
   const frame = document.querySelector(`#${frameId}`);
-  if (frame && !frame.src) frame.src = frame.dataset.src;
+  if (frame && !frame.src) {
+    let src = frame.dataset.src;
+    if (view === "salesReport") {
+      const permissions = state.currentPermissions || { canViewAllStores: true };
+      if (!permissions.canViewAllStores && state.currentUser && state.currentUser.salesOwner) {
+        src += (src.includes("?") ? "&" : "?") + "salesperson=" + encodeURIComponent(state.currentUser.salesOwner);
+      }
+    }
+    frame.src = src;
+  }
 }
 
 function reloadFrame(frameId) {
@@ -1034,7 +1053,14 @@ function reloadFrame(frameId) {
     toast("找不到要重新整理的表格");
     return;
   }
-  frame.src = frame.dataset.src;
+  let src = frame.dataset.src;
+  if (frameId === "salesReportFrame") {
+    const permissions = state.currentPermissions || { canViewAllStores: true };
+    if (!permissions.canViewAllStores && state.currentUser && state.currentUser.salesOwner) {
+      src += (src.includes("?") ? "&" : "?") + "salesperson=" + encodeURIComponent(state.currentUser.salesOwner);
+    }
+  }
+  frame.src = src;
   toast("已重新整理連動表");
 }
 
@@ -1528,6 +1554,6 @@ render();
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js?v=20260626-login-v2").catch(() => {});
+    navigator.serviceWorker.register("./service-worker.js?v=20260626-login-v3").catch(() => {});
   });
 }

@@ -10,9 +10,9 @@
     <meta name="apple-mobile-web-app-title" content="勁揚業務管家" />
     <meta name="format-detection" content="telephone=no" />
     <title>勁揚業務管家</title>
-    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=20260626-login-v2" />
-    <link class="PWA-version" rel="manifest" href="manifest.webmanifest?v=20260626-login-v2" />
-    <link rel="stylesheet" href="styles.css?v=20260626-login-v2" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=20260626-login-v3" />
+    <link class="PWA-version" rel="manifest" href="manifest.webmanifest?v=20260626-login-v3" />
+    <link rel="stylesheet" href="styles.css?v=20260626-login-v3" />
   </head>
   <body>
     <!-- 登入頁面遮罩 -->
@@ -286,7 +286,7 @@
           </div>
           <div class="action-row">
             <button class="secondary-button" data-action="reload-frame" data-frame="salesReportFrame">重新整理</button>
-            <a class="link-button" href="https://script.google.com/macros/s/AKfycbwonMKbfTbmkacvvNFXbqZXIi42KcRpXLtcEaYrLqH2SPbbh7z-A9QPYR257uJ0V0ha/exec" target="_blank" rel="noopener">開啟原表</a>
+            <a id="openOriginalReportLink" class="link-button" href="https://script.google.com/macros/s/AKfycbwonMKbfTbmkacvvNFXbqZXIi42KcRpXLtcEaYrLqH2SPbbh7z-A9QPYR257uJ0V0ha/exec" target="_blank" rel="noopener">開啟原表</a>
           </div>
           <section class="external-panel">
             <iframe id="salesReportFrame" title="業務業績分析表" data-src="https://script.google.com/macros/s/AKfycbwonMKbfTbmkacvvNFXbqZXIi42KcRpXLtcEaYrLqH2SPbbh7z-A9QPYR257uJ0V0ha/exec" loading="lazy"></iframe>
@@ -379,7 +379,7 @@
     </div>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="store-data.js?v=20260626-login-v2"></script>
-    <script src="app.js?v=20260626-login-v2"></script>
+    <script src="store-data.js?v=20260626-login-v3"></script>
+    <script src="app.js?v=20260626-login-v3"></script>
   </body>
 </html>
