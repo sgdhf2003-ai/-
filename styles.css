@@ -1354,3 +1354,111 @@ textarea {
   margin: 0;
   padding: 0;
 }
+
+/* Calculator Results Styling */
+.calculator-results {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 10px 0;
+}
+
+.calc-result-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 15px;
+}
+
+.calc-result-row span {
+  color: var(--muted);
+}
+
+.calc-result-row strong {
+  font-family: monospace, sans-serif;
+  font-size: 16px;
+  color: var(--text);
+}
+
+.calc-result-row.cyan {
+  border-color: rgba(85, 167, 255, 0.35);
+  background: rgba(85, 167, 255, 0.06);
+}
+.calc-result-row.cyan strong {
+  color: var(--blue);
+  font-weight: 700;
+}
+
+.calc-result-row.green {
+  border-color: rgba(84, 226, 176, 0.35);
+  background: rgba(84, 226, 176, 0.06);
+}
+.calc-result-row.green strong {
+  color: var(--green);
+  font-weight: 700;
+}
+
+.calc-result-row.gold {
+  border-color: rgba(244, 191, 88, 0.35);
+  background: rgba(244, 191, 88, 0.06);
+}
+.calc-result-row.gold strong {
+  color: var(--gold);
+  font-weight: 700;
+  font-size: 18px;
+}
+
+/* Badge colors for statuses */
+.badge.status-洽談中, .badge.status-已送達-上架, .badge.status-待處理 {
+  background: rgba(85, 167, 255, 0.15);
+  color: var(--blue);
+}
+
+.badge.status-已報備, .badge.status-已出貨, .badge.status-處理中 {
+  background: rgba(255, 149, 82, 0.15);
+  color: var(--orange);
+}
+
+.badge.status-已結案, .badge.status-已補退貨 {
+  background: rgba(84, 226, 176, 0.15);
+  color: var(--green);
+}
+
+.badge.status-需汰換, .badge.status-已收回-下架 {
+  background: rgba(255, 117, 111, 0.15);
+  color: var(--coral);
+}
+
+/* Text area & formatting helpers */
+.pre-text {
+  font-family: inherit;
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin: 4px 0 0 0;
+  line-height: 1.4;
+  color: var(--text);
+  background: rgba(0, 0, 0, 0.15);
+  padding: 6px 10px;
+  border-radius: 6px;
+  border-left: 3px solid var(--blue);
+}
+
+/* Card images */
+.card-image-wrapper {
+  margin: 10px 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  max-width: 100%;
+  display: flex;
+}
+
+.card-image-wrapper img {
+  width: 100%;
+  max-height: 300px;
+  object-fit: cover;
+}

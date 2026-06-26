@@ -11,6 +11,9 @@ const initialState = {
   importVersion: "",
   stores: [],
   holds: [],
+  projects: [],
+  samples: [],
+  complaints: [],
   photos: [],
   currentUser: null,
   currentPermissions: null,
@@ -25,7 +28,10 @@ const views = {
   home: document.querySelector("#homeView"),
   stores: document.querySelector("#storesView"),
   holds: document.querySelector("#holdsView"),
-  photos: document.querySelector("#photosView"),
+  projects: document.querySelector("#projectsView"),
+  samples: document.querySelector("#samplesView"),
+  complaints: document.querySelector("#complaintsView"),
+  calculator: document.querySelector("#calculatorView"),
   salesReport: document.querySelector("#salesReportView"),
   inventory: document.querySelector("#inventoryView"),
   admin: document.querySelector("#adminView"),
@@ -35,7 +41,10 @@ const viewNames = {
   home: "勁揚業務管家",
   stores: "店家",
   holds: "保留物品",
-  photos: "上架拍照存檔",
+  projects: "案場報備",
+  samples: "樣品與展示架",
+  complaints: "售後客訴",
+  calculator: "報價試算器",
   salesReport: "業績分析",
   inventory: "庫存查詢",
   admin: "後台管理",
@@ -56,6 +65,10 @@ document.querySelector("#salesFilter").addEventListener("change", (event) => {
 setupStoreCombo("storeName");
 setupStoreCombo("holdStore");
 setupStoreCombo("photoStore");
+setupStoreCombo("projectStore");
+setupStoreCombo("sampleStore");
+setupStoreCombo("complaintStore");
+initCalculator();
 
 document.querySelector("#storeForm").addEventListener("submit", (event) => {
   event.preventDefault();
@@ -253,59 +266,361 @@ document.querySelector("#salesOwnerForm")?.addEventListener("submit", (event) =>
   toast("業務已新增");
 });
 
-document.querySelector("#photoForm").addEventListener("submit", async (event) => {
+let editingProjectId = null;
+let editingSampleId = null;
+let editingComplaintId = null;
+
+document.querySelector("#projectForm")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  syncProjectStoreIdFromInput();
+  const form = new FormData(event.currentTarget);
+  const storeId = form.get("storeId");
+  if (!storeId) {
+    toast("請從店家欄位選擇一筆店家資料");
+    return;
+  }
+  const id = form.get("id") || crypto.randomUUID();
+  const projectName = form.get("projectName").trim();
+  const projectAddress = form.get("projectAddress").trim();
+  const tileDetails = form.get("tileDetails").trim();
+  const expectedDeliveryDate = form.get("expectedDeliveryDate");
+  const status = form.get("status");
+  const note = form.get("note").trim();
+
+  const store = getStore(storeId);
+  const project = {
+    id,
+    storeId,
+    storeName: store?.name || "",
+    salesOwner: store?.salesOwner || "",
+    projectName,
+    projectAddress,
+    tileDetails,
+    expectedDeliveryDate,
+    status,
+    note,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+
+  const existingIndex = (state.projects || []).findIndex(p => p.id === id);
+  if (existingIndex > -1) {
+    project.createdAt = state.projects[existingIndex].createdAt || project.createdAt;
+    project.edited = true;
+    state.projects[existingIndex] = project;
+    toast("案場報備已更新");
+  } else {
+    if (!state.projects) state.projects = [];
+    state.projects.unshift(project);
+    toast("案場報備已建立");
+  }
+
+  cancelEditProject();
+  saveState();
+  render();
+
+  if (getCloudApiUrl()) {
+    try {
+      await sendCloudWrite("upsertProject", { project });
+    } catch (e) {
+      console.error(e);
+    }
+  }
+});
+
+function startEditProject(id) {
+  const project = state.projects.find(p => p.id === id);
+  if (!project) return;
+  editingProjectId = id;
+  const store = getStore(project.storeId);
+  
+  const form = document.querySelector("#projectForm");
+  form.querySelector("#projectFormId").value = project.id;
+  form.querySelector("#projectStoreId").value = project.storeId;
+  form.querySelector("#projectStoreInput").value = store ? storeOptionLabel(store) : "";
+  form.querySelector("[name='projectName']").value = project.projectName || "";
+  form.querySelector("[name='projectAddress']").value = project.projectAddress || "";
+  form.querySelector("[name='tileDetails']").value = project.tileDetails || "";
+  form.querySelector("[name='expectedDeliveryDate']").value = project.expectedDeliveryDate || "";
+  form.querySelector("[name='status']").value = project.status || "洽談中";
+  form.querySelector("[name='note']").value = project.note || "";
+
+  document.querySelector("#projectSubmitButton").textContent = t("更新案場資料");
+  document.querySelector("#projectCancelButton").style.display = "inline-block";
+  form.scrollIntoView({ behavior: "smooth" });
+}
+
+function cancelEditProject() {
+  editingProjectId = null;
+  const form = document.querySelector("#projectForm");
+  if (!form) return;
+  form.reset();
+  form.querySelector("#projectFormId").value = "";
+  form.querySelector("#projectStoreId").value = "";
+  form.querySelector("#projectStoreInput").value = "";
+  document.querySelector("#projectSubmitButton").textContent = state.currentUser?.role === "retail" ? "新增案場登錄" : "新增案場報備";
+  document.querySelector("#projectCancelButton").style.display = "none";
+}
+
+document.querySelector("#projectCancelButton")?.addEventListener("click", () => {
+  cancelEditProject();
+});
+
+document.querySelector("#sampleForm")?.addEventListener("submit", async (event) => {
   event.preventDefault();
   const submitButton = event.currentTarget.querySelector("button[type='submit']");
   submitButton.disabled = true;
-  submitButton.textContent = "照片處理中...";
+  submitButton.textContent = "樣品處理中...";
   try {
-    syncPhotoStoreIdFromInput();
+    syncSampleStoreIdFromInput();
     const form = new FormData(event.currentTarget);
     const storeId = form.get("storeId");
     if (!storeId) {
       toast("請從店家欄位選擇一筆店家資料");
       return;
     }
-    const category = form.get("category");
+    const id = form.get("id") || crypto.randomUUID();
+    const itemType = form.get("itemType");
+    const quantity = form.get("quantity");
+    const modelName = form.get("modelName").trim();
+    const status = form.get("status");
     const note = form.get("note").trim();
 
-    if (category === "下架") {
-      const removed = state.photos.filter((photo) => photo.storeId === storeId).length;
-      state.photos = state.photos.filter((photo) => photo.storeId !== storeId);
-      event.currentTarget.reset();
-      updatePhotoUploadRequirement();
-      saveState();
-      render();
-      if (getCloudApiUrl()) await pushSnapshotToCloud();
-      toast(removed ? `已下架並刪除 ${removed} 筆照片資訊` : "已下架，目前沒有照片資訊需要刪除");
-      return;
+    const store = getStore(storeId);
+    const sample = {
+      id,
+      storeId,
+      storeName: store?.name || "",
+      salesOwner: store?.salesOwner || "",
+      itemType,
+      quantity,
+      modelName,
+      status,
+      note,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    const existingSample = (state.samples || []).find(s => s.id === id);
+    if (existingSample) {
+      sample.image = existingSample.image;
+      sample.driveUrl = existingSample.driveUrl;
+      sample.fileId = existingSample.fileId;
+      sample.cloudStatus = existingSample.cloudStatus;
+      sample.createdAt = existingSample.createdAt || sample.createdAt;
     }
 
-    const file = form.get("photo");
-    const thumbnail = await resizeImageFile(file, 420, 0.68);
-    const uploadImage = await resizeImageFile(file, 1600, 0.78);
-    const photo = {
-      id: crypto.randomUUID(),
-      storeId,
-      category,
-      note,
-      image: thumbnail,
-      createdAt: new Date().toISOString(),
-      cloudStatus: getCloudApiUrl() ? "uploading" : "local",
-    };
-    state.photos.unshift(photo);
-    event.currentTarget.reset();
-    updatePhotoUploadRequirement();
+    const fileInput = document.querySelector("#sampleFileInput");
+    const file = fileInput?.files?.[0];
+    let thumbnail = null;
+    let uploadImage = null;
+    if (file) {
+      thumbnail = await resizeImageFile(file, 420, 0.68);
+      uploadImage = await resizeImageFile(file, 1600, 0.78);
+      sample.image = thumbnail;
+      sample.cloudStatus = getCloudApiUrl() ? "uploading" : "local";
+    }
+
+    const existingIndex = (state.samples || []).findIndex(s => s.id === id);
+    if (existingIndex > -1) {
+      sample.edited = true;
+      state.samples[existingIndex] = sample;
+      toast("樣品展架記錄已更新");
+    } else {
+      if (!state.samples) state.samples = [];
+      state.samples.unshift(sample);
+      toast("樣品展架記錄已建立");
+    }
+
+    cancelEditSample();
     saveState();
     render();
-    toast(getCloudApiUrl() ? "照片已存本機，正在上傳 Google Drive" : "照片已存本機，設定雲端後可上傳 Drive");
-    if (getCloudApiUrl()) await uploadPhotoToCloud(photo, uploadImage);
+
+    if (file && uploadImage) {
+      if (getCloudApiUrl()) {
+        await uploadPhotoToCloud(sample, uploadImage, "samples");
+      }
+    } else {
+      if (getCloudApiUrl()) {
+        try {
+          await sendCloudWrite("upsertSample", { sample });
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
   } catch (error) {
-    toast(error.message || "照片處理失敗");
+    toast(error.message || "處理失敗");
   } finally {
     submitButton.disabled = false;
-    submitButton.textContent = "存入照片檔案";
+    submitButton.textContent = "新增樣品展架記錄";
   }
+});
+
+function startEditSample(id) {
+  const sample = state.samples.find(s => s.id === id);
+  if (!sample) return;
+  editingSampleId = id;
+  const store = getStore(sample.storeId);
+
+  const form = document.querySelector("#sampleForm");
+  form.querySelector("#sampleFormId").value = sample.id;
+  form.querySelector("#sampleStoreId").value = sample.storeId;
+  form.querySelector("#sampleStoreInput").value = store ? storeOptionLabel(store) : "";
+  form.querySelector("[name='itemType']").value = sample.itemType || "展示架";
+  form.querySelector("[name='quantity']").value = sample.quantity || "1";
+  form.querySelector("[name='modelName']").value = sample.modelName || "";
+  form.querySelector("[name='status']").value = sample.status || "已送達/上架";
+  form.querySelector("[name='note']").value = sample.note || "";
+  
+  if (form.querySelector("#sampleFileInput")) form.querySelector("#sampleFileInput").value = "";
+
+  document.querySelector("#sampleSubmitButton").textContent = "更新樣品展架記錄";
+  document.querySelector("#sampleCancelButton").style.display = "inline-block";
+  form.scrollIntoView({ behavior: "smooth" });
+}
+
+function cancelEditSample() {
+  editingSampleId = null;
+  const form = document.querySelector("#sampleForm");
+  if (!form) return;
+  form.reset();
+  form.querySelector("#sampleFormId").value = "";
+  form.querySelector("#sampleStoreId").value = "";
+  form.querySelector("#sampleStoreInput").value = "";
+  document.querySelector("#sampleSubmitButton").textContent = "新增樣品展架記錄";
+  document.querySelector("#sampleCancelButton").style.display = "none";
+}
+
+document.querySelector("#sampleCancelButton")?.addEventListener("click", () => {
+  cancelEditSample();
+});
+
+document.querySelector("#complaintForm")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const submitButton = event.currentTarget.querySelector("button[type='submit']");
+  submitButton.disabled = true;
+  submitButton.textContent = "客訴單處理中...";
+  try {
+    syncComplaintStoreIdFromInput();
+    const form = new FormData(event.currentTarget);
+    const storeId = form.get("storeId");
+    if (!storeId) {
+      toast("請從店家欄位選擇一筆店家資料");
+      return;
+    }
+    const id = form.get("id") || crypto.randomUUID();
+    const category = form.get("category");
+    const status = form.get("status");
+    const issueDescription = form.get("issueDescription").trim();
+    const coordinationLog = form.get("coordinationLog").trim();
+
+    const store = getStore(storeId);
+    const complaint = {
+      id,
+      storeId,
+      storeName: store?.name || "",
+      salesOwner: store?.salesOwner || "",
+      category,
+      status,
+      issueDescription,
+      coordinationLog,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    const existingComplaint = (state.complaints || []).find(c => c.id === id);
+    if (existingComplaint) {
+      complaint.image = existingComplaint.image;
+      complaint.driveUrl = existingComplaint.driveUrl;
+      complaint.fileId = existingComplaint.fileId;
+      complaint.cloudStatus = existingComplaint.cloudStatus;
+      complaint.createdAt = existingComplaint.createdAt || complaint.createdAt;
+    }
+
+    const fileInput = document.querySelector("#complaintFileInput");
+    const file = fileInput?.files?.[0];
+    let thumbnail = null;
+    let uploadImage = null;
+    if (file) {
+      thumbnail = await resizeImageFile(file, 420, 0.68);
+      uploadImage = await resizeImageFile(file, 1600, 0.78);
+      complaint.image = thumbnail;
+      complaint.cloudStatus = getCloudApiUrl() ? "uploading" : "local";
+    }
+
+    const existingIndex = (state.complaints || []).findIndex(c => c.id === id);
+    if (existingIndex > -1) {
+      complaint.edited = true;
+      state.complaints[existingIndex] = complaint;
+      toast("售後客訴單已更新");
+    } else {
+      if (!state.complaints) state.complaints = [];
+      state.complaints.unshift(complaint);
+      toast("售後客訴單已建立");
+    }
+
+    cancelEditComplaint();
+    saveState();
+    render();
+
+    if (file && uploadImage) {
+      if (getCloudApiUrl()) {
+        await uploadPhotoToCloud(complaint, uploadImage, "complaints");
+      }
+    } else {
+      if (getCloudApiUrl()) {
+        try {
+          await sendCloudWrite("upsertComplaint", { complaint });
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+  } catch (error) {
+    toast(error.message || "處理失敗");
+  } finally {
+    submitButton.disabled = false;
+    submitButton.textContent = "新增售後客訴單";
+  }
+});
+
+function startEditComplaint(id) {
+  const complaint = state.complaints.find(c => c.id === id);
+  if (!complaint) return;
+  editingComplaintId = id;
+  const store = getStore(complaint.storeId);
+
+  const form = document.querySelector("#complaintForm");
+  form.querySelector("#complaintFormId").value = complaint.id;
+  form.querySelector("#complaintStoreId").value = complaint.storeId;
+  form.querySelector("#complaintStoreInput").value = store ? storeOptionLabel(store) : "";
+  form.querySelector("[name='category']").value = complaint.category || "色差問題";
+  form.querySelector("[name='status']").value = complaint.status || "待處理";
+  form.querySelector("[name='issueDescription']").value = complaint.issueDescription || "";
+  form.querySelector("[name='coordinationLog']").value = complaint.coordinationLog || "";
+
+  if (form.querySelector("#complaintFileInput")) form.querySelector("#complaintFileInput").value = "";
+
+  document.querySelector("#complaintSubmitButton").textContent = "更新售後客訴單";
+  document.querySelector("#complaintCancelButton").style.display = "inline-block";
+  form.scrollIntoView({ behavior: "smooth" });
+}
+
+function cancelEditComplaint() {
+  editingComplaintId = null;
+  const form = document.querySelector("#complaintForm");
+  if (!form) return;
+  form.reset();
+  form.querySelector("#complaintFormId").value = "";
+  form.querySelector("#complaintStoreId").value = "";
+  form.querySelector("#complaintStoreInput").value = "";
+  document.querySelector("#complaintSubmitButton").textContent = "新增售後客訴單";
+  document.querySelector("#complaintCancelButton").style.display = "none";
+}
+
+document.querySelector("#complaintCancelButton")?.addEventListener("click", () => {
+  cancelEditComplaint();
 });
 
 document.querySelector("#seedButton").addEventListener("click", () => {
@@ -438,10 +753,43 @@ document.addEventListener("click", (event) => {
     render();
     toast(before === state.photos.length ? "找不到這張照片資料" : "照片資料已刪除");
   }
+  if (actionName === "delete-project") {
+    const before = (state.projects || []).length;
+    state.projects = (state.projects || []).filter((proj) => proj.id !== id);
+    saveState();
+    render();
+    toast(before === (state.projects || []).length ? "找不到這筆案場資料" : "案場報備已刪除");
+  }
+  if (actionName === "edit-project") {
+    startEditProject(id);
+    return;
+  }
+  if (actionName === "delete-sample") {
+    const before = (state.samples || []).length;
+    state.samples = (state.samples || []).filter((s) => s.id !== id);
+    saveState();
+    render();
+    toast(before === (state.samples || []).length ? "找不到這筆樣品展架記錄" : "樣品展架記錄已刪除");
+  }
+  if (actionName === "edit-sample") {
+    startEditSample(id);
+    return;
+  }
+  if (actionName === "delete-complaint") {
+    const before = (state.complaints || []).length;
+    state.complaints = (state.complaints || []).filter((c) => c.id !== id);
+    saveState();
+    render();
+    toast(before === (state.complaints || []).length ? "找不到這筆客訴資料" : "售後客訴單已刪除");
+  }
+  if (actionName === "edit-complaint") {
+    startEditComplaint(id);
+    return;
+  }
   if (actionName === "reload-frame") {
     reloadFrame(action.dataset.frame);
   }
-  if (!["done", "delete-store", "edit-store", "delete-hold", "delete-photo", "reload-frame", "rename-sales-owner", "delete-sales-owner"].includes(actionName)) {
+  if (!["done", "delete-store", "edit-store", "delete-hold", "delete-photo", "reload-frame", "rename-sales-owner", "delete-sales-owner", "delete-project", "edit-project", "delete-sample", "edit-sample", "delete-complaint", "edit-complaint"].includes(actionName)) {
     toast("這個按鈕尚未設定功能");
   }
   if (actionName === "rename-sales-owner") {
@@ -484,6 +832,9 @@ function render() {
   renderSelects();
   renderStores();
   renderHolds();
+  renderProjects();
+  renderSamples();
+  renderComplaints();
   renderPhotos();
   renderHome();
   renderCloudStatus();
@@ -522,13 +873,19 @@ function renderCounts() {
   const visibleStores = getVisibleStores();
   const visibleStoreIds = new Set(visibleStores.map((store) => store.id));
   const visibleHolds = state.holds.filter((hold) => visibleStoreIds.has(hold.storeId));
-  const visiblePhotos = state.photos.filter((photo) => visibleStoreIds.has(photo.storeId));
+  const visibleProjects = (state.projects || []).filter((proj) => visibleStoreIds.has(proj.storeId));
+  const visibleSamples = (state.samples || []).filter((s) => visibleStoreIds.has(s.storeId));
+  const visibleComplaints = (state.complaints || []).filter((c) => visibleStoreIds.has(c.storeId));
   const unreadCount = getUnreadReminderCount(visibleStoreIds);
+
   setText("#storeCount", visibleStores.length);
   setText("#holdCount", visibleHolds.filter((hold) => hold.status !== "done").length);
-  setText("#photoCount", visiblePhotos.length);
+  setText("#projectCount", visibleProjects.length);
+  setText("#sampleCount", visibleSamples.length);
+  setText("#complaintCount", visibleComplaints.length);
   setText("#unreadCount", unreadCount);
   document.querySelector("#unreadCount")?.classList.toggle("zero", unreadCount === 0);
+
   setText("#adminStoreCount", `${state.stores.length} 筆`);
   setText("#adminHoldCount", `${state.holds.length} 筆`);
   setText("#adminPhotoCount", `${state.photos.length} 張`);
@@ -687,6 +1044,241 @@ function renderHolds() {
     .sort((a, b) => getHoldTiming(a).expiresAt.localeCompare(getHoldTiming(b).expiresAt))
     .map((hold) => holdCard(hold))
     .join("");
+}
+
+function renderProjects() {
+  const list = document.querySelector("#projectList");
+  if (!list) return;
+  const ids = new Set(getVisibleStores().map((store) => store.id));
+  const projects = (state.projects || []).filter((proj) => ids.has(proj.storeId));
+  if (!projects.length) {
+    list.innerHTML = emptyState("尚未建立案場報備資料");
+    return;
+  }
+  list.innerHTML = [...projects]
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .map((proj) => projectCard(proj))
+    .join("");
+}
+
+function projectCard(proj) {
+  const store = getStore(proj.storeId);
+  return `
+    <details class="info-card project-card">
+      <summary class="hold-summary">
+        <span class="hold-summary-text">
+          <strong>${escapeHtml(proj.projectName)}</strong>
+          <span>${escapeHtml(store?.name || t("未指定店家"))}</span>
+          <span>預估進場：${formatDate(proj.expectedDeliveryDate)}</span>
+        </span>
+        <span class="badge status-${proj.status}">${escapeHtml(proj.status)}</span>
+      </summary>
+      <div class="meta hold-detail">
+        案場地址：${escapeHtml(proj.projectAddress || "未填")}<br />
+        預估出貨明細：<br />
+        <pre class="pre-text">${escapeHtml(proj.tileDetails)}</pre>
+        備註：${escapeHtml(proj.note || "無備註")}<br />
+        建立時間：${formatDate(proj.createdAt)}
+      </div>
+      <div class="card-actions">
+        <button class="small-button" data-action="edit-project" data-id="${proj.id}">編輯</button>
+        <button class="small-button" data-action="delete-project" data-id="${proj.id}">刪除</button>
+      </div>
+    </details>
+  `;
+}
+
+function renderSamples() {
+  const list = document.querySelector("#sampleList");
+  if (!list) return;
+  const ids = new Set(getVisibleStores().map((store) => store.id));
+  const samples = (state.samples || []).filter((s) => ids.has(s.storeId));
+  if (!samples.length) {
+    list.innerHTML = emptyState("尚未建立樣品展架記錄");
+    return;
+  }
+  list.innerHTML = [...samples]
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .map((s) => sampleCard(s))
+    .join("");
+}
+
+function sampleCard(item) {
+  const store = getStore(item.storeId);
+  const cloudLine = item.driveUrl
+    ? `<br /><a class="inline-link" href="${escapeHtml(item.driveUrl)}" target="_blank" rel="noopener">查看 Google Drive 照片</a>`
+    : (item.image ? `<br />雲端狀態：${escapeHtml(cloudStatusLabel(item.cloudStatus))}` : "");
+  const imgHtml = item.image ? `<div class="card-image-wrapper"><img src="${item.image}" alt="現場照" /></div>` : "";
+  return `
+    <details class="info-card sample-card">
+      <summary class="hold-summary">
+        <span class="hold-summary-text">
+          <strong>${escapeHtml(item.modelName)} (${escapeHtml(item.quantity)} ${item.itemType === "展示架" ? "組" : "本"})</strong>
+          <span>${escapeHtml(store?.name || t("未指定店家"))} / ${escapeHtml(item.itemType)}</span>
+        </span>
+        <span class="badge status-${item.status}">${escapeHtml(item.status)}</span>
+      </summary>
+      <div class="meta hold-detail">
+        ${imgHtml}
+        巡查狀態：${escapeHtml(item.status)}<br />
+        備註：${escapeHtml(item.note || "無備註")}${cloudLine}<br />
+        建立時間：${formatDate(item.createdAt)}
+      </div>
+      <div class="card-actions">
+        <button class="small-button" data-action="edit-sample" data-id="${item.id}">編輯</button>
+        <button class="small-button" data-action="delete-sample" data-id="${item.id}">刪除</button>
+      </div>
+    </details>
+  `;
+}
+
+function renderComplaints() {
+  const list = document.querySelector("#complaintList");
+  if (!list) return;
+  const ids = new Set(getVisibleStores().map((store) => store.id));
+  const complaints = (state.complaints || []).filter((c) => ids.has(c.storeId));
+  if (!complaints.length) {
+    list.innerHTML = emptyState("尚未建立售後客訴單");
+    return;
+  }
+  list.innerHTML = [...complaints]
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .map((c) => complaintCard(c))
+    .join("");
+}
+
+function complaintCard(comp) {
+  const store = getStore(comp.storeId);
+  const cloudLine = comp.driveUrl
+    ? `<br /><a class="inline-link" href="${escapeHtml(comp.driveUrl)}" target="_blank" rel="noopener">查看 Google Drive 照片</a>`
+    : (comp.image ? `<br />雲端狀態：${escapeHtml(cloudStatusLabel(comp.cloudStatus))}` : "");
+  const imgHtml = comp.image ? `<div class="card-image-wrapper"><img src="${comp.image}" alt="客訴照" /></div>` : "";
+  return `
+    <details class="info-card complaint-card">
+      <summary class="hold-summary">
+        <span class="hold-summary-text">
+          <strong>${escapeHtml(comp.category)}</strong>
+          <span>${escapeHtml(store?.name || t("未指定店家"))}</span>
+          <span>問題描述：${escapeHtml(comp.issueDescription)}</span>
+        </span>
+        <span class="badge status-${comp.status}">${escapeHtml(comp.status)}</span>
+      </summary>
+      <div class="meta hold-detail">
+        ${imgHtml}
+        問題描述：<br />
+        <pre class="pre-text">${escapeHtml(comp.issueDescription)}</pre>
+        處理協調紀錄：<br />
+        <pre class="pre-text">${escapeHtml(comp.coordinationLog || "無協調紀錄")}</pre>${cloudLine}<br />
+        建立時間：${formatDate(comp.createdAt)}
+      </div>
+      <div class="card-actions">
+        <button class="small-button" data-action="edit-complaint" data-id="${comp.id}">編輯</button>
+        <button class="small-button" data-action="delete-complaint" data-id="${comp.id}">刪除</button>
+      </div>
+    </details>
+  `;
+}
+
+function initCalculator() {
+  const unitSelect = document.querySelector("#calcUnitSelect");
+  const areaInputLabel = document.querySelector("#calcAreaInputLabel");
+  const lengthLabel = document.querySelector("#calcLengthLabel");
+  const dimFields = document.querySelector("#calcDimFields");
+  const sizeSelect = document.querySelector("#calcSizeSelect");
+  const customSizeFields = document.querySelector("#calcCustomSizeFields");
+  const boxPcsInput = document.querySelector("#calcBoxPcsInput");
+
+  if (!unitSelect) return;
+
+  unitSelect.addEventListener("change", () => {
+    const isPing = unitSelect.value === "ping";
+    if (areaInputLabel) areaInputLabel.style.display = isPing ? "block" : "none";
+    if (lengthLabel) lengthLabel.style.display = isPing ? "none" : "block";
+    if (dimFields) dimFields.style.display = isPing ? "none" : "flex";
+    calculateTile();
+  });
+
+  sizeSelect.addEventListener("change", () => {
+    const isCustom = sizeSelect.value === "custom";
+    if (customSizeFields) customSizeFields.style.display = isCustom ? "flex" : "none";
+    const selectedOption = sizeSelect.options[sizeSelect.selectedIndex];
+    if (selectedOption && !isCustom) {
+      boxPcsInput.value = selectedOption.dataset.boxPcs || 1;
+    }
+    calculateTile();
+  });
+
+  const allInputs = [
+    "#calcAreaInput", "#calcLengthInput", "#calcWidthInput", "#calcLossInput",
+    "#calcBoxPcsInput", "#calcCustomL", "#calcCustomW", "#calcPriceUnit", "#calcUnitPrice"
+  ];
+  allInputs.forEach(selector => {
+    document.querySelector(selector)?.addEventListener("input", calculateTile);
+    document.querySelector(selector)?.addEventListener("change", calculateTile);
+  });
+}
+
+function calculateTile() {
+  const unit = document.querySelector("#calcUnitSelect").value;
+  const lossPct = parseFloat(document.querySelector("#calcLossInput").value) || 0;
+  const sizeValue = document.querySelector("#calcSizeSelect").value;
+  const boxPcs = parseInt(document.querySelector("#calcBoxPcsInput").value) || 1;
+  const priceUnit = document.querySelector("#calcPriceUnit").value;
+  const unitPrice = parseFloat(document.querySelector("#calcUnitPrice").value) || 0;
+
+  let netSqm = 0;
+  if (unit === "ping") {
+    const ping = parseFloat(document.querySelector("#calcAreaInput").value) || 0;
+    netSqm = ping * 3.305785;
+  } else {
+    const length = parseFloat(document.querySelector("#calcLengthInput").value) || 0;
+    const width = parseFloat(document.querySelector("#calcWidthInput").value) || 0;
+    netSqm = length * width;
+  }
+
+  const netPing = netSqm / 3.305785;
+  const grossSqm = netSqm * (1 + lossPct / 100);
+  const grossPing = grossSqm / 3.305785;
+
+  let tileW_m = 0;
+  let tileH_m = 0;
+  if (sizeValue === "custom") {
+    tileW_m = (parseFloat(document.querySelector("#calcCustomW").value) || 0) / 100;
+    tileH_m = (parseFloat(document.querySelector("#calcCustomL").value) || 0) / 100;
+  } else {
+    const parts = sizeValue.split("x");
+    tileW_m = parseFloat(parts[0]) / 100;
+    tileH_m = parseFloat(parts[1]) / 100;
+  }
+
+  const tileArea_sqm = tileW_m * tileH_m;
+
+  let netSheets = 0;
+  let grossSheets = 0;
+  let lossSheets = 0;
+  let totalBoxes = 0;
+  let totalCost = 0;
+
+  if (tileArea_sqm > 0) {
+    netSheets = Math.ceil(netSqm / tileArea_sqm);
+    grossSheets = Math.ceil(grossSqm / tileArea_sqm);
+    lossSheets = Math.max(0, grossSheets - netSheets);
+    totalBoxes = Math.ceil(grossSheets / boxPcs);
+  }
+
+  if (priceUnit === "ping") {
+    totalCost = Math.round(grossPing * unitPrice);
+  } else {
+    totalCost = Math.round(grossSheets * unitPrice);
+  }
+
+  setText("#resNetArea", `${netPing.toFixed(2)} 坪 (${netSqm.toFixed(2)} ㎡)`);
+  setText("#resGrossArea", `${grossPing.toFixed(2)} 坪 (${grossSqm.toFixed(2)} ㎡)`);
+  setText("#resNetSheets", `${netSheets} 片`);
+  setText("#resLossSheets", `${lossSheets} 片`);
+  setText("#resTotalSheets", `${grossSheets} 片`);
+  setText("#resTotalBoxes", `${totalBoxes} 箱`);
+  setText("#resTotalCost", `$${totalCost.toLocaleString()}`);
 }
 
 function renderHome() {
@@ -854,6 +1446,9 @@ async function pushSnapshotToCloud() {
     driveFolderId: GOOGLE_DRIVE_FOLDER_ID,
     stores: state.stores,
     holds: state.holds,
+    projects: state.projects || [],
+    samples: (state.samples || []).map(({ image, ...sample }) => sample),
+    complaints: (state.complaints || []).map(({ image, ...complaint }) => complaint),
     photos: state.photos.map(({ image, ...photo }) => photo),
     salesOwners: state.salesOwners,
   });
@@ -863,16 +1458,20 @@ async function syncFromCloud() {
   const result = await sendCloudAction("readAll", { driveFolderId: GOOGLE_DRIVE_FOLDER_ID });
   if (Array.isArray(result.stores) && result.stores.length) state.stores = mergeById(state.stores, result.stores);
   if (Array.isArray(result.holds)) state.holds = mergeById(state.holds, result.holds);
+  if (Array.isArray(result.projects)) state.projects = mergeById(state.projects || [], result.projects);
+  if (Array.isArray(result.samples)) state.samples = mergeById(state.samples || [], result.samples);
+  if (Array.isArray(result.complaints)) state.complaints = mergeById(state.complaints || [], result.complaints);
   if (Array.isArray(result.photos)) state.photos = mergeById(state.photos, result.photos);
   saveState();
   return { message: "已從 Google 後台同步資料" };
 }
 
-async function uploadPhotoToCloud(photo, imageDataUrl) {
+async function uploadPhotoToCloud(photo, imageDataUrl, targetTable = "photos") {
   try {
     const store = getStore(photo.storeId);
     const result = await sendCloudAction("uploadPhoto", {
       driveFolderId: GOOGLE_DRIVE_FOLDER_ID,
+      targetTable,
       photo: {
         ...photo,
         storeName: store?.name || "",
@@ -1029,7 +1628,9 @@ function setView(view) {
   let title = viewNames[view];
   if (state.currentUser && state.currentUser.role === "retail") {
     if (view === "stores") title = "設計公司/業主";
-    if (view === "photos") title = "案場拍照存檔";
+    if (view === "projects") title = "案場登錄";
+    if (view === "samples") title = "樣架與目錄本";
+    if (view === "complaints") title = "售後服務追蹤";
   }
   setTextSafe("#viewTitle", title);
   
@@ -1321,6 +1922,9 @@ function getComboConfig(combo) {
     storeName: { input: "#storeNameInput" },
     holdStore: { input: "#holdStoreInput", hidden: "#holdStoreId" },
     photoStore: { input: "#photoStoreInput", hidden: "#photoStoreId" },
+    projectStore: { input: "#projectStoreInput", hidden: "#projectStoreId" },
+    sampleStore: { input: "#sampleStoreInput", hidden: "#sampleStoreId" },
+    complaintStore: { input: "#complaintStoreInput", hidden: "#complaintStoreId" },
   }[combo];
 }
 
@@ -1330,6 +1934,18 @@ function syncHoldStoreIdFromInput() {
 
 function syncPhotoStoreIdFromInput() {
   syncStoreIdFromInput("#photoStoreInput", "#photoStoreId");
+}
+
+function syncProjectStoreIdFromInput() {
+  syncStoreIdFromInput("#projectStoreInput", "#projectStoreId");
+}
+
+function syncSampleStoreIdFromInput() {
+  syncStoreIdFromInput("#sampleStoreInput", "#sampleStoreId");
+}
+
+function syncComplaintStoreIdFromInput() {
+  syncStoreIdFromInput("#complaintStoreInput", "#complaintStoreId");
 }
 
 function syncStoreIdFromInput(inputSelector, hiddenSelector) {
@@ -1578,6 +2194,9 @@ function t(term) {
       case "地址": return "施工/送貨地址";
       case "地址Placeholder": return "例：工地地址或送貨地址...";
       case "未填地址": return "未填施工送貨地址";
+      case "案場報備": return "案場登錄";
+      case "樣品與展示架": return "樣架與目錄本";
+      case "售後客訴": return "售後服務追蹤";
       default: return term;
     }
   }
@@ -1604,16 +2223,38 @@ function applyRoleAesthetic() {
     if (p) p.textContent = isRetail ? "查看名下設計公司、設計師、業主案名與工地資料" : "查看業務名下店家、電話、地址與聯絡資料";
   }
 
-  const photosMenuCard = document.querySelector(".menu-card[data-view='photos']");
-  if (photosMenuCard) {
-    const p = photosMenuCard.querySelector("p");
-    if (p) p.textContent = isRetail ? "每個設計案都有專屬照片檔案夾" : "每個店家都有專屬照片檔案夾";
+  const projectsMenuCard = document.querySelector(".menu-card[data-view='projects']");
+  if (projectsMenuCard) {
+    const strong = projectsMenuCard.querySelector("strong");
+    const p = projectsMenuCard.querySelector("p");
+    if (strong) strong.textContent = isRetail ? "案場登錄" : "案場報備";
+    if (p) p.textContent = isRetail ? "登錄目前跟進的設計案、樣品及估價明細" : "報備進行中的工程案場，保障業務開發權益";
+  }
+
+  const samplesMenuCard = document.querySelector(".menu-card[data-view='samples']");
+  if (samplesMenuCard) {
+    const strong = samplesMenuCard.querySelector("strong");
+    const p = samplesMenuCard.querySelector("p");
+    if (strong) strong.textContent = isRetail ? "樣架與目錄本" : "樣品與展示架";
+    if (p) p.textContent = isRetail ? "登記擺放於設計公司的目錄本與展示瓷磚進度" : "追蹤放置於店家的目錄本、展示瓷磚與展架巡查";
+  }
+
+  const complaintsMenuCard = document.querySelector(".menu-card[data-view='complaints']");
+  if (complaintsMenuCard) {
+    const strong = complaintsMenuCard.querySelector("strong");
+    const p = complaintsMenuCard.querySelector("p");
+    if (strong) strong.textContent = isRetail ? "售後服務追蹤" : "售後客訴追蹤";
+    if (p) p.textContent = isRetail ? "記錄色差、破損等售後問題與補退貨進度" : "處理瓷磚破損、色差等問題的跟進狀態與照片";
   }
 
   // 2. 底部導覽列按鈕
   const storesNavBtn = document.querySelector(".bottom-nav .nav-item[data-view='stores']");
   if (storesNavBtn) {
     storesNavBtn.textContent = isRetail ? "設計/業主" : "店家";
+  }
+  const projectsNavBtn = document.querySelector(".bottom-nav .nav-item[data-view='projects']");
+  if (projectsNavBtn) {
+    projectsNavBtn.textContent = isRetail ? "案場登錄" : "案場";
   }
 
   // 3. 店家表單的 Label 和 Placeholder
@@ -1657,14 +2298,58 @@ function applyRoleAesthetic() {
     if (addressLabelText) addressLabelText.textContent = isRetail ? "保留案場地址" : "保留地址";
   }
 
-  // 5. 拍照上傳表單的 Label
-  const photoForm = document.querySelector("#photoForm");
-  if (photoForm) {
-    const storeLabelText = document.querySelector(".photos-label-store");
+  // 5. 案場報備表單
+  const projectForm = document.querySelector("#projectForm");
+  if (projectForm) {
+    const header = document.querySelector("#projectsView .view-toolbar h1");
+    if (header) header.textContent = isRetail ? "案場登錄" : "案場報備";
+
+    const storeLabelText = document.querySelector(".projects-label-store");
     if (storeLabelText) storeLabelText.textContent = isRetail ? "設計公司/業主" : "店家";
 
-    const storeInput = document.querySelector("#photoStoreInput");
+    const storeInput = document.querySelector("#projectStoreInput");
     if (storeInput) storeInput.placeholder = isRetail ? "輸入設計案名或設計公司關鍵字" : "輸入店家編號或名稱關鍵字";
+
+    const submitBtn = document.querySelector("#projectSubmitButton");
+    if (submitBtn && editingProjectId === null) {
+      submitBtn.textContent = isRetail ? "新增案場登錄" : "新增案場報備";
+    }
+  }
+
+  // 6. 樣品表單
+  const sampleForm = document.querySelector("#sampleForm");
+  if (sampleForm) {
+    const header = document.querySelector("#samplesView .view-toolbar h1");
+    if (header) header.textContent = isRetail ? "樣架與目錄本" : "樣品與展示架";
+
+    const storeLabelText = document.querySelector(".samples-label-store");
+    if (storeLabelText) storeLabelText.textContent = isRetail ? "設計公司/業主" : "店家";
+
+    const storeInput = document.querySelector("#sampleStoreInput");
+    if (storeInput) storeInput.placeholder = isRetail ? "輸入設計案名或設計公司關鍵字" : "輸入店家編號或名稱關鍵字";
+
+    const submitBtn = document.querySelector("#sampleSubmitButton");
+    if (submitBtn && editingSampleId === null) {
+      submitBtn.textContent = isRetail ? "新增樣架目錄記錄" : "新增樣品展架記錄";
+    }
+  }
+
+  // 7. 客訴表單
+  const complaintForm = document.querySelector("#complaintForm");
+  if (complaintForm) {
+    const header = document.querySelector("#complaintsView .view-toolbar h1");
+    if (header) header.textContent = isRetail ? "售後服務追蹤" : "售後客訴";
+
+    const storeLabelText = document.querySelector(".complaints-label-store");
+    if (storeLabelText) storeLabelText.textContent = isRetail ? "設計公司/業主" : "店家";
+
+    const storeInput = document.querySelector("#complaintStoreInput");
+    if (storeInput) storeInput.placeholder = isRetail ? "輸入設計案名或設計公司關鍵字" : "輸入店家編號或名稱關鍵字";
+
+    const submitBtn = document.querySelector("#complaintSubmitButton");
+    if (submitBtn && editingComplaintId === null) {
+      submitBtn.textContent = isRetail ? "新增售後服務單" : "新增售後客訴單";
+    }
   }
 }
 
@@ -1672,6 +2357,6 @@ render();
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js?v=20260627-retail").catch(() => {});
+    navigator.serviceWorker.register("./service-worker.js?v=20260627-revamp").catch(() => {});
   });
 }

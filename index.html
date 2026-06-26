@@ -10,9 +10,9 @@
     <meta name="apple-mobile-web-app-title" content="勁揚業務管家" />
     <meta name="format-detection" content="telephone=no" />
     <title>勁揚業務管家</title>
-    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=20260626-login-v3" />
-    <link class="PWA-version" rel="manifest" href="manifest.webmanifest?v=20260626-login-v3" />
-    <link rel="stylesheet" href="styles.css?v=20260626-login-v3" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=20260627-revamp" />
+    <link class="PWA-version" rel="manifest" href="manifest.webmanifest?v=20260627-revamp" />
+    <link rel="stylesheet" href="styles.css?v=20260627-revamp" />
   </head>
   <body>
     <!-- 登入頁面遮罩 -->
@@ -86,35 +86,59 @@
               <span class="team-badge"><span id="storeCount">0</span> 家</span>
               <span class="domain-icon" aria-hidden="true">店</span>
               <span>
-                <strong>店家</strong>
-                <p>查看業務名下店家、電話、地址與聯絡資料</p>
+                <strong class="stores-menu-title">店家資料</strong>
+                <p class="stores-menu-desc">查看負責店家、電話、地址與聯絡資料</p>
               </span>
             </button>
             <button class="domain-card" data-view="holds" style="--tone: #54e2b0">
               <span class="team-badge"><span id="holdCount">0</span> 筆</span>
               <span class="domain-icon" aria-hidden="true">留</span>
               <span>
-                <strong>保留物品</strong>
-                <p>建立兩個月保留期限，前一週提醒所屬業務</p>
+                <strong>保留提醒</strong>
+                <p>實物留貨管理，建立兩個月保留期限與到期提醒</p>
               </span>
             </button>
-            <button class="domain-card" data-view="photos" style="--tone: #f4bf58">
-              <span class="team-badge"><span id="photoCount">0</span> 張</span>
-              <span class="domain-icon" aria-hidden="true">拍</span>
+            <button class="domain-card" data-view="projects" style="--tone: #ff756f">
+              <span class="team-badge"><span id="projectCount">0</span> 案</span>
+              <span class="domain-icon" aria-hidden="true">案</span>
               <span>
-                <strong>上架拍照存檔</strong>
-                <p>每個店家都有專屬照片檔案夾</p>
+                <strong class="projects-menu-title">案場報備</strong>
+                <p class="projects-menu-desc">登記工程案場、鎖定專案進度與出貨預估</p>
               </span>
             </button>
-            <button class="domain-card" id="salesReportCard" data-view="salesReport" style="--tone: #ff756f">
+            <button class="domain-card" data-view="samples" style="--tone: #f4bf58">
+              <span class="team-badge"><span id="sampleCount">0</span> 件</span>
+              <span class="domain-icon" aria-hidden="true">樣</span>
+              <span>
+                <strong class="samples-menu-title">樣品與展示架</strong>
+                <p class="samples-menu-desc">管理店面放置的樣品本與展示瓷磚架巡查</p>
+              </span>
+            </button>
+            <button class="domain-card" data-view="complaints" style="--tone: #ec4899">
+              <span class="team-badge"><span id="complaintCount">0</span> 案</span>
+              <span class="domain-icon" aria-hidden="true">訴</span>
+              <span>
+                <strong class="complaints-menu-title">售後客訴</strong>
+                <p class="complaints-menu-desc">售後服務申報、破損色差等跟進狀態</p>
+              </span>
+            </button>
+            <button class="domain-card" data-view="calculator" style="--tone: #ab68ff">
+              <span class="team-badge">工具</span>
+              <span class="domain-icon" aria-hidden="true">算</span>
+              <span>
+                <strong>報價試算器</strong>
+                <p>快速計算瓷磚面積、耗損片數及所需箱數</p>
+              </span>
+            </button>
+            <button class="domain-card" id="salesReportCard" data-view="salesReport" style="--tone: #3b82f6">
               <span class="team-badge">LIVE</span>
               <span class="domain-icon" aria-hidden="true">績</span>
               <span>
                 <strong>業績分析</strong>
-                <p>連動業務業績分析表，手動刷新避免跳動</p>
+                <p>連動業務業績分析表，雙北與外縣市數據</p>
               </span>
             </button>
-            <button class="domain-card" data-view="inventory" style="--tone: #ab68ff">
+            <button class="domain-card" data-view="inventory" style="--tone: #10b981">
               <span class="team-badge">LIVE</span>
               <span class="domain-icon" aria-hidden="true">庫</span>
               <span>
@@ -206,7 +230,6 @@
               <select name="reservationStatus" required>
                 <option>已收訂</option>
                 <option>未收訂</option>
-                <option>報備</option>
               </select>
             </label>
             <div class="split-fields">
@@ -231,49 +254,307 @@
               提醒內容
               <textarea name="note" rows="3" placeholder="例：到期前確認是否續留"></textarea>
             </label>
-            <p class="form-note">已收訂保留為兩個月期限；提醒內容出現「一週 / 保留一週」會改成一週追蹤；報備僅記錄案場地址，不幫忙留貨。</p>
+            <p class="form-note">已收訂/未收訂保留為兩個月期限；提醒內容出現「一週 / 保留一週」會自動換成一週追蹤提醒。</p>
             <button class="primary-button" type="submit">新增保留提醒</button>
           </form>
           <div class="list" id="holdList"></div>
         </section>
 
-        <section class="view" id="photosView">
+        <section class="view" id="projectsView">
           <div class="view-toolbar">
             <button class="back-button" data-view="home">‹</button>
             <div>
-              <p class="eyebrow">PHOTO ARCHIVE</p>
-              <h1>上架拍照存檔</h1>
+              <p class="eyebrow">PROJECT REGISTRY</p>
+              <h1 class="projects-view-header">案場報備</h1>
             </div>
           </div>
-          <form class="entry-form" id="photoForm">
+          <form class="entry-form" id="projectForm">
             <label>
-              <span class="photos-label-store">店家</span>
-              <div class="search-combo" data-combo="photoStore">
-                <input id="photoStoreInput" required placeholder="輸入店家編號或名稱關鍵字" autocomplete="off" />
-                <button class="combo-toggle" type="button" data-combo-toggle="photoStore" aria-label="展開店家清單">⌄</button>
-                <div class="combo-panel" data-combo-panel="photoStore"></div>
+              <span class="projects-label-store">店家/設計公司</span>
+              <div class="search-combo" data-combo="projectStore">
+                <input id="projectStoreInput" required placeholder="輸入店家編號或名稱關鍵字" autocomplete="off" />
+                <button class="combo-toggle" type="button" data-combo-toggle="projectStore" aria-label="展開店家清單">⌄</button>
+                <div class="combo-panel" data-combo-panel="projectStore"></div>
               </div>
-              <input type="hidden" name="storeId" id="photoStoreId" />
+              <input type="hidden" name="storeId" id="projectStoreId" />
             </label>
             <label>
-              工作類型
-              <select name="category" id="photoCategorySelect">
-                <option>上架</option>
-                <option>客訴</option>
-                <option>下架</option>
+              案場名稱
+              <input name="projectName" required placeholder="例：南京東路王公館室內裝修案" />
+            </label>
+            <label>
+              案場地址
+              <input name="projectAddress" placeholder="例：台北市中山區南京東路..." />
+            </label>
+            <label>
+              預估出貨明細
+              <textarea name="tileDetails" rows="2" required placeholder="例：白玉大理石 30x60 - 50 坪 / 皇家灰 60x60 - 20 坪"></textarea>
+            </label>
+            <div class="split-fields">
+              <label>
+                預估進場日期
+                <input name="expectedDeliveryDate" required type="date" />
+              </label>
+              <label>
+                報備狀態
+                <select name="status" required>
+                  <option>洽談中</option>
+                  <option>已報備</option>
+                  <option>已出貨</option>
+                  <option>已結案</option>
+                </select>
+              </label>
+            </div>
+            <label>
+              備註
+              <textarea name="note" rows="2" placeholder="例：預計 10 月中旬需要第一批底磚"></textarea>
+            </label>
+            <input type="hidden" name="id" id="projectFormId" />
+            <div class="form-actions">
+              <button class="primary-button" type="submit" id="projectSubmitButton">新增案場報備</button>
+              <button class="secondary-button" type="button" id="projectCancelButton" style="display: none;">取消編輯</button>
+            </div>
+          </form>
+          <div class="list" id="projectList"></div>
+        </section>
+
+        <section class="view" id="samplesView">
+          <div class="view-toolbar">
+            <button class="back-button" data-view="home">‹</button>
+            <div>
+              <p class="eyebrow">SAMPLE & RACK CONTROL</p>
+              <h1 class="samples-view-header">樣品與展示架</h1>
+            </div>
+          </div>
+          <form class="entry-form" id="sampleForm">
+            <label>
+              <span class="samples-label-store">店家/設計公司</span>
+              <div class="search-combo" data-combo="sampleStore">
+                <input id="sampleStoreInput" required placeholder="輸入店家編號或名稱關鍵字" autocomplete="off" />
+                <button class="combo-toggle" type="button" data-combo-toggle="sampleStore" aria-label="展開店家清單">⌄</button>
+                <div class="combo-panel" data-combo-panel="sampleStore"></div>
+              </div>
+              <input type="hidden" name="storeId" id="sampleStoreId" />
+            </label>
+            <div class="split-fields">
+              <label>
+                樣品類型
+                <select name="itemType" id="sampleTypeSelect" required>
+                  <option>展示架</option>
+                  <option>目錄樣品本</option>
+                </select>
+              </label>
+              <label>
+                數量
+                <input name="quantity" type="number" required placeholder="例：1" value="1" min="1" />
+              </label>
+            </div>
+            <label>
+              型號系列/名稱
+              <input name="modelName" required placeholder="例：現代極簡系列 / 2026年瓷磚總目錄" />
+            </label>
+            <label>
+              巡查狀態
+              <select name="status" required>
+                <option>已送達/上架</option>
+                <option>需汰換</option>
+                <option>已收回/下架</option>
               </select>
             </label>
             <label>
-              拍照上傳
-              <input name="photo" required id="photoFileInput" type="file" accept="image/*" capture="environment" />
+              拍照記錄
+              <input name="photo" id="sampleFileInput" type="file" accept="image/*" capture="environment" />
             </label>
             <label>
-              照片備註
-              <textarea name="note" rows="3" placeholder="例：架子位置、客訴產品及地點、下架原因..."></textarea>
+              備註
+              <textarea name="note" rows="2" placeholder="例：放置於店面右側展示牆"></textarea>
             </label>
-            <button class="primary-button" type="submit">存入照片檔案</button>
+            <input type="hidden" name="id" id="sampleFormId" />
+            <input type="hidden" name="driveUrl" id="sampleDriveUrl" />
+            <input type="hidden" name="fileId" id="sampleFileId" />
+            <div class="form-actions">
+              <button class="primary-button" type="submit" id="sampleSubmitButton">新增樣品展架記錄</button>
+              <button class="secondary-button" type="button" id="sampleCancelButton" style="display: none;">取消編輯</button>
+            </div>
           </form>
-          <div class="folder-grid" id="photoFolderList"></div>
+          <div class="list" id="sampleList"></div>
+        </section>
+
+        <section class="view" id="complaintsView">
+          <div class="view-toolbar">
+            <button class="back-button" data-view="home">‹</button>
+            <div>
+              <p class="eyebrow">AFTER-SALES & SERVICE</p>
+              <h1 class="complaints-view-header">售後客訴</h1>
+            </div>
+          </div>
+          <form class="entry-form" id="complaintForm">
+            <label>
+              <span class="complaints-label-store">店家/設計公司</span>
+              <div class="search-combo" data-combo="complaintStore">
+                <input id="complaintStoreInput" required placeholder="輸入店家編號或名稱關鍵字" autocomplete="off" />
+                <button class="combo-toggle" type="button" data-combo-toggle="complaintStore" aria-label="展開店家清單">⌄</button>
+                <div class="combo-panel" data-combo-panel="complaintStore"></div>
+              </div>
+              <input type="hidden" name="storeId" id="complaintStoreId" />
+            </label>
+            <div class="split-fields">
+              <label>
+                客訴分類
+                <select name="category" required>
+                  <option>色差問題</option>
+                  <option>產品破損</option>
+                  <option>尺寸誤差</option>
+                  <option>施工客訴</option>
+                  <option>其他</option>
+                </select>
+              </label>
+              <label>
+                處理狀態
+                <select name="status" required>
+                  <option>待處理</option>
+                  <option>處理中</option>
+                  <option>已補退貨</option>
+                  <option>已結案</option>
+                </select>
+              </label>
+            </div>
+            <label>
+              客訴問題描述
+              <textarea name="issueDescription" rows="2" required placeholder="例：客廳 80x80 地磚邊角有大面積破損，共 5 片"></textarea>
+            </label>
+            <label>
+              現場照片上傳
+              <input name="photo" id="complaintFileInput" type="file" accept="image/*" capture="environment" />
+            </label>
+            <label>
+              處理協調紀錄
+              <textarea name="coordinationLog" rows="2" placeholder="例：6/27 已跟工廠安排補貨，預計下週二由司機送達"></textarea>
+            </label>
+            <input type="hidden" name="id" id="complaintFormId" />
+            <input type="hidden" name="driveUrl" id="complaintDriveUrl" />
+            <input type="hidden" name="fileId" id="complaintFileId" />
+            <div class="form-actions">
+              <button class="primary-button" type="submit" id="complaintSubmitButton">新增售後客訴單</button>
+              <button class="secondary-button" type="button" id="complaintCancelButton" style="display: none;">取消編輯</button>
+            </div>
+          </form>
+          <div class="list" id="complaintList"></div>
+        </section>
+
+        <section class="view" id="calculatorView">
+          <div class="view-toolbar">
+            <button class="back-button" data-view="home">‹</button>
+            <div>
+              <p class="eyebrow">TILE AREA CALCULATOR</p>
+              <h1>報價試算器</h1>
+            </div>
+          </div>
+          <div class="entry-form">
+            <div class="split-fields">
+              <label>
+                輸入維度
+                <select id="calcUnitSelect">
+                  <option value="m">長寬公尺 (m)</option>
+                  <option value="ping">坪數 (坪)</option>
+                </select>
+              </label>
+              <label id="calcAreaInputLabel" style="display: none;">
+                施工坪數
+                <input id="calcAreaInput" type="number" step="0.01" placeholder="例：15" />
+              </label>
+              <label id="calcLengthLabel">
+                長度 (m)
+                <input id="calcLengthInput" type="number" step="0.01" placeholder="例：5.5" />
+              </label>
+            </div>
+            <div class="split-fields" id="calcDimFields">
+              <label id="calcWidthLabel">
+                寬度 (m)
+                <input id="calcWidthInput" type="number" step="0.01" placeholder="例：3.6" />
+              </label>
+              <label>
+                估計耗損率 (%)
+                <input id="calcLossInput" type="number" placeholder="例：10" value="10" />
+              </label>
+            </div>
+            <div class="split-fields">
+              <label>
+                瓷磚尺寸規格 (cm)
+                <select id="calcSizeSelect">
+                  <option value="30x60" data-box-pcs="8">30 x 60 (8片/箱)</option>
+                  <option value="60x60" data-box-pcs="4">60 x 60 (4片/箱)</option>
+                  <option value="80x80" data-box-pcs="3">80 x 80 (3片/箱)</option>
+                  <option value="30x30" data-box-pcs="15">30 x 30 (15片/箱)</option>
+                  <option value="75x150" data-box-pcs="2">75 x 150 (2片/箱)</option>
+                  <option value="custom" data-box-pcs="1">自訂規格</option>
+                </select>
+              </label>
+              <label>
+                每箱片數
+                <input id="calcBoxPcsInput" type="number" value="8" />
+              </label>
+            </div>
+            <div class="split-fields" id="calcCustomSizeFields" style="display: none;">
+              <label>
+                自訂長 (cm)
+                <input id="calcCustomL" type="number" placeholder="例：20" />
+              </label>
+              <label>
+                自訂寬 (cm)
+                <input id="calcCustomW" type="number" placeholder="例：20" />
+              </label>
+            </div>
+            <div class="split-fields">
+              <label>
+                單價計算基準
+                <select id="calcPriceUnit">
+                  <option value="ping">按坪計價</option>
+                  <option value="sheet">按片計價</option>
+                </select>
+              </label>
+              <label>
+                單價 (元)
+                <input id="calcUnitPrice" type="number" placeholder="例：2500" />
+              </label>
+            </div>
+          </div>
+          
+          <div class="panel calculator-result-panel" style="margin-top: 20px;">
+            <div class="panel-heading">
+              <h2>🧮 試算結果</h2>
+            </div>
+            <div class="calculator-results">
+              <div class="calc-result-row">
+                <span>估計淨面積：</span>
+                <strong id="resNetArea">0.00 坪 (0.00 ㎡)</strong>
+              </div>
+              <div class="calc-result-row">
+                <span>含損耗總面積：</span>
+                <strong id="resGrossArea">0.00 坪 (0.00 ㎡)</strong>
+              </div>
+              <div class="calc-result-row">
+                <span>基本所需片數：</span>
+                <strong id="resNetSheets">0 片</strong>
+              </div>
+              <div class="calc-result-row">
+                <span>損耗所需片數：</span>
+                <strong id="resLossSheets">0 片</strong>
+              </div>
+              <div class="calc-result-row cyan">
+                <span>應訂購總片數：</span>
+                <strong id="resTotalSheets">0 片</strong>
+              </div>
+              <div class="calc-result-row green">
+                <span>應訂購總箱數：</span>
+                <strong id="resTotalBoxes">0 箱</strong>
+              </div>
+              <div class="calc-result-row gold">
+                <span>概估總金額 (未稅)：</span>
+                <strong id="resTotalCost">$0</strong>
+              </div>
+            </div>
+          </div>
         </section>
 
         <section class="view" id="salesReportView">
@@ -373,13 +654,13 @@
         <button class="nav-item active" data-view="home">首頁</button>
         <button class="nav-item" data-view="stores">店家</button>
         <button class="nav-item" data-view="holds">保留</button>
-        <button class="nav-item" data-view="photos">拍照</button>
+        <button class="nav-item" data-view="projects">案場</button>
         <button class="nav-pill" id="navAdminButton" data-view="admin"><span>▣</span> 後台</button>
       </nav>
     </div>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="store-data.js?v=20260626-login-v3"></script>
-    <script src="app.js?v=20260626-login-v3"></script>
+    <script src="store-data.js?v=20260627-revamp"></script>
+    <script src="app.js?v=20260627-revamp"></script>
   </body>
 </html>

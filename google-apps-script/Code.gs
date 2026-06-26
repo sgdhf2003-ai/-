@@ -3,7 +3,9 @@ const SPREADSHEET_NAME = "勁揚業務管家後台";
 const SHEETS = {
   stores: "店家資料",
   holds: "保留物品",
-  photos: "照片存檔",
+  projects: "案場報備",
+  samples: "樣品與展示架",
+  complaints: "售後客訴",
   users: "Users",
   settings: "系統設定",
 };
@@ -11,7 +13,9 @@ const SHEETS = {
 const HEADERS = {
   stores: ["id", "customerCode", "name", "shortName", "salesOwner", "phone", "phone2", "mobile", "address", "region", "contactName", "taxId", "note", "createdAt", "updatedAt"],
   holds: ["id", "storeId", "storeName", "salesOwner", "item", "quantity", "reservationStatus", "holdAddress", "holdDate", "expiresAt", "reminderAt", "note", "status", "createdAt", "updatedAt"],
-  photos: ["id", "storeId", "storeName", "salesOwner", "category", "note", "driveUrl", "fileId", "folderId", "createdAt", "uploadedAt"],
+  projects: ["id", "storeId", "storeName", "salesOwner", "projectName", "projectAddress", "tileDetails", "expectedDeliveryDate", "status", "note", "createdAt", "updatedAt"],
+  samples: ["id", "storeId", "storeName", "salesOwner", "itemType", "modelName", "quantity", "status", "driveUrl", "fileId", "note", "createdAt", "updatedAt"],
+  complaints: ["id", "storeId", "storeName", "salesOwner", "issueDescription", "category", "driveUrl", "fileId", "status", "coordinationLog", "createdAt", "updatedAt"],
   users: ["id", "username", "displayName", "password", "role", "salesOwner", "status", "note", "createdAt", "updatedAt"],
   settings: ["key", "value", "updatedAt"],
 };
@@ -38,6 +42,9 @@ function doPost(e) {
     if (action === "snapshot") return jsonOutput(saveSnapshot(data));
     if (action === "upsertStore") return jsonOutput(upsertStores([data.store]));
     if (action === "upsertHold") return jsonOutput(upsertHolds([data.hold]));
+    if (action === "upsertProject") return jsonOutput(upsertProjects([data.project]));
+    if (action === "upsertSample") return jsonOutput(upsertSamples([data.sample]));
+    if (action === "upsertComplaint") return jsonOutput(upsertComplaints([data.complaint]));
     if (action === "uploadPhoto") return jsonOutput(uploadPhoto(data));
     throw new Error("Unknown action: " + action);
   } catch (error) {
@@ -75,7 +82,9 @@ function saveSnapshot(data) {
   ensureAllSheets(ensureSpreadsheet());
   if (Array.isArray(data.stores)) upsertStores(data.stores);
   if (Array.isArray(data.holds)) upsertHolds(data.holds);
-  if (Array.isArray(data.photos)) upsertPhotos(data.photos);
+  if (Array.isArray(data.projects)) upsertProjects(data.projects);
+  if (Array.isArray(data.samples)) upsertSamples(data.samples);
+  if (Array.isArray(data.complaints)) upsertComplaints(data.complaints);
   return { ok: true, message: "目前資料已同步到 Google Sheet" };
 }
 
@@ -89,7 +98,9 @@ function readAll() {
     driveFolderId: ROOT_FOLDER_ID,
     stores: readObjects(SHEETS.stores, HEADERS.stores),
     holds: readObjects(SHEETS.holds, HEADERS.holds),
-    photos: readObjects(SHEETS.photos, HEADERS.photos),
+    projects: readObjects(SHEETS.projects, HEADERS.projects),
+    samples: readObjects(SHEETS.samples, HEADERS.samples),
+    complaints: readObjects(SHEETS.complaints, HEADERS.complaints),
   };
 }
 
@@ -121,6 +132,7 @@ function uploadPhoto(data) {
   ensureAllSheets(spreadsheet);
   const photo = data.photo || {};
   const imageDataUrl = data.imageDataUrl || "";
+  const targetTable = data.targetTable || "photos";
   if (!photo.id) throw new Error("Missing photo id");
   if (!imageDataUrl.startsWith("data:image/")) throw new Error("Missing image data");
 
@@ -128,24 +140,30 @@ function uploadPhoto(data) {
   const storeFolder = getOrCreateFolder(root, sanitizeName(photo.storeName || photo.storeId || "未指定店家"));
   const createdAt = photo.createdAt ? new Date(photo.createdAt) : new Date();
   const timestamp = Utilities.formatDate(createdAt, Session.getScriptTimeZone(), "yyyyMMdd-HHmmss");
-  const fileName = sanitizeName(timestamp + "-" + (photo.category || "照片") + "-" + (photo.storeName || "店家")) + ".jpg";
+  
+  const prefix = targetTable === "samples" ? (photo.itemType || "樣品") : targetTable === "complaints" ? (photo.category || "客訴") : (photo.category || "照片");
+  const fileName = sanitizeName(timestamp + "-" + prefix + "-" + (photo.storeName || "店家")) + ".jpg";
   const blob = dataUrlToBlob(imageDataUrl, fileName);
   const file = storeFolder.createFile(blob);
-  const uploadedAt = new Date().toISOString();
+  const updatedAt = new Date().toISOString();
+  
   const savedPhoto = {
     id: photo.id,
     storeId: photo.storeId,
     storeName: photo.storeName,
     salesOwner: photo.salesOwner,
-    category: photo.category,
-    note: photo.note,
     driveUrl: file.getUrl(),
     fileId: file.getId(),
-    folderId: storeFolder.getId(),
-    createdAt: photo.createdAt,
-    uploadedAt,
+    createdAt: photo.createdAt || updatedAt,
+    updatedAt,
+    ...photo
   };
-  upsertPhotos([savedPhoto]);
+  
+  if (targetTable === "samples") {
+    upsertSamples([savedPhoto]);
+  } else if (targetTable === "complaints") {
+    upsertComplaints([savedPhoto]);
+  }
   return { ok: true, message: "照片已上傳 Google Drive", ...savedPhoto };
 }
 
@@ -311,6 +329,51 @@ function makeLookup(items, key) {
     lookup[item[key]] = item;
     return lookup;
   }, {});
+}
+
+function upsertProjects(projects) {
+  const storesById = makeLookup(readObjects(SHEETS.stores, HEADERS.stores), "id");
+  const rows = projects.filter(Boolean).map((proj) => {
+    const store = storesById[proj.storeId] || {};
+    return {
+      ...proj,
+      storeName: proj.storeName || store.name || "",
+      salesOwner: proj.salesOwner || store.salesOwner || "",
+      updatedAt: new Date().toISOString(),
+    };
+  });
+  upsertObjects(SHEETS.projects, HEADERS.projects, rows);
+  return { ok: true, message: "案場報備已同步" };
+}
+
+function upsertSamples(samples) {
+  const storesById = makeLookup(readObjects(SHEETS.stores, HEADERS.stores), "id");
+  const rows = samples.filter(Boolean).map((item) => {
+    const store = storesById[item.storeId] || {};
+    return {
+      ...item,
+      storeName: item.storeName || store.name || "",
+      salesOwner: item.salesOwner || store.salesOwner || "",
+      updatedAt: new Date().toISOString(),
+    };
+  });
+  upsertObjects(SHEETS.samples, HEADERS.samples, rows);
+  return { ok: true, message: "樣品與展架已同步" };
+}
+
+function upsertComplaints(complaints) {
+  const storesById = makeLookup(readObjects(SHEETS.stores, HEADERS.stores), "id");
+  const rows = complaints.filter(Boolean).map((comp) => {
+    const store = storesById[comp.storeId] || {};
+    return {
+      ...comp,
+      storeName: comp.storeName || store.name || "",
+      salesOwner: comp.salesOwner || store.salesOwner || "",
+      updatedAt: new Date().toISOString(),
+    };
+  });
+  upsertObjects(SHEETS.complaints, HEADERS.complaints, rows);
+  return { ok: true, message: "客訴紀錄已同步" };
 }
 
 function jsonOutput(data) {
