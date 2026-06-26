@@ -829,16 +829,26 @@ function render() {
 
   renderSalesOptions();
   renderCounts();
-  renderSelects();
-  renderStores();
-  renderHolds();
-  renderProjects();
-  renderSamples();
-  renderComplaints();
-  renderPhotos();
-  renderHome();
-  renderCloudStatus();
-  renderSalesOwnerAdmin();
+
+  const activeView = Object.keys(views).find(name => views[name]?.classList.contains("active")) || "home";
+
+  if (activeView === "home") {
+    renderHome();
+  } else if (activeView === "stores") {
+    renderSelects();
+    renderStores();
+  } else if (activeView === "holds") {
+    renderHolds();
+  } else if (activeView === "projects") {
+    renderProjects();
+  } else if (activeView === "samples") {
+    renderSamples();
+  } else if (activeView === "complaints") {
+    renderComplaints();
+  } else if (activeView === "admin") {
+    renderSalesOwnerAdmin();
+    renderCloudStatus();
+  }
 
   const openReportLink = document.querySelector("#openOriginalReportLink");
   if (openReportLink) {
@@ -1303,15 +1313,7 @@ function renderHome() {
   }
 }
 
-function renderPhotos() {
-  const list = document.querySelector("#photoFolderList");
-  const stores = getVisibleStores();
-  if (!stores.length) {
-    list.innerHTML = emptyState(t("請先建立店家資料，再替店家上架拍照存檔"));
-    return;
-  }
-  list.innerHTML = stores.map((store) => photoFolderCard(store)).join("");
-}
+
 
 function holdCard(hold, compact = false) {
   const store = getStore(hold.storeId);
@@ -1345,43 +1347,7 @@ function holdCard(hold, compact = false) {
   `;
 }
 
-function photoFolderCard(store) {
-  const photos = state.photos.filter((photo) => photo.storeId === store.id);
-  const previewHtml = photos.slice(0, 3).length
-    ? photos.slice(0, 3).map((photo) => `<img src="${photo.image}" alt="${escapeHtml(store.name)}照片" />`).join("")
-    : `<div class="folder-placeholder">尚無照片</div>`;
-  return `
-    <section class="info-card folder-card">
-      <div class="card-header">
-        <h2>${escapeHtml(store.name)}</h2>
-        <span class="badge">${photos.length} 張</span>
-      </div>
-      <div class="meta">固定地址：${escapeHtml(store.address || "未填地址")}</div>
-      <div class="folder-preview">${previewHtml}</div>
-      <div class="photo-grid">${photos.length ? photos.map((photo) => photoCard(photo)).join("") : ""}</div>
-    </section>
-  `;
-}
 
-function photoCard(photo) {
-  const store = getStore(photo.storeId);
-  const cloudLine = photo.driveUrl
-    ? `<br /><a class="inline-link" href="${escapeHtml(photo.driveUrl)}" target="_blank" rel="noopener">查看 Google Drive 照片</a>`
-    : `<br />雲端狀態：${escapeHtml(cloudStatusLabel(photo.cloudStatus))}`;
-  return `
-    <article class="photo-card">
-      <img src="${photo.image}" alt="${escapeHtml(photo.category)}照片" />
-      <div class="photo-body">
-        <div class="card-header">
-          <h2>${escapeHtml(photo.category)}</h2>
-          <span class="badge">${formatDate(photo.createdAt)}</span>
-        </div>
-        <div class="meta">${escapeHtml(store?.name || t("未指定店家"))}<br />${escapeHtml(photo.note || "無備註")}${cloudLine}</div>
-        <button class="small-button" data-action="delete-photo" data-id="${photo.id}">刪除</button>
-      </div>
-    </article>
-  `;
-}
 
 
 function loadCloudConfig() {
@@ -1637,6 +1603,7 @@ function setView(view) {
   closeComboPanels();
   loadExternalFrame(view);
   window.scrollTo({ top: 0, behavior: "smooth" });
+  render();
 }
 
 function loadExternalFrame(view) {
