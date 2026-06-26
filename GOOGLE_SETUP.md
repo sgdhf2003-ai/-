@@ -39,6 +39,29 @@ https://script.google.com/macros/s/AKfycb.../exec
 - 每個店家的照片資料夾
 - 照片檔案與 Sheet 紀錄連結
 
+## 4. Users 登入權限分頁
+
+這版 Apps Script 會在 Google Sheet 自動建立 `Users` 分頁，欄位如下：
+
+`id / username / displayName / password / role / salesOwner / status / note / createdAt / updatedAt`
+
+預設帳號：
+
+- `admin / admin123`：管理員，可看全部資料
+- `cai / cai123`：業務蔡
+- `lun / lun123`：業務倫
+- `hao / hao123`：業務豪
+- `sales001 / sales001`：備用帳號，預設停用
+- `sales002 / sales002`：備用帳號，預設停用
+
+正式使用前，請先到 `Users` 分頁修改預設密碼。`status` 必須是 `啟用` 才能登入；改成 `停用` 就會禁止登入。
+
+登入 API 使用 POST JSON：
+
+`{ "action": "login", "username": "admin", "password": "admin123" }`
+
+成功會回傳使用者資料與權限，不會回傳密碼。
+
 ## 注意
 
 目前 PWA 仍保留本機資料作為暫存。照片會先壓縮後存本機縮圖，再將較大版本上傳到 Google Drive，避免手機長期堆滿原圖。

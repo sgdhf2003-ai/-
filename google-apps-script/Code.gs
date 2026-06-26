@@ -4,6 +4,7 @@ const SHEETS = {
   stores: "店家資料",
   holds: "保留物品",
   photos: "照片存檔",
+  users: "Users",
   settings: "系統設定",
 };
 
@@ -11,6 +12,7 @@ const HEADERS = {
   stores: ["id", "customerCode", "name", "shortName", "salesOwner", "phone", "phone2", "mobile", "address", "region", "contactName", "taxId", "note", "createdAt", "updatedAt"],
   holds: ["id", "storeId", "storeName", "salesOwner", "item", "quantity", "reservationStatus", "holdAddress", "holdDate", "expiresAt", "reminderAt", "note", "status", "createdAt", "updatedAt"],
   photos: ["id", "storeId", "storeName", "salesOwner", "category", "note", "driveUrl", "fileId", "folderId", "createdAt", "uploadedAt"],
+  users: ["id", "username", "displayName", "password", "role", "salesOwner", "status", "note", "createdAt", "updatedAt"],
   settings: ["key", "value", "updatedAt"],
 };
 
@@ -23,6 +25,7 @@ function doPost(e) {
     const data = parseBody(e);
     const action = data.action || "readAll";
     if (action === "setup") return jsonOutput(setupBackend(data));
+    if (action === "login") return jsonOutput(loginUser(data));
     if (action === "readAll") return jsonOutput(readAll());
     if (action === "snapshot") return jsonOutput(saveSnapshot(data));
     if (action === "upsertStore") return jsonOutput(upsertStores([data.store]));
@@ -42,6 +45,7 @@ function parseBody(e) {
 function setupBackend(data) {
   const spreadsheet = ensureSpreadsheet();
   ensureAllSheets(spreadsheet);
+  ensureDefaultUsers();
   if (Array.isArray(data.stores) && data.stores.length) upsertStores(data.stores);
   setSetting("driveFolderId", getRootFolderId(data));
   setSetting("spreadsheetId", spreadsheet.getId());
@@ -74,6 +78,29 @@ function readAll() {
     stores: readObjects(SHEETS.stores, HEADERS.stores),
     holds: readObjects(SHEETS.holds, HEADERS.holds),
     photos: readObjects(SHEETS.photos, HEADERS.photos),
+  };
+}
+
+function loginUser(data) {
+  ensureAllSheets(ensureSpreadsheet());
+  ensureDefaultUsers();
+  const username = normalizeLoginValue(data.username || data.name || data.account);
+  const password = String(data.password || "");
+  if (!username || !password) throw new Error("請輸入帳號與密碼");
+
+  const user = readObjects(SHEETS.users, HEADERS.users).find((item) => {
+    return normalizeLoginValue(item.username) === username || normalizeLoginValue(item.displayName) === username;
+  });
+  if (!user) throw new Error("帳號或密碼錯誤");
+  if (String(user.status || "").trim() !== "啟用") throw new Error("此帳號已停用，請聯絡管理員");
+  if (String(user.password || "") !== password) throw new Error("帳號或密碼錯誤");
+
+  const safeUser = sanitizeUser(user);
+  return {
+    ok: true,
+    message: "登入成功",
+    user: safeUser,
+    permissions: getUserPermissions(safeUser),
   };
 }
 
@@ -133,6 +160,47 @@ function upsertHolds(holds) {
 function upsertPhotos(photos) {
   upsertObjects(SHEETS.photos, HEADERS.photos, photos.filter(Boolean));
   return { ok: true, message: "照片紀錄已同步" };
+}
+
+function ensureDefaultUsers() {
+  const existing = readObjects(SHEETS.users, HEADERS.users);
+  if (existing.length) return;
+  const now = new Date().toISOString();
+  upsertObjects(SHEETS.users, HEADERS.users, [
+    { id: "user-admin", username: "admin", displayName: "管理員", password: "admin123", role: "admin", salesOwner: "全部", status: "啟用", note: "預設管理員，請登入後到 Sheet 修改密碼", createdAt: now, updatedAt: now },
+    { id: "user-cai", username: "cai", displayName: "蔡", password: "cai123", role: "sales", salesOwner: "蔡", status: "啟用", note: "預設業務帳號，請修改密碼", createdAt: now, updatedAt: now },
+    { id: "user-lun", username: "lun", displayName: "倫", password: "lun123", role: "sales", salesOwner: "倫", status: "啟用", note: "預設業務帳號，請修改密碼", createdAt: now, updatedAt: now },
+    { id: "user-hao", username: "hao", displayName: "豪", password: "hao123", role: "sales", salesOwner: "豪", status: "啟用", note: "預設業務帳號，請修改密碼", createdAt: now, updatedAt: now },
+    { id: "user-sales001", username: "sales001", displayName: "業務001", password: "sales001", role: "sales", salesOwner: "業務001", status: "停用", note: "備用帳號，可改名後啟用", createdAt: now, updatedAt: now },
+    { id: "user-sales002", username: "sales002", displayName: "業務002", password: "sales002", role: "sales", salesOwner: "業務002", status: "停用", note: "備用帳號，可改名後啟用", createdAt: now, updatedAt: now },
+  ]);
+}
+
+function sanitizeUser(user) {
+  return {
+    id: user.id,
+    username: user.username,
+    displayName: user.displayName,
+    role: user.role,
+    salesOwner: user.salesOwner,
+    status: user.status,
+  };
+}
+
+function getUserPermissions(user) {
+  const isAdmin = user.role === "admin";
+  return {
+    canViewAllStores: isAdmin,
+    canManageUsers: isAdmin,
+    canManageSettings: isAdmin,
+    canUploadPhotos: true,
+    canManageHolds: true,
+    visibleSalesOwner: isAdmin ? "全部" : user.salesOwner,
+  };
+}
+
+function normalizeLoginValue(value) {
+  return String(value || "").trim().toLowerCase();
 }
 
 function ensureSpreadsheet() {
