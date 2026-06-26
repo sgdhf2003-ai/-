@@ -1238,3 +1238,95 @@ textarea {
     font-size: 13px;
   }
 }
+
+/* 登入 Overlay 與卡片樣式 */
+.login-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(4, 9, 20, 0.94);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.login-overlay.active {
+  display: flex;
+}
+
+.login-card {
+  width: min(100%, 420px);
+  padding: 28px 24px;
+  border: 1px solid rgba(105, 160, 255, 0.36);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 80% 20%, rgba(84, 226, 176, 0.12), transparent 30%),
+    linear-gradient(150deg, rgba(16, 33, 64, 0.98), rgba(7, 17, 34, 0.98));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 24px 60px rgba(0, 0, 0, 0.54);
+}
+
+.login-card .brand-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.login-card .brand-mark {
+  display: inline-block;
+  width: 50px;
+  height: 50px;
+  margin-bottom: 12px;
+  border-radius: 50%;
+  background:
+    conic-gradient(from 18deg, transparent 0 22%, #4c9cff 22% 72%, transparent 72% 100%),
+    radial-gradient(circle, rgba(85, 167, 255, 0.14), transparent 58%);
+  filter: drop-shadow(0 0 14px rgba(85, 167, 255, 0.72));
+}
+
+.login-card h1 {
+  font-size: 24px;
+  margin-bottom: 4px;
+}
+
+.login-card .eyebrow {
+  margin-top: 4px;
+  font-size: 11px;
+}
+
+.login-settings-details {
+  margin-top: 20px;
+  border-top: 1px solid rgba(105, 160, 255, 0.18);
+  padding-top: 16px;
+}
+
+.login-settings-details summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+  text-align: center;
+  list-style: none;
+}
+
+.login-settings-details summary::-webkit-details-marker {
+  display: none;
+}
+
+/* 用戶狀態顯示標籤 */
+.user-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid rgba(84, 226, 176, 0.44);
+  border-radius: 999px;
+  color: #c8ffe8;
+  background: rgba(84, 226, 176, 0.12);
+  font-size: 13px;
+  font-weight: 900;
+  white-space: nowrap;
+}

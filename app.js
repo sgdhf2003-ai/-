@@ -11,6 +11,8 @@ const initialState = {
   stores: [],
   holds: [],
   photos: [],
+  currentUser: null,
+  currentPermissions: null,
 };
 
 let state = loadState();
@@ -100,6 +102,79 @@ document.querySelector("#storeForm").addEventListener("submit", (event) => {
 
 document.querySelector("#storeCancelButton")?.addEventListener("click", () => {
   cancelEditStore();
+});
+
+document.querySelector("#loginForm")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  const username = form.get("username").trim();
+  const password = form.get("password");
+  const submitButton = event.currentTarget.querySelector("button[type='submit']");
+
+  if (!getCloudApiUrl()) {
+    toast("請先在下方「API 連線設定」中儲存 Apps Script 網址");
+    return;
+  }
+
+  submitButton.disabled = true;
+  submitButton.textContent = "登入中...";
+
+  try {
+    const response = await fetch(getCloudApiUrl(), {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({
+        action: "login",
+        username,
+        password
+      })
+    });
+    const text = await response.text();
+    let result;
+    try {
+      result = JSON.parse(text);
+    } catch {
+      throw new Error("API 登入回應格式不正確，請檢查 URL");
+    }
+
+    if (!result.ok) {
+      throw new Error(result.error || "登入失敗，請檢查帳號密碼");
+    }
+
+    state.currentUser = result.user;
+    state.currentPermissions = result.permissions;
+
+    if (!state.currentPermissions.canViewAllStores) {
+      state.activeSalesOwner = state.currentUser.salesOwner;
+    }
+
+    saveState();
+    render();
+    toast("登入成功！歡迎 " + (state.currentUser.displayName || state.currentUser.username));
+    setView("home");
+  } catch (error) {
+    toast(error.message || "登入連線失敗，請檢查網路或 API 網址");
+  } finally {
+    submitButton.disabled = false;
+    submitButton.textContent = "確認登入";
+  }
+});
+
+document.querySelector("#loginSaveApiButton")?.addEventListener("click", () => {
+  const url = String(document.querySelector("#loginApiUrlInput")?.value || "").trim();
+  cloudConfig.apiUrl = url;
+  saveCloudConfig();
+  toast(url ? "連線網址儲存成功" : "已清除連線網址");
+});
+
+document.querySelector("#logoutButton")?.addEventListener("click", () => {
+  if (!confirm("確定要登出系統嗎？")) return;
+  state.currentUser = null;
+  state.currentPermissions = null;
+  state.activeSalesOwner = "all";
+  saveState();
+  render();
+  toast("已登出帳號");
 });
 
 document.querySelector("#holdForm").addEventListener("submit", (event) => {
@@ -360,6 +435,31 @@ document.addEventListener("click", (event) => {
 });
 
 function render() {
+  const loginView = document.querySelector("#loginView");
+  const userPill = document.querySelector("#userDisplayName");
+  const logoutBtn = document.querySelector("#logoutButton");
+
+  const loginApiUrlInput = document.querySelector("#loginApiUrlInput");
+  if (loginApiUrlInput && !loginApiUrlInput.value) {
+    loginApiUrlInput.value = getCloudApiUrl();
+  }
+
+  if (!state.currentUser) {
+    if (loginView) loginView.classList.add("active");
+    if (userPill) userPill.style.display = "none";
+    if (logoutBtn) logoutBtn.style.display = "none";
+    return;
+  }
+
+  if (loginView) loginView.classList.remove("active");
+  if (userPill) {
+    userPill.textContent = state.currentUser.displayName || state.currentUser.username;
+    userPill.style.display = "inline-flex";
+  }
+  if (logoutBtn) {
+    logoutBtn.style.display = "inline-flex";
+  }
+
   renderSalesOptions();
   renderCounts();
   renderSelects();
@@ -389,15 +489,40 @@ function renderCounts() {
 
 function renderSalesOptions() {
   normalizeSalesOwners();
-  const options = [
-    `<option value="all">全部業務</option>`,
-    ...state.salesOwners.map((owner) => `<option value="${escapeHtml(owner)}">${escapeHtml(owner)}</option>`),
-  ].join("");
-  document.querySelector("#salesFilter").innerHTML = options;
-  document.querySelector("#salesFilter").value = state.activeSalesOwner || "all";
-  document.querySelector("#storeSalesSelect").innerHTML = state.salesOwners
-    .map((owner) => `<option value="${escapeHtml(owner)}">${escapeHtml(owner)}</option>`)
-    .join("");
+  const permissions = state.currentPermissions || { canViewAllStores: true, visibleSalesOwner: "全部" };
+
+  let options = [];
+  if (permissions.canViewAllStores) {
+    options.push(`<option value="all">全部業務</option>`);
+    options.push(...state.salesOwners.map((owner) => `<option value="${escapeHtml(owner)}">${escapeHtml(owner)}</option>`));
+  } else {
+    options.push(`<option value="${escapeHtml(permissions.visibleSalesOwner)}">${escapeHtml(permissions.visibleSalesOwner)}</option>`);
+  }
+
+  const salesFilterSelect = document.querySelector("#salesFilter");
+  if (salesFilterSelect) {
+    salesFilterSelect.innerHTML = options.join("");
+    if (permissions.canViewAllStores) {
+      salesFilterSelect.disabled = false;
+      salesFilterSelect.value = state.activeSalesOwner || "all";
+    } else {
+      salesFilterSelect.disabled = true;
+      salesFilterSelect.value = permissions.visibleSalesOwner;
+    }
+  }
+
+  const storeSalesSelect = document.querySelector("#storeSalesSelect");
+  if (storeSalesSelect) {
+    if (permissions.canViewAllStores) {
+      storeSalesSelect.innerHTML = state.salesOwners
+        .map((owner) => `<option value="${escapeHtml(owner)}">${escapeHtml(owner)}</option>`)
+        .join("");
+      storeSalesSelect.disabled = false;
+    } else {
+      storeSalesSelect.innerHTML = `<option value="${escapeHtml(permissions.visibleSalesOwner)}">${escapeHtml(permissions.visibleSalesOwner)}</option>`;
+      storeSalesSelect.disabled = true;
+    }
+  }
 }
 
 function renderSalesOwnerAdmin() {
@@ -522,6 +647,21 @@ function renderHome() {
   document.querySelector("#dueList").innerHTML = due.length
     ? due.map((hold) => holdCard(hold, true)).join("")
     : emptyState("目前沒有近期到期提醒");
+
+  const permissions = state.currentPermissions || { canViewAllStores: true };
+  const salesReportCard = document.querySelector("#salesReportCard");
+  if (salesReportCard) salesReportCard.style.display = permissions.canViewAllStores ? "grid" : "none";
+
+  const adminCard = document.querySelector("#adminCard");
+  if (adminCard) adminCard.style.display = permissions.canViewAllStores ? "grid" : "none";
+
+  const navAdminButton = document.querySelector("#navAdminButton");
+  if (navAdminButton) navAdminButton.style.display = permissions.canViewAllStores ? "inline-flex" : "none";
+
+  const nav = document.querySelector(".bottom-nav");
+  if (nav) {
+    nav.style.gridTemplateColumns = permissions.canViewAllStores ? "repeat(5, 1fr)" : "repeat(4, 1fr)";
+  }
 }
 
 function renderPhotos() {
@@ -968,6 +1108,11 @@ function resolveHoldRule({ reservationStatus, item = "", note = "" }) {
 }
 
 function getVisibleStores() {
+  const permissions = state.currentPermissions || { canViewAllStores: true, visibleSalesOwner: "全部" };
+  if (!permissions.canViewAllStores) {
+    return state.stores.filter((store) => store.salesOwner === permissions.visibleSalesOwner);
+  }
+
   if (!state.activeSalesOwner || state.activeSalesOwner === "all") {
     return state.stores;
   }
@@ -1347,6 +1492,6 @@ render();
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js?v=20260626-macarena-icon-v1").catch(() => {});
+    navigator.serviceWorker.register("./service-worker.js?v=20260626-login-v1").catch(() => {});
   });
 }

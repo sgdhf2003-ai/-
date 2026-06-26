@@ -10,11 +10,44 @@
     <meta name="apple-mobile-web-app-title" content="勁揚業務管家" />
     <meta name="format-detection" content="telephone=no" />
     <title>勁揚業務管家</title>
-    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=20260626-macarena-icon-v1" />
-    <link class="PWA-version" rel="manifest" href="manifest.webmanifest?v=20260626-macarena-icon-v1" />
-    <link rel="stylesheet" href="styles.css?v=20260626-macarena-icon-v1" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=20260626-login-v1" />
+    <link class="PWA-version" rel="manifest" href="manifest.webmanifest?v=20260626-login-v1" />
+    <link rel="stylesheet" href="styles.css?v=20260626-login-v1" />
   </head>
   <body>
+    <!-- 登入頁面遮罩 -->
+    <div id="loginView" class="login-overlay active">
+      <div class="login-card">
+        <div class="brand-header">
+          <span class="brand-mark"></span>
+          <h1>勁揚業務管家</h1>
+          <p class="eyebrow">SALES CONTROL SIGN IN</p>
+        </div>
+        <form id="loginForm" class="entry-form">
+          <label>
+            帳號 / 顯示名稱
+            <input name="username" required placeholder="請輸入帳號或名字" autocomplete="username" />
+          </label>
+          <label>
+            密碼
+            <input type="password" name="password" required placeholder="請輸入密碼" autocomplete="current-password" />
+          </label>
+          <button class="primary-button" type="submit" style="margin-top: 12px;">確認登入</button>
+        </form>
+        
+        <details class="login-settings-details">
+          <summary>API 連線設定</summary>
+          <div class="entry-form" style="margin-top: 10px;">
+            <label>
+              Apps Script API 網址
+              <input id="loginApiUrlInput" placeholder="請貼上部署網址" />
+            </label>
+            <button class="secondary-button" id="loginSaveApiButton" type="button">儲存連線網址</button>
+          </div>
+        </details>
+      </div>
+    </div>
+
     <div class="app-shell">
       <header class="topbar">
         <button class="brand-button" data-view="home" aria-label="回到首頁">
@@ -25,6 +58,7 @@
           </span>
         </button>
         <div class="topbar-actions">
+          <span id="userDisplayName" class="user-pill" style="display: none;"></span>
           <button class="notification-button" data-view="holds" aria-label="查看保留提醒">
             <span class="notification-icon" aria-hidden="true">!</span>
             <span class="notification-label">保留提醒</span>
@@ -33,6 +67,7 @@
           <select id="salesFilter" aria-label="業務篩選">
             <option value="all">全部業務</option>
           </select>
+          <button class="secondary-button small-button" id="logoutButton" style="display: none;">登出</button>
         </div>
       </header>
 
@@ -67,7 +102,7 @@
                 <p>每個店家都有專屬照片檔案夾</p>
               </span>
             </button>
-            <button class="domain-card" data-view="salesReport" style="--tone: #ff756f">
+            <button class="domain-card" id="salesReportCard" data-view="salesReport" style="--tone: #ff756f">
               <span class="team-badge">LIVE</span>
               <span class="domain-icon" aria-hidden="true">績</span>
               <span>
@@ -83,7 +118,7 @@
                 <p>直接在 App 裡查看庫存查詢系統</p>
               </span>
             </button>
-            <button class="domain-card" data-view="admin" style="--tone: #ff9552">
+            <button class="domain-card" id="adminCard" data-view="admin" style="--tone: #ff9552">
               <span class="team-badge">管理</span>
               <span class="domain-icon" aria-hidden="true">管</span>
               <span>
@@ -335,12 +370,12 @@
         <button class="nav-item" data-view="stores">店家</button>
         <button class="nav-item" data-view="holds">保留</button>
         <button class="nav-item" data-view="photos">拍照</button>
-        <button class="nav-pill" data-view="admin"><span>▣</span> 後台</button>
+        <button class="nav-pill" id="navAdminButton" data-view="admin"><span>▣</span> 後台</button>
       </nav>
     </div>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="store-data.js?v=20260626-macarena-icon-v1"></script>
-    <script src="app.js?v=20260626-macarena-icon-v1"></script>
+    <script src="store-data.js?v=20260626-login-v1"></script>
+    <script src="app.js?v=20260626-login-v1"></script>
   </body>
 </html>
