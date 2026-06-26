@@ -498,6 +498,7 @@ function render() {
     }
     openReportLink.href = href;
   }
+  applyRoleAesthetic();
 }
 
 function fillRememberedCredentials() {
@@ -606,7 +607,7 @@ function renderStores() {
   const list = document.querySelector("#storeList");
   const stores = getVisibleStores();
   if (!stores.length) {
-    list.innerHTML = emptyState("尚未建立店家資料");
+    list.innerHTML = emptyState(t("尚未建立店家資料"));
     return;
   }
   list.innerHTML = stores.map((store) => `
@@ -616,9 +617,9 @@ function renderStores() {
         <h2>${escapeHtml(store.name)}</h2>
       </div>
       <div class="meta">
-        負責業務：${escapeHtml(store.salesOwner || "未分配")}<br />
+        ${t("負責業務")}：${escapeHtml(store.salesOwner || "未分配")}<br />
         ${escapeHtml(storePhoneLine(store))}<br />
-        ${escapeHtml(store.address || "未填地址")}<br />
+        ${escapeHtml(store.address || t("未填地址"))}<br />
         ${escapeHtml(storeInfoLine(store))}
       </div>
       <div class="card-actions">
@@ -650,7 +651,7 @@ function startEditStore(storeId) {
   form.querySelector("[name='note']").value = store.note || "";
 
   const submitBtn = document.querySelector("#storeSubmitButton");
-  if (submitBtn) submitBtn.textContent = "更新店家資料";
+  if (submitBtn) submitBtn.textContent = t("更新店家資料");
 
   const cancelBtn = document.querySelector("#storeCancelButton");
   if (cancelBtn) cancelBtn.style.display = "inline-flex";
@@ -668,7 +669,7 @@ function cancelEditStore() {
   if (idInput) idInput.value = "";
 
   const submitBtn = document.querySelector("#storeSubmitButton");
-  if (submitBtn) submitBtn.textContent = "儲存店家資料";
+  if (submitBtn) submitBtn.textContent = t("儲存店家資料");
 
   const cancelBtn = document.querySelector("#storeCancelButton");
   if (cancelBtn) cancelBtn.style.display = "none";
@@ -714,7 +715,7 @@ function renderPhotos() {
   const list = document.querySelector("#photoFolderList");
   const stores = getVisibleStores();
   if (!stores.length) {
-    list.innerHTML = emptyState("請先建立店家資料，再替店家上架拍照存檔");
+    list.innerHTML = emptyState(t("請先建立店家資料，再替店家上架拍照存檔"));
     return;
   }
   list.innerHTML = stores.map((store) => photoFolderCard(store)).join("");
@@ -728,7 +729,7 @@ function holdCard(hold, compact = false) {
     <details class="info-card hold-card" ${compact ? "open" : ""}>
       <summary class="hold-summary">
         <span class="hold-summary-text">
-          <strong>${escapeHtml(store?.name || "未指定店家")}</strong>
+          <strong>${escapeHtml(store?.name || t("未指定店家"))}</strong>
           <span>保留物品：${escapeHtml(hold.item)}${hold.quantity ? ` / ${escapeHtml(hold.quantity)}` : ""}</span>
           <span>保留起始日期：${formatDate(timing.holdDate)}</span>
         </span>
@@ -783,7 +784,7 @@ function photoCard(photo) {
           <h2>${escapeHtml(photo.category)}</h2>
           <span class="badge">${formatDate(photo.createdAt)}</span>
         </div>
-        <div class="meta">${escapeHtml(store?.name || "未指定店家")}<br />${escapeHtml(photo.note || "無備註")}${cloudLine}</div>
+        <div class="meta">${escapeHtml(store?.name || t("未指定店家"))}<br />${escapeHtml(photo.note || "無備註")}${cloudLine}</div>
         <button class="small-button" data-action="delete-photo" data-id="${photo.id}">刪除</button>
       </div>
     </article>
@@ -1024,7 +1025,14 @@ function setView(view) {
   }
   Object.entries(views).forEach(([name, element]) => element.classList.toggle("active", name === view));
   document.querySelectorAll("[data-view]").forEach((button) => button.classList.toggle("active", button.dataset.view === view));
-  setTextSafe("#viewTitle", viewNames[view]);
+  
+  let title = viewNames[view];
+  if (state.currentUser && state.currentUser.role === "retail") {
+    if (view === "stores") title = "設計公司/業主";
+    if (view === "photos") title = "案場拍照存檔";
+  }
+  setTextSafe("#viewTitle", title);
+  
   closeComboPanels();
   loadExternalFrame(view);
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1277,7 +1285,7 @@ function renderComboOptions(combo, forceOpen = false) {
 
   panel.innerHTML = matches.length
     ? matches.map((store) => comboOptionButton(combo, store)).join("")
-    : `<div class="combo-empty">找不到符合的店家</div>`;
+    : `<div class="combo-empty">${t("找不到符合的店家")}</div>`;
 
   if (forceOpen) {
     document.querySelectorAll(".combo-panel.open").forEach((openPanel) => {
@@ -1288,9 +1296,9 @@ function renderComboOptions(combo, forceOpen = false) {
 }
 
 function comboOptionButton(combo, store) {
-  const subline = [store.shortName, store.salesOwner ? `業務：${store.salesOwner}` : "", store.contactName]
+  const subline = [store.shortName, store.salesOwner ? `${t("負責業務")}：${store.salesOwner}` : "", store.contactName]
     .filter(Boolean)
-    .join("｜") || "店家資料";
+    .join("｜") || t("店家資料");
   return `
     <button class="combo-option" type="button" data-combo-pick="${combo}" data-store-id="${escapeHtml(store.id)}">
       <strong>${escapeHtml(storeOptionLabel(store))}</strong>
@@ -1550,10 +1558,120 @@ function toast(message) {
   window.setTimeout(() => element.classList.remove("show"), 2200);
 }
 
+function t(term) {
+  const role = state.currentUser ? state.currentUser.role : null;
+  if (role === "retail") {
+    switch (term) {
+      case "店家": return "設計公司/業主";
+      case "店家資料": return "案場資料";
+      case "店家名稱": return "設計案名 / 業主姓名";
+      case "店家名稱Placeholder": return "例：設計案名、業主案名關鍵字";
+      case "負責業務": return "負責人";
+      case "未指定店家": return "未指定設計/業主";
+      case "找不到符合的店家": return "找不到符合的項目";
+      case "尚未建立店家資料": return "尚未建立設計案或業主資料";
+      case "更新店家資料": return "更新案場資料";
+      case "儲存店家資料": return "儲存案場資料";
+      case "請先建立店家資料，再替店家上架拍照存檔": return "請先建立案場資料，再進行拍照存檔";
+      case "店家已選": return "設計/業主已選";
+      case "找不到店家資料": return "找不到案場資料";
+      case "地址": return "施工/送貨地址";
+      case "地址Placeholder": return "例：工地地址或送貨地址...";
+      case "未填地址": return "未填施工送貨地址";
+      default: return term;
+    }
+  }
+  
+  // 預設（sales / admin）
+  switch (term) {
+    case "店家名稱Placeholder": return "例：輸入店家編號或名稱關鍵字";
+    case "地址Placeholder": return "例：台北市中山區...";
+    case "未填地址": return "未填地址";
+    default: return term;
+  }
+}
+
+function applyRoleAesthetic() {
+  const role = state.currentUser ? state.currentUser.role : null;
+  const isRetail = (role === "retail");
+
+  // 1. 首頁選單卡片
+  const storesMenuCard = document.querySelector(".menu-card[data-view='stores']");
+  if (storesMenuCard) {
+    const strong = storesMenuCard.querySelector("strong");
+    const p = storesMenuCard.querySelector("p");
+    if (strong) strong.textContent = isRetail ? "設計公司/業主" : "店家";
+    if (p) p.textContent = isRetail ? "查看名下設計公司、設計師、業主案名與工地資料" : "查看業務名下店家、電話、地址與聯絡資料";
+  }
+
+  const photosMenuCard = document.querySelector(".menu-card[data-view='photos']");
+  if (photosMenuCard) {
+    const p = photosMenuCard.querySelector("p");
+    if (p) p.textContent = isRetail ? "每個設計案都有專屬照片檔案夾" : "每個店家都有專屬照片檔案夾";
+  }
+
+  // 2. 底部導覽列按鈕
+  const storesNavBtn = document.querySelector(".bottom-nav .nav-item[data-view='stores']");
+  if (storesNavBtn) {
+    storesNavBtn.textContent = isRetail ? "設計/業主" : "店家";
+  }
+
+  // 3. 店家表單的 Label 和 Placeholder
+  const storeForm = document.querySelector("#storeForm");
+  if (storeForm) {
+    const storesHeader = document.querySelector("#storesView .view-toolbar h1");
+    if (storesHeader) storesHeader.textContent = isRetail ? "設計公司/業主" : "店家";
+
+    const nameLabelText = document.querySelector(".stores-label-storeName");
+    if (nameLabelText) nameLabelText.textContent = isRetail ? "設計案名 / 業主姓名" : "店家名稱";
+
+    const nameInput = document.querySelector("#storeNameInput");
+    if (nameInput) nameInput.placeholder = t("店家名稱Placeholder");
+
+    const addressLabelText = document.querySelector(".stores-label-address");
+    if (addressLabelText) addressLabelText.textContent = isRetail ? "施工/送貨地址" : "地址";
+
+    const addressInput = storeForm.querySelector("[name='address']");
+    if (addressInput) addressInput.placeholder = t("地址Placeholder");
+
+    const submitBtn = document.querySelector("#storeSubmitButton");
+    if (submitBtn) {
+      if (submitBtn.textContent.indexOf("儲存") === 0) {
+        submitBtn.textContent = t("儲存店家資料");
+      } else if (submitBtn.textContent.indexOf("更新") === 0) {
+        submitBtn.textContent = t("更新店家資料");
+      }
+    }
+  }
+
+  // 4. 保留提醒表單的 Label 和 Placeholder
+  const holdForm = document.querySelector("#holdForm");
+  if (holdForm) {
+    const storeLabelText = document.querySelector(".holds-label-store");
+    if (storeLabelText) storeLabelText.textContent = isRetail ? "設計公司/業主" : "店家";
+
+    const storeInput = document.querySelector("#holdStoreInput");
+    if (storeInput) storeInput.placeholder = isRetail ? "輸入設計案名或設計公司關鍵字" : "輸入店家編號或名稱關鍵字";
+
+    const addressLabelText = document.querySelector(".holds-label-address");
+    if (addressLabelText) addressLabelText.textContent = isRetail ? "保留案場地址" : "保留地址";
+  }
+
+  // 5. 拍照上傳表單的 Label
+  const photoForm = document.querySelector("#photoForm");
+  if (photoForm) {
+    const storeLabelText = document.querySelector(".photos-label-store");
+    if (storeLabelText) storeLabelText.textContent = isRetail ? "設計公司/業主" : "店家";
+
+    const storeInput = document.querySelector("#photoStoreInput");
+    if (storeInput) storeInput.placeholder = isRetail ? "輸入設計案名或設計公司關鍵字" : "輸入店家編號或名稱關鍵字";
+  }
+}
+
 render();
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js?v=20260626-login-v3").catch(() => {});
+    navigator.serviceWorker.register("./service-worker.js?v=20260627-retail").catch(() => {});
   });
 }
