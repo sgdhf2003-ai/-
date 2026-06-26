@@ -1,14 +1,15 @@
-const CACHE_NAME = "jingyang-manager-pwa-v29-lock-edited";
+const CACHE_NAME = "jingyang-manager-pwa-v29-macarena-icon";
 const ASSETS = [
   "./",
   "./index.html",
-  "./styles.css?v=20260626-lock-edited-v1",
-  "./app.js?v=20260626-lock-edited-v1",
-  "./store-data.js?v=20260626-lock-edited-v1",
-  "./manifest.webmanifest?v=20260626-lock-edited-v1",
+  "./styles.css?v=20260626-macarena-icon-v1",
+  "./app.js?v=20260626-macarena-icon-v1",
+  "./store-data.js?v=20260626-macarena-icon-v1",
+  "./manifest.webmanifest?v=20260626-macarena-icon-v1",
   "./icons/icon.svg",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
+  "./icons/apple-touch-icon.png",
 ];
 
 self.addEventListener("install", (event) => {

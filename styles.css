@@ -1170,3 +1170,71 @@ textarea {
     gap: 10px;
   }
 }
+
+
+@media (max-width: 640px) {
+  .topbar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 18px;
+    padding-bottom: 14px;
+  }
+
+  .brand-button {
+    width: 100%;
+    min-height: 46px;
+    gap: 10px;
+  }
+
+  .brand-mark {
+    width: 44px;
+    height: 44px;
+    flex-basis: 44px;
+  }
+
+  .brand-button strong {
+    font-size: clamp(24px, 7vw, 30px);
+    white-space: normal;
+  }
+
+  .brand-button small {
+    margin-top: 5px;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+  }
+
+  .topbar-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .notification-button,
+  #salesFilter {
+    width: 100%;
+    min-width: 0;
+    height: 44px;
+  }
+
+  #salesFilter {
+    flex-basis: auto;
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 390px) {
+  .topbar-actions {
+    gap: 8px;
+  }
+
+  .notification-button {
+    padding-inline: 10px;
+  }
+
+  .notification-label,
+  #salesFilter {
+    font-size: 13px;
+  }
+}

@@ -1,6 +1,6 @@
 const STORAGE_KEY = "jingyang-sales-workspace-v2";
 const LEGACY_STORAGE_KEY = "jingyang-sales-workspace-v1";
-const IMPORT_VERSION = "customers-address-restore-2026-06-26-v1";
+const IMPORT_VERSION = "customers-mobile-topbar-2026-06-26-v1";
 const CLOUD_CONFIG_KEY = "jingyang-cloud-config-v1";
 const GOOGLE_DRIVE_FOLDER_ID = "1eOqcHag3qUO_Cd7n2Hv4A4Q3K8NKgXvB";
 
@@ -1347,6 +1347,6 @@ render();
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js?v=20260626-address-restore-v1").catch(() => {});
+    navigator.serviceWorker.register("./service-worker.js?v=20260626-macarena-icon-v1").catch(() => {});
   });
 }
