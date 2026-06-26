@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#071326" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="勁揚業務管家" />
+    <meta name="format-detection" content="telephone=no" />
+    <title>勁揚業務管家</title>
+    <link class="PWA-version" rel="manifest" href="manifest.webmanifest?v=20260626-lock-edited-v1" />
+    <link rel="stylesheet" href="styles.css?v=20260626-lock-edited-v1" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <button class="brand-button" data-view="home" aria-label="回到首頁">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <span>
+            <strong>勁揚業務管家</strong>
+            <small>SALES CONTROL</small>
+          </span>
+        </button>
+        <div class="topbar-actions">
+          <button class="notification-button" data-view="holds" aria-label="查看保留提醒">
+            <span class="notification-icon" aria-hidden="true">!</span>
+            <span class="notification-label">保留提醒</span>
+            <span class="notification-count zero" id="unreadCount">0</span>
+          </button>
+          <select id="salesFilter" aria-label="業務篩選">
+            <option value="all">全部業務</option>
+          </select>
+        </div>
+      </header>
+
+      <main>
+        <section class="view active" id="homeView">
+          <div class="section-title">
+            <span class="title-dot"></span>
+            <h1>選擇功能</h1>
+          </div>
+          <div class="domain-grid">
+            <button class="domain-card" data-view="stores" style="--tone: #58a8ff">
+              <span class="team-badge"><span id="storeCount">0</span> 家</span>
+              <span class="domain-icon" aria-hidden="true">店</span>
+              <span>
+                <strong>店家</strong>
+                <p>查看業務名下店家、電話、地址與聯絡資料</p>
+              </span>
+            </button>
+            <button class="domain-card" data-view="holds" style="--tone: #54e2b0">
+              <span class="team-badge"><span id="holdCount">0</span> 筆</span>
+              <span class="domain-icon" aria-hidden="true">留</span>
+              <span>
+                <strong>保留物品</strong>
+                <p>建立兩個月保留期限，前一週提醒所屬業務</p>
+              </span>
+            </button>
+            <button class="domain-card" data-view="photos" style="--tone: #f4bf58">
+              <span class="team-badge"><span id="photoCount">0</span> 張</span>
+              <span class="domain-icon" aria-hidden="true">拍</span>
+              <span>
+                <strong>上架拍照存檔</strong>
+                <p>每個店家都有專屬照片檔案夾</p>
+              </span>
+            </button>
+            <button class="domain-card" data-view="salesReport" style="--tone: #ff756f">
+              <span class="team-badge">LIVE</span>
+              <span class="domain-icon" aria-hidden="true">績</span>
+              <span>
+                <strong>業績分析</strong>
+                <p>連動業務業績分析表，手動刷新避免跳動</p>
+              </span>
+            </button>
+            <button class="domain-card" data-view="inventory" style="--tone: #ab68ff">
+              <span class="team-badge">LIVE</span>
+              <span class="domain-icon" aria-hidden="true">庫</span>
+              <span>
+                <strong>庫存查詢</strong>
+                <p>直接在 App 裡查看庫存查詢系統</p>
+              </span>
+            </button>
+            <button class="domain-card" data-view="admin" style="--tone: #ff9552">
+              <span class="team-badge">管理</span>
+              <span class="domain-icon" aria-hidden="true">管</span>
+              <span>
+                <strong>後台管理</strong>
+                <p>同步店家資料、匯出備份與系統工具</p>
+              </span>
+            </button>
+          </div>
+
+          <section class="panel compact-panel">
+            <div class="panel-heading">
+              <h2>最近提醒</h2>
+              <button class="text-button" data-view="holds">查看</button>
+            </div>
+            <div class="list" id="dueList"></div>
+          </section>
+        </section>
+
+        <section class="view" id="storesView">
+          <div class="view-toolbar">
+            <button class="back-button" data-view="home">‹</button>
+            <div>
+              <p class="eyebrow">STORE DATA</p>
+              <h1>店家</h1>
+            </div>
+          </div>
+          <form class="entry-form" id="storeForm">
+            <label>
+              店家名稱
+              <div class="search-combo" data-combo="storeName">
+                <input name="name" id="storeNameInput" required placeholder="例：輸入店家編號或名稱關鍵字" autocomplete="off" />
+                <button class="combo-toggle" type="button" data-combo-toggle="storeName" aria-label="展開店家清單">⌄</button>
+                <div class="combo-panel" data-combo-panel="storeName"></div>
+              </div>
+            </label>
+            <label>
+              聯絡電話
+              <input name="phone" inputmode="tel" placeholder="例：0912-345-678" />
+            </label>
+            <label>
+              地址
+              <input name="address" placeholder="例：台北市中山區..." />
+            </label>
+            <label>
+              負責業務
+              <select name="salesOwner" id="storeSalesSelect"></select>
+            </label>
+            <label>
+              備註
+              <textarea name="note" rows="3" placeholder="例：每週三上午方便到店"></textarea>
+            </label>
+            <input type="hidden" name="id" id="storeFormId" />
+            <div class="form-actions">
+              <button class="primary-button" type="submit" id="storeSubmitButton">儲存店家資料</button>
+              <button class="secondary-button" type="button" id="storeCancelButton" style="display: none;">取消編輯</button>
+            </div>
+          </form>
+          <div class="list" id="storeList"></div>
+        </section>
+
+        <section class="view" id="holdsView">
+          <div class="view-toolbar">
+            <button class="back-button" data-view="home">‹</button>
+            <div>
+              <p class="eyebrow">RESERVED ITEMS</p>
+              <h1>保留物品</h1>
+            </div>
+          </div>
+          <form class="entry-form" id="holdForm">
+            <label>
+              店家
+              <div class="search-combo" data-combo="holdStore">
+                <input id="holdStoreInput" required placeholder="輸入店家編號或名稱關鍵字" autocomplete="off" />
+                <button class="combo-toggle" type="button" data-combo-toggle="holdStore" aria-label="展開店家清單">⌄</button>
+                <div class="combo-panel" data-combo-panel="holdStore"></div>
+              </div>
+              <input type="hidden" name="storeId" id="holdStoreId" />
+            </label>
+            <label>
+              收訂狀態
+              <select name="reservationStatus" required>
+                <option>已收訂</option>
+                <option>未收訂</option>
+                <option>報備</option>
+              </select>
+            </label>
+            <div class="split-fields">
+              <label>
+                保留物品
+                <input name="item" required placeholder="例：編號、系列" />
+              </label>
+              <label>
+                數量
+                <input name="quantity" inputmode="numeric" placeholder="例：1" />
+              </label>
+            </div>
+            <label>
+              保留地址
+              <input name="holdAddress" required placeholder="例：台北市中山區南京東路一段 88 號" />
+            </label>
+            <label>
+              保留起始日期
+              <input name="holdDate" required type="date" />
+            </label>
+            <label>
+              提醒內容
+              <textarea name="note" rows="3" placeholder="例：到期前確認是否續留"></textarea>
+            </label>
+            <p class="form-note">已收訂保留為兩個月期限；提醒內容出現「一週 / 保留一週」會改成一週追蹤；報備僅記錄案場地址，不幫忙留貨。</p>
+            <button class="primary-button" type="submit">新增保留提醒</button>
+          </form>
+          <div class="list" id="holdList"></div>
+        </section>
+
+        <section class="view" id="photosView">
+          <div class="view-toolbar">
+            <button class="back-button" data-view="home">‹</button>
+            <div>
+              <p class="eyebrow">PHOTO ARCHIVE</p>
+              <h1>上架拍照存檔</h1>
+            </div>
+          </div>
+          <form class="entry-form" id="photoForm">
+            <label>
+              店家
+              <div class="search-combo" data-combo="photoStore">
+                <input id="photoStoreInput" required placeholder="輸入店家編號或名稱關鍵字" autocomplete="off" />
+                <button class="combo-toggle" type="button" data-combo-toggle="photoStore" aria-label="展開店家清單">⌄</button>
+                <div class="combo-panel" data-combo-panel="photoStore"></div>
+              </div>
+              <input type="hidden" name="storeId" id="photoStoreId" />
+            </label>
+            <label>
+              工作類型
+              <select name="category" id="photoCategorySelect">
+                <option>上架</option>
+                <option>客訴</option>
+                <option>下架</option>
+              </select>
+            </label>
+            <label>
+              拍照上傳
+              <input name="photo" required id="photoFileInput" type="file" accept="image/*" capture="environment" />
+            </label>
+            <label>
+              照片備註
+              <textarea name="note" rows="3" placeholder="例：架子位置、客訴產品及地點、下架原因..."></textarea>
+            </label>
+            <button class="primary-button" type="submit">存入照片檔案</button>
+          </form>
+          <div class="folder-grid" id="photoFolderList"></div>
+        </section>
+
+        <section class="view" id="salesReportView">
+          <div class="view-toolbar">
+            <button class="back-button" data-view="home">‹</button>
+            <div>
+              <p class="eyebrow">LIVE LINK</p>
+              <h1>業績分析</h1>
+            </div>
+          </div>
+          <div class="action-row">
+            <button class="secondary-button" data-action="reload-frame" data-frame="salesReportFrame">重新整理</button>
+            <a class="link-button" href="https://script.google.com/macros/s/AKfycbwonMKbfTbmkacvvNFXbqZXIi42KcRpXLtcEaYrLqH2SPbbh7z-A9QPYR257uJ0V0ha/exec" target="_blank" rel="noopener">開啟原表</a>
+          </div>
+          <section class="external-panel">
+            <iframe id="salesReportFrame" title="業務業績分析表" data-src="https://script.google.com/macros/s/AKfycbwonMKbfTbmkacvvNFXbqZXIi42KcRpXLtcEaYrLqH2SPbbh7z-A9QPYR257uJ0V0ha/exec" loading="lazy"></iframe>
+          </section>
+        </section>
+
+        <section class="view" id="inventoryView">
+          <div class="view-toolbar">
+            <button class="back-button" data-view="home">‹</button>
+            <div>
+              <p class="eyebrow">LIVE LINK</p>
+              <h1>庫存查詢</h1>
+            </div>
+          </div>
+          <div class="action-row">
+            <button class="secondary-button" data-action="reload-frame" data-frame="inventoryFrame">重新整理</button>
+            <a class="link-button" href="https://script.google.com/macros/s/AKfycbxioavjvzENr9duOtomZQRmbycbDtJOzKNAuSgcnE1ptNquTStiWMZwygLEHaYfPxOn/exec" target="_blank" rel="noopener">開啟原表</a>
+          </div>
+          <section class="external-panel">
+            <iframe id="inventoryFrame" title="庫存查詢表" data-src="https://script.google.com/macros/s/AKfycbxioavjvzENr9duOtomZQRmbycbDtJOzKNAuSgcnE1ptNquTStiWMZwygLEHaYfPxOn/exec" loading="lazy"></iframe>
+          </section>
+        </section>
+
+        <section class="view" id="adminView">
+          <div class="view-toolbar">
+            <button class="back-button" data-view="home">‹</button>
+            <div>
+              <p class="eyebrow">ADMIN</p>
+              <h1>後台管理</h1>
+            </div>
+          </div>
+          <div class="admin-grid">
+            <section class="panel">
+              <div class="panel-heading"><h2>資料管理</h2></div>
+              <div class="admin-actions">
+                <button class="management-card" data-view="stores"><strong>店家資料</strong><span id="adminStoreCount">0 筆</span></button>
+                <button class="management-card" data-view="holds"><strong>保留物品提醒</strong><span id="adminHoldCount">0 筆</span></button>
+                <button class="management-card" data-view="photos"><strong>照片檔案</strong><span id="adminPhotoCount">0 張</span></button>
+              </div>
+            </section>
+            <section class="panel">
+              <div class="panel-heading"><h2>業務管理</h2></div>
+              <form class="inline-admin-form" id="salesOwnerForm">
+                <input name="ownerName" required placeholder="新增業務名稱，例如：001" autocomplete="off" />
+                <button class="primary-button" type="submit">新增</button>
+              </form>
+              <div class="sales-owner-list" id="salesOwnerList"></div>
+              <p class="form-note">可以直接修改業務名稱；已分配店家的業務改名時，店家會一起更新。</p>
+            </section>
+            <section class="panel">
+              <div class="panel-heading"><h2>系統工具</h2></div>
+              <div class="admin-actions">
+                <button class="primary-button" id="seedButton">建立範例資料</button>
+                <button class="secondary-button" id="importSheetButton">同步已匯入店家</button>
+                <button class="secondary-button" id="exportButton">匯出資料備份</button>
+                <button class="danger-button" id="clearButton">清空本機資料</button>
+              </div>
+            </section>
+            <section class="panel cloud-panel">
+              <div class="panel-heading">
+                <h2>Google 雲端同步</h2>
+                <span class="status-pill" id="cloudStatus">尚未連線</span>
+              </div>
+              <form class="cloud-form" id="cloudConfigForm">
+                <label>
+                  Apps Script Web App URL
+                  <input id="cloudApiUrl" name="cloudApiUrl" inputmode="url" placeholder="部署後貼上 https://script.google.com/macros/s/.../exec" />
+                </label>
+                <p class="form-note">Drive 資料夾已設定：1eOqcHag3qUO_Cd7n2Hv4A4Q3K8NKgXvB</p>
+                <div class="admin-actions">
+                  <button class="primary-button" type="submit">儲存連線</button>
+                  <button class="secondary-button" type="button" id="cloudSetupButton">建立 Google 後台</button>
+                  <button class="secondary-button" type="button" id="cloudSyncButton">從雲端同步</button>
+                  <button class="secondary-button" type="button" id="cloudPushButton">上傳目前資料</button>
+                </div>
+              </form>
+              <div class="cloud-summary" id="cloudSummary">尚未設定 Apps Script URL。照片上傳會先存在本機，連線後即可同步到 Drive。</div>
+            </section>
+          </div>
+        </section>
+      </main>
+
+      <nav class="bottom-nav" aria-label="手機底部導覽">
+        <button class="nav-item active" data-view="home">首頁</button>
+        <button class="nav-item" data-view="stores">店家</button>
+        <button class="nav-item" data-view="holds">保留</button>
+        <button class="nav-item" data-view="photos">拍照</button>
+        <button class="nav-pill" data-view="admin"><span>▣</span> 後台</button>
+      </nav>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="store-data.js?v=20260626-lock-edited-v1"></script>
+    <script src="app.js?v=20260626-lock-edited-v1"></script>
+  </body>
+</html>

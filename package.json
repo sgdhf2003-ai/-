@@ -1,0 +1,10 @@
+{
+  "name": "jingyang-sales-manager",
+  "version": "0.1.0",
+  "private": true,
+  "description": "手機優先的勁揚業務管家 PWA 原型。",
+  "scripts": {
+    "start": "python3 -m http.server 4181 --bind 0.0.0.0",
+    "check": "node --check app.js && node --check service-worker.js"
+  }
+}
