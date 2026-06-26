@@ -1330,3 +1330,27 @@ textarea {
   font-weight: 900;
   white-space: nowrap;
 }
+
+/* 記住帳號密碼核取方塊樣式 */
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0;
+  cursor: pointer;
+  user-select: none;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.checkbox-row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  border: 1px solid rgba(105, 160, 255, 0.44);
+  background: rgba(4, 10, 22, 0.72) !important;
+  accent-color: #55a7ff;
+  cursor: pointer;
+  margin: 0;
+  padding: 0;
+}

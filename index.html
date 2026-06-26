@@ -10,9 +10,9 @@
     <meta name="apple-mobile-web-app-title" content="勁揚業務管家" />
     <meta name="format-detection" content="telephone=no" />
     <title>勁揚業務管家</title>
-    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=20260626-login-v1" />
-    <link class="PWA-version" rel="manifest" href="manifest.webmanifest?v=20260626-login-v1" />
-    <link rel="stylesheet" href="styles.css?v=20260626-login-v1" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=20260626-login-v2" />
+    <link class="PWA-version" rel="manifest" href="manifest.webmanifest?v=20260626-login-v2" />
+    <link rel="stylesheet" href="styles.css?v=20260626-login-v2" />
   </head>
   <body>
     <!-- 登入頁面遮罩 -->
@@ -31,6 +31,10 @@
           <label>
             密碼
             <input type="password" name="password" required placeholder="請輸入密碼" autocomplete="current-password" />
+          </label>
+          <label class="checkbox-row">
+            <input type="checkbox" id="loginRememberMe" name="rememberMe" />
+            記住帳號密碼
           </label>
           <button class="primary-button" type="submit" style="margin-top: 12px;">確認登入</button>
         </form>
@@ -375,7 +379,7 @@
     </div>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="store-data.js?v=20260626-login-v1"></script>
-    <script src="app.js?v=20260626-login-v1"></script>
+    <script src="store-data.js?v=20260626-login-v2"></script>
+    <script src="app.js?v=20260626-login-v2"></script>
   </body>
 </html>

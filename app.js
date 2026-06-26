@@ -2,6 +2,7 @@ const STORAGE_KEY = "jingyang-sales-workspace-v2";
 const LEGACY_STORAGE_KEY = "jingyang-sales-workspace-v1";
 const IMPORT_VERSION = "customers-mobile-topbar-2026-06-26-v1";
 const CLOUD_CONFIG_KEY = "jingyang-cloud-config-v1";
+const REMEMBER_ME_KEY = "jingyang-remember-me-v1";
 const GOOGLE_DRIVE_FOLDER_ID = "1eOqcHag3qUO_Cd7n2Hv4A4Q3K8NKgXvB";
 
 const initialState = {
@@ -153,6 +154,13 @@ document.querySelector("#loginForm")?.addEventListener("submit", async (event) =
 
     state.currentUser = result.user;
     state.currentPermissions = result.permissions;
+
+    const rememberCheckbox = document.querySelector("#loginRememberMe");
+    if (rememberCheckbox && rememberCheckbox.checked) {
+      localStorage.setItem(REMEMBER_ME_KEY, JSON.stringify({ username, password }));
+    } else {
+      localStorage.removeItem(REMEMBER_ME_KEY);
+    }
 
     if (!state.currentPermissions.canViewAllStores) {
       state.activeSalesOwner = state.currentUser.salesOwner;
@@ -458,6 +466,7 @@ function render() {
     if (loginView) loginView.classList.add("active");
     if (userPill) userPill.style.display = "none";
     if (logoutBtn) logoutBtn.style.display = "none";
+    fillRememberedCredentials();
     return;
   }
 
@@ -479,6 +488,23 @@ function render() {
   renderHome();
   renderCloudStatus();
   renderSalesOwnerAdmin();
+}
+
+function fillRememberedCredentials() {
+  try {
+    const saved = localStorage.getItem(REMEMBER_ME_KEY);
+    if (!saved) return;
+    const { username, password } = JSON.parse(saved);
+    const usernameInput = document.querySelector("#loginForm input[name='username']");
+    const passwordInput = document.querySelector("#loginForm input[name='password']");
+    const rememberCheckbox = document.querySelector("#loginRememberMe");
+    
+    if (usernameInput && !usernameInput.value) usernameInput.value = username || "";
+    if (passwordInput && !passwordInput.value) passwordInput.value = password || "";
+    if (rememberCheckbox) rememberCheckbox.checked = true;
+  } catch (e) {
+    console.error("Failed to load remembered credentials", e);
+  }
 }
 
 function renderCounts() {
@@ -1502,6 +1528,6 @@ render();
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js?v=20260626-login-v1").catch(() => {});
+    navigator.serviceWorker.register("./service-worker.js?v=20260626-login-v2").catch(() => {});
   });
 }
