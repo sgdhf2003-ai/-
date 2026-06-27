@@ -1,11 +1,11 @@
-const CACHE_NAME = "jingyang-manager-pwa-v34-revamp";
+const CACHE_NAME = "jingyang-manager-pwa-v35-sales-report-smooth";
 const ASSETS = [
   "./",
   "./index.html",
-  "./styles.css?v=20260627-revamp",
-  "./app.js?v=20260627-revamp",
-  "./store-data.js?v=20260627-revamp",
-  "./manifest.webmanifest?v=20260627-revamp",
+  "./styles.css?v=20260627-sales-report-smooth",
+  "./app.js?v=20260627-sales-report-smooth",
+  "./store-data.js?v=20260627-sales-report-smooth",
+  "./manifest.webmanifest?v=20260627-sales-report-smooth",
   "./icons/icon.svg",
   "./icons/icon-192.png",
   "./icons/icon-512.png",

@@ -653,12 +653,34 @@ textarea {
   padding: 13px;
 }
 
+.external-panel {
+  position: relative;
+}
+
 .external-panel iframe {
   width: 100%;
   min-height: calc(100vh - 220px);
   border: 1px solid rgba(105, 160, 255, 0.2);
   border-radius: 16px;
   background: #071326;
+}
+
+.frame-loading {
+  position: absolute;
+  inset: 1px;
+  z-index: 1;
+  display: none;
+  place-items: center;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(7, 19, 38, 0.96), rgba(14, 40, 73, 0.94));
+  color: #b9d4ff;
+  font-weight: 800;
+  letter-spacing: 0;
+  pointer-events: none;
+}
+
+.external-panel.is-loading .frame-loading {
+  display: grid;
 }
 
 .admin-grid {

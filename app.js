@@ -4,6 +4,7 @@ const IMPORT_VERSION = "customers-mobile-topbar-2026-06-26-v1";
 const CLOUD_CONFIG_KEY = "jingyang-cloud-config-v1";
 const REMEMBER_ME_KEY = "jingyang-remember-me-v1";
 const GOOGLE_DRIVE_FOLDER_ID = "1eOqcHag3qUO_Cd7n2Hv4A4Q3K8NKgXvB";
+const SALES_REPORT_URL = "https://script.google.com/macros/s/AKfycbwonMKbfTbmkacvvNFXbqZXIi42KcRpXLtcEaYrLqH2SPbbh7z-A9QPYR257uJ0V0ha/exec";
 
 const initialState = {
   activeSalesOwner: "all",
@@ -69,6 +70,7 @@ setupStoreCombo("projectStore");
 setupStoreCombo("sampleStore");
 setupStoreCombo("complaintStore");
 initCalculator();
+setupExternalFrameLoaders();
 
 document.querySelector("#storeForm").addEventListener("submit", (event) => {
   event.preventDefault();
@@ -144,14 +146,13 @@ document.querySelector("#loginForm")?.addEventListener("submit", async (event) =
   submitButton.textContent = "登入中...";
 
   try {
-    const response = await fetch(apiUrl, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({
-        action: "login",
-        username,
-        password
-      })
+    const loginUrl = new URL(apiUrl);
+    loginUrl.searchParams.set("action", "login");
+    loginUrl.searchParams.set("username", username);
+    loginUrl.searchParams.set("password", password);
+    const response = await fetch(loginUrl.toString(), {
+      method: "GET",
+      cache: "no-store"
     });
     const text = await response.text();
     let result;
@@ -181,6 +182,7 @@ document.querySelector("#loginForm")?.addEventListener("submit", async (event) =
 
     saveState();
     render();
+    warmSalesReportFrame();
     toast("登入成功！歡迎 " + (state.currentUser.displayName || state.currentUser.username));
     setView("home");
   } catch (error) {
@@ -1610,17 +1612,65 @@ function loadExternalFrame(view) {
   const frameByView = { salesReport: "salesReportFrame", inventory: "inventoryFrame" };
   const frameId = frameByView[view];
   if (!frameId) return;
+  loadFrameById(frameId);
+}
+
+function setupExternalFrameLoaders() {
+  ["salesReportFrame", "inventoryFrame"].forEach((frameId) => {
+    const frame = document.querySelector(`#${frameId}`);
+    if (!frame) return;
+    frame.addEventListener("load", () => setFrameLoading(frameId, false));
+  });
+}
+
+function buildFrameSrc(frameId) {
   const frame = document.querySelector(`#${frameId}`);
-  if (frame && !frame.src) {
-    let src = frame.dataset.src;
-    if (view === "salesReport") {
-      const permissions = state.currentPermissions || { canViewAllStores: true };
-      if (!permissions.canViewAllStores && state.currentUser && state.currentUser.salesOwner) {
-        src += (src.includes("?") ? "&" : "?") + "salesperson=" + encodeURIComponent(state.currentUser.salesOwner);
-      }
+  if (!frame) return "";
+  let src = frame.dataset.src;
+  if (frameId === "salesReportFrame") {
+    src = SALES_REPORT_URL;
+    const permissions = state.currentPermissions || { canViewAllStores: true };
+    if (!permissions.canViewAllStores && state.currentUser && state.currentUser.salesOwner) {
+      const url = new URL(src);
+      url.searchParams.set("salesperson", state.currentUser.salesOwner);
+      src = url.toString();
     }
-    frame.src = src;
   }
+  return src;
+}
+
+function loadFrameById(frameId, { force = false } = {}) {
+  const frame = document.querySelector(`#${frameId}`);
+  if (!frame) return;
+  const src = buildFrameSrc(frameId);
+  if (!src) return;
+  if (!force && frame.dataset.loadedSrc === src && frame.src) return;
+  setFrameLoading(frameId, true);
+  frame.dataset.loadedSrc = src;
+  frame.src = force ? addCacheBust(src) : src;
+}
+
+function warmSalesReportFrame() {
+  const run = () => {
+    if (!state.currentUser) return;
+    loadFrameById("salesReportFrame");
+  };
+  if ("requestIdleCallback" in window) {
+    window.requestIdleCallback(run, { timeout: 1800 });
+  } else {
+    window.setTimeout(run, 600);
+  }
+}
+
+function setFrameLoading(frameId, isLoading) {
+  const panel = document.querySelector(`[data-frame-panel="${frameId}"]`);
+  if (panel) panel.classList.toggle("is-loading", isLoading);
+}
+
+function addCacheBust(src) {
+  const url = new URL(src);
+  url.searchParams.set("_refresh", Date.now().toString());
+  return url.toString();
 }
 
 function reloadFrame(frameId) {
@@ -1629,14 +1679,7 @@ function reloadFrame(frameId) {
     toast("找不到要重新整理的表格");
     return;
   }
-  let src = frame.dataset.src;
-  if (frameId === "salesReportFrame") {
-    const permissions = state.currentPermissions || { canViewAllStores: true };
-    if (!permissions.canViewAllStores && state.currentUser && state.currentUser.salesOwner) {
-      src += (src.includes("?") ? "&" : "?") + "salesperson=" + encodeURIComponent(state.currentUser.salesOwner);
-    }
-  }
-  frame.src = src;
+  loadFrameById(frameId, { force: true });
   toast("已重新整理連動表");
 }
 
@@ -2324,6 +2367,6 @@ render();
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js?v=20260627-revamp").catch(() => {});
+    navigator.serviceWorker.register("./service-worker.js?v=20260627-sales-report-smooth").catch(() => {});
   });
 }
