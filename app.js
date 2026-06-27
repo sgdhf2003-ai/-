@@ -72,7 +72,7 @@ setupStoreCombo("complaintStore");
 initCalculator();
 setupExternalFrameLoaders();
 
-document.querySelector("#storeForm").addEventListener("submit", (event) => {
+document.querySelector("#storeForm").addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
   const name = form.get("name").trim();
@@ -80,6 +80,8 @@ document.querySelector("#storeForm").addEventListener("submit", (event) => {
   const address = form.get("address").trim();
   const salesOwner = form.get("salesOwner");
   const note = form.get("note").trim();
+
+  let savedStore = null;
 
   if (editingStoreId) {
     const store = state.stores.find((s) => s.id === editingStoreId);
@@ -94,26 +96,40 @@ document.querySelector("#storeForm").addEventListener("submit", (event) => {
       store.note = note;
       store.edited = true;
       store.updatedAt = new Date().toISOString();
-      toast("店家資料已更新");
+      savedStore = store;
+      toast(store.ownerEdited ? "店家資料已更新，業務歸屬已鎖定" : "店家資料已更新");
     } else {
       toast("更新失敗，找不到店家");
     }
     cancelEditStore();
   } else {
-    state.stores.unshift({
+    savedStore = {
       id: crypto.randomUUID(),
       name,
       phone,
       address,
       salesOwner,
       note,
+      edited: true,
+      ownerEdited: true,
       createdAt: new Date().toISOString(),
-    });
+      updatedAt: new Date().toISOString(),
+    };
+    state.stores.unshift(savedStore);
     event.currentTarget.reset();
     toast("店家資料已儲存");
   }
   saveState();
   render();
+
+  if (savedStore && getCloudApiUrl()) {
+    try {
+      await sendCloudWrite("upsertStore", { store: savedStore });
+    } catch (error) {
+      console.error(error);
+      toast("店家已存在本機，但雲端鎖定送出失敗");
+    }
+  }
 });
 
 document.querySelector("#storeCancelButton")?.addEventListener("click", () => {
@@ -2039,9 +2055,11 @@ function mergeImportedStores() {
     const existing = existingByCode.get(incoming.customerCode);
     const resolvedIncomingOwner = state.salesOwners.includes(incoming.salesOwner) ? incoming.salesOwner : "未分配";
     if (existing) {
-      const preservedOwner = incoming.ownerSource === "area-simulation-18x6"
-        ? resolvedIncomingOwner
-        : ((existing.ownerEdited || existing.edited) ? existing.salesOwner : resolvedIncomingOwner);
+      const preservedOwner = existing.ownerEdited
+        ? existing.salesOwner
+        : (incoming.ownerSource === "area-simulation-18x6"
+          ? resolvedIncomingOwner
+          : (existing.edited ? existing.salesOwner : resolvedIncomingOwner));
       
       if (existing.edited) {
         const savedFields = {
@@ -2057,7 +2075,7 @@ function mergeImportedStores() {
       } else {
         Object.assign(existing, incoming, {
           salesOwner: preservedOwner,
-          ownerEdited: incoming.ownerSource === "area-simulation-18x6" ? false : (existing.ownerEdited || false)
+          ownerEdited: existing.ownerEdited || false
         });
       }
       delete existing.monthlySales;
@@ -2367,6 +2385,6 @@ render();
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js?v=20260627-sales-report-smooth").catch(() => {});
+    navigator.serviceWorker.register("./service-worker.js?v=20260627-owner-lock-v1").catch(() => {});
   });
 }

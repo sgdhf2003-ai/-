@@ -11,7 +11,7 @@ const SHEETS = {
 };
 
 const HEADERS = {
-  stores: ["id", "customerCode", "name", "shortName", "salesOwner", "phone", "phone2", "mobile", "address", "region", "contactName", "taxId", "note", "createdAt", "updatedAt"],
+  stores: ["id", "customerCode", "name", "shortName", "salesOwner", "phone", "phone2", "mobile", "address", "region", "contactName", "taxId", "note", "createdAt", "updatedAt", "ownerEdited"],
   holds: ["id", "storeId", "storeName", "salesOwner", "item", "quantity", "reservationStatus", "holdAddress", "holdDate", "expiresAt", "reminderAt", "note", "status", "createdAt", "updatedAt"],
   projects: ["id", "storeId", "storeName", "salesOwner", "projectName", "projectAddress", "tileDetails", "expectedDeliveryDate", "status", "note", "createdAt", "updatedAt"],
   samples: ["id", "storeId", "storeName", "salesOwner", "itemType", "modelName", "quantity", "status", "driveUrl", "fileId", "note", "createdAt", "updatedAt"],
@@ -168,7 +168,11 @@ function uploadPhoto(data) {
 }
 
 function upsertStores(stores) {
-  upsertObjects(SHEETS.stores, HEADERS.stores, stores.filter(Boolean).map((store) => ({ ...store, updatedAt: new Date().toISOString() })));
+  upsertObjects(SHEETS.stores, HEADERS.stores, stores.filter(Boolean).map((store) => ({
+    ...store,
+    ownerEdited: normalizeBooleanValue(store.ownerEdited),
+    updatedAt: new Date().toISOString(),
+  })));
   return { ok: true, message: "店家資料已同步" };
 }
 
@@ -233,6 +237,10 @@ function normalizeLoginValue(value) {
   return String(value || "").trim().toLowerCase();
 }
 
+function normalizeBooleanValue(value) {
+  return value === true || String(value || "").toLowerCase() === "true" || String(value || "") === "1";
+}
+
 function ensureSpreadsheet() {
   const props = PropertiesService.getScriptProperties();
   const existingId = props.getProperty("SPREADSHEET_ID");
@@ -263,10 +271,21 @@ function ensureAllSheets(spreadsheet) {
 function ensureSheet(spreadsheet, name, headers) {
   let sheet = spreadsheet.getSheetByName(name);
   if (!sheet) sheet = spreadsheet.insertSheet(name);
-  const current = sheet.getRange(1, 1, 1, headers.length).getValues()[0];
+  const currentWidth = Math.max(sheet.getLastColumn(), headers.length);
+  const current = sheet.getRange(1, 1, 1, currentWidth).getValues()[0].filter(String);
+  const samePrefix = current.length && current.every((header, index) => header === headers[index]);
   if (current.join("") !== headers.join("")) {
-    sheet.clear();
-    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    if (samePrefix) {
+      const missing = headers.slice(current.length);
+      if (missing.length) {
+        sheet.getRange(1, current.length + 1, 1, missing.length).setValues([missing]);
+      }
+    } else if (sheet.getLastRow() <= 1) {
+      sheet.clear();
+      sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    } else {
+      throw new Error("Sheet header mismatch: " + name + "，請先確認欄位後再同步，避免清空資料。");
+    }
     sheet.setFrozenRows(1);
   }
   return sheet;
