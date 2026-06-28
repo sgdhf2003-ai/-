@@ -2711,7 +2711,7 @@ render();
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js?v=20260628-default-api-v10").catch(() => {});
+    navigator.serviceWorker.register("./service-worker.js?v=20260628-default-api-v11").catch(() => {});
   });
   
   let refreshing = false;
@@ -2729,58 +2729,4 @@ if (state.currentUser) {
   syncFromCloud(true).catch((e) => console.warn("Initial background sync failed:", e));
 }
 
-// OneSignal Web SDK Initialization
-window.OneSignalDeferred = window.OneSignalDeferred || [];
-window.OneSignalDeferred.push(async function(OneSignal) {
-  const customAppIdSetting = state.settings && state.settings.find(s => s.key === "oneSignalAppId");
-  const appId = (customAppIdSetting && customAppIdSetting.value) || "eb4c23ab-9624-45f4-b5ef-0a8236b6fb22";
-  
-  await OneSignal.init({
-    appId: appId,
-    allowLocalhostAsSecureOrigin: true
-  });
 
-  updatePushSubscriptionUI();
-
-  OneSignal.Notifications.addEventListener("permissionChange", () => {
-    updatePushSubscriptionUI();
-  });
-});
-
-async function updatePushSubscriptionUI() {
-  const subscribeBtn = document.querySelector("#oneSignalSubscribeButton");
-  if (!subscribeBtn) return;
-
-  if (window.OneSignal && OneSignal.Notifications) {
-    const isPermissionGranted = OneSignal.Notifications.permission;
-    if (isPermissionGranted) {
-      subscribeBtn.style.display = "none";
-      if (state.currentUser && state.currentUser.salesOwner) {
-        try {
-          await OneSignal.login(state.currentUser.salesOwner);
-        } catch (e) {
-          console.warn("OneSignal login alias binding failed:", e);
-        }
-      }
-    } else {
-      subscribeBtn.style.display = "inline-flex";
-    }
-  }
-}
-
-document.addEventListener("click", (e) => {
-  if (e.target && e.target.id === "oneSignalSubscribeButton") {
-    if (window.OneSignal && OneSignal.Notifications) {
-      OneSignal.Notifications.requestPermission().then((permission) => {
-        if (permission) {
-          toast("推播通知已啟用！");
-          updatePushSubscriptionUI();
-        }
-      }).catch(() => {
-        toast("喚起通知設定失敗，請至手機瀏覽器設定中開啟通知權限");
-      });
-    } else {
-      toast("推播元件載入中，請稍後再試...");
-    }
-  }
-});
