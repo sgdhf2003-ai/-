@@ -1,11 +1,13 @@
-const CACHE_NAME = "jingyang-manager-pwa-v48-default-api";
+importScripts("https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js");
+
+const CACHE_NAME = "jingyang-manager-pwa-v49-default-api";
 const ASSETS = [
   "./",
   "./index.html",
-  "./styles.css?v=20260628-default-api-v6",
-  "./app.js?v=20260628-default-api-v6",
-  "./store-data.js?v=20260628-default-api-v6",
-  "./manifest.webmanifest?v=20260628-default-api-v6",
+  "./styles.css?v=20260628-default-api-v7",
+  "./app.js?v=20260628-default-api-v7",
+  "./store-data.js?v=20260628-default-api-v7",
+  "./manifest.webmanifest?v=20260628-default-api-v7",
   "./icons/icon.svg",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
