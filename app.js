@@ -213,6 +213,9 @@ document.querySelector("#loginForm")?.addEventListener("submit", async (event) =
     render();
     warmSalesReportFrame();
     toast("登入成功！歡迎 " + (state.currentUser.displayName || state.currentUser.username));
+    requestNotificationPermission();
+    startAutoSync();
+    syncFromCloud(true).catch((e) => console.warn("Sync on login failed:", e));
     setView("home");
   } catch (error) {
     toast(error.message || "登入連線失敗，請檢查網路或 API 網址");
@@ -234,12 +237,13 @@ document.querySelector("#logoutButton")?.addEventListener("click", () => {
   state.currentUser = null;
   state.currentPermissions = null;
   state.activeSalesOwner = "all";
+  stopAutoSync();
   saveState();
   render();
   toast("已登出帳號");
 });
 
-document.querySelector("#holdForm").addEventListener("submit", (event) => {
+document.querySelector("#holdForm").addEventListener("submit", async (event) => {
   event.preventDefault();
   syncHoldStoreIdFromInput();
   const form = new FormData(event.currentTarget);
@@ -257,7 +261,7 @@ document.querySelector("#holdForm").addEventListener("submit", (event) => {
     item: form.get("item").trim(),
     note,
   });
-  state.holds.unshift({
+  const newHold = {
     id: crypto.randomUUID(),
     storeId,
     item: form.get("item").trim(),
@@ -271,12 +275,23 @@ document.querySelector("#holdForm").addEventListener("submit", (event) => {
     reminderRule: holdTiming.rule,
     note,
     status: "open",
+    edited: true,
     createdAt: new Date().toISOString(),
-  });
+  };
+  state.holds.unshift(newHold);
   event.currentTarget.reset();
   saveState();
   render();
   toast("保留物品提醒已建立");
+
+  if (getCloudApiUrl()) {
+    try {
+      await sendCloudWrite("upsertHold", { hold: newHold });
+    } catch (error) {
+      console.error(error);
+      toast("保留提醒已儲存於本機，但雲端送出失敗");
+    }
+  }
 });
 
 document.querySelector("#photoCategorySelect")?.addEventListener("change", updatePhotoUploadRequirement);
@@ -751,9 +766,13 @@ document.addEventListener("click", (event) => {
       return;
     }
     hold.status = hold.status === "done" ? "open" : "done";
+    hold.edited = true;
     saveState();
     render();
     toast(hold.status === "done" ? "保留提醒已標記完成" : "保留提醒已重新開啟");
+    if (getCloudApiUrl()) {
+      sendCloudWrite("upsertHold", { hold }).catch(console.error);
+    }
   }
   if (actionName === "delete-store") {
     if (editingStoreId === id) {
@@ -765,6 +784,9 @@ document.addEventListener("click", (event) => {
     saveState();
     render();
     toast("店家與相關資料已刪除");
+    if (getCloudApiUrl()) {
+      pushSnapshotToCloud().catch(console.error);
+    }
   }
   if (actionName === "edit-store") {
     startEditStore(id);
@@ -776,6 +798,9 @@ document.addEventListener("click", (event) => {
     saveState();
     render();
     toast(before === state.holds.length ? "找不到這筆保留資料" : "保留提醒已刪除");
+    if (getCloudApiUrl()) {
+      pushSnapshotToCloud().catch(console.error);
+    }
   }
   if (actionName === "delete-photo") {
     const before = state.photos.length;
@@ -783,6 +808,9 @@ document.addEventListener("click", (event) => {
     saveState();
     render();
     toast(before === state.photos.length ? "找不到這張照片資料" : "照片資料已刪除");
+    if (getCloudApiUrl()) {
+      pushSnapshotToCloud().catch(console.error);
+    }
   }
   if (actionName === "delete-project") {
     const before = (state.projects || []).length;
@@ -790,6 +818,9 @@ document.addEventListener("click", (event) => {
     saveState();
     render();
     toast(before === (state.projects || []).length ? "找不到這筆案場資料" : "案場報備已刪除");
+    if (getCloudApiUrl()) {
+      pushSnapshotToCloud().catch(console.error);
+    }
   }
   if (actionName === "edit-project") {
     startEditProject(id);
@@ -801,6 +832,9 @@ document.addEventListener("click", (event) => {
     saveState();
     render();
     toast(before === (state.samples || []).length ? "找不到這筆樣品展架記錄" : "樣品展架記錄已刪除");
+    if (getCloudApiUrl()) {
+      pushSnapshotToCloud().catch(console.error);
+    }
   }
   if (actionName === "edit-sample") {
     startEditSample(id);
@@ -812,6 +846,9 @@ document.addEventListener("click", (event) => {
     saveState();
     render();
     toast(before === (state.complaints || []).length ? "找不到這筆客訴資料" : "售後客訴單已刪除");
+    if (getCloudApiUrl()) {
+      pushSnapshotToCloud().catch(console.error);
+    }
   }
   if (actionName === "edit-complaint") {
     startEditComplaint(id);
@@ -1448,15 +1485,91 @@ async function pushSnapshotToCloud() {
   });
 }
 
-async function syncFromCloud() {
+let autoSyncTimer = null;
+
+function startAutoSync() {
+  if (autoSyncTimer) clearInterval(autoSyncTimer);
+  autoSyncTimer = setInterval(async () => {
+    if (state.currentUser && getCloudApiUrl()) {
+      try {
+        await syncFromCloud(true);
+      } catch (e) {
+        console.warn("Background auto-sync failed:", e);
+      }
+    }
+  }, 30000);
+}
+
+function stopAutoSync() {
+  if (autoSyncTimer) {
+    clearInterval(autoSyncTimer);
+    autoSyncTimer = null;
+  }
+}
+
+function showSystemNotification(title, body) {
+  if ("Notification" in window) {
+    if (Notification.permission === "granted") {
+      try {
+        new Notification(title, {
+          body,
+          icon: "icons/apple-touch-icon.png?v=20260628-default-api-v1"
+        });
+      } catch (e) {
+        console.warn("Notification creation failed:", e);
+      }
+    }
+  }
+  toast(`🔔 ${title}: ${body}`);
+}
+
+function requestNotificationPermission() {
+  if ("Notification" in window) {
+    if (Notification.permission === "default") {
+      Notification.requestPermission().then(permission => {
+        if (permission === "granted") {
+          console.log("Notification permission granted.");
+        }
+      }).catch(e => console.warn("Requesting notification permission failed:", e));
+    }
+  }
+}
+
+async function syncFromCloud(silent = false) {
   const result = await sendCloudAction("readAll", { driveFolderId: GOOGLE_DRIVE_FOLDER_ID });
+  
+  let newHoldsCount = 0;
+  if (state.currentUser && Array.isArray(result.holds)) {
+    const localHoldIds = new Set(state.holds.map(h => h.id));
+    result.holds.forEach(cloudHold => {
+      if (!localHoldIds.has(cloudHold.id)) {
+        const store = (result.stores || []).find(s => s.id === cloudHold.storeId);
+        const owner = store?.salesOwner || cloudHold.salesOwner;
+        if (owner === state.currentUser.salesOwner) {
+          newHoldsCount++;
+        }
+      }
+    });
+  }
+
   if (Array.isArray(result.stores) && result.stores.length) state.stores = mergeById(state.stores, result.stores);
   if (Array.isArray(result.holds)) state.holds = mergeById(state.holds, result.holds);
   if (Array.isArray(result.projects)) state.projects = mergeById(state.projects || [], result.projects);
   if (Array.isArray(result.samples)) state.samples = mergeById(state.samples || [], result.samples);
   if (Array.isArray(result.complaints)) state.complaints = mergeById(state.complaints || [], result.complaints);
   if (Array.isArray(result.photos)) state.photos = mergeById(state.photos, result.photos);
+  
   saveState();
+
+  if (newHoldsCount > 0) {
+    showSystemNotification(
+      "您有新的保留提醒",
+      `管理員或系統為您新增了 ${newHoldsCount} 筆新的保留物品提醒，請至「保留」頁面確認。`
+    );
+    render();
+  }
+
+  if (!silent) toast("已從 Google 後台同步資料");
   return { message: "已從 Google 後台同步資料" };
 }
 
@@ -1539,23 +1652,35 @@ async function sendCloudRead() {
 }
 
 function mergeById(localItems, cloudItems) {
-  const merged = new Map(localItems.map((item) => [item.id, item]));
+  const cloudIds = new Set(cloudItems.map(item => item.id).filter(Boolean));
+  
+  // 1. Filter out local items that were deleted on the cloud.
+  // A local item was deleted on the cloud if it's missing from cloudItems AND doesn't have unsynced local edits.
+  const filteredLocal = localItems.filter(item => {
+    const isLocalOnly = !cloudIds.has(item.id);
+    const hasUnsyncedEdits = item.edited || item.ownerEdited;
+    if (isLocalOnly && !hasUnsyncedEdits) {
+      return false; // Deleted on cloud
+    }
+    return true;
+  });
+
+  const merged = new Map(filteredLocal.map((item) => [item.id, item]));
   cloudItems.forEach((item) => {
     if (!item.id) return;
     const localItem = merged.get(item.id);
     if (localItem) {
       if (localItem.edited) {
         merged.set(item.id, {
-          ...item,
           ...localItem,
-          edited: true
+          ...item,
+          edited: false
         });
       } else if (localItem.ownerEdited) {
         merged.set(item.id, {
-          ...item,
           ...localItem,
-          salesOwner: localItem.salesOwner,
-          ownerEdited: true
+          ...item,
+          ownerEdited: false
         });
       } else {
         merged.set(item.id, { ...localItem, ...item });
@@ -2171,8 +2296,13 @@ function addMonths(date, months) {
 
 function parseDateInput(value) {
   if (value instanceof Date) return value;
-  const [year, month, day] = String(value).slice(0, 10).split("-").map(Number);
+  if (!value) return new Date();
+  const str = String(value).trim().replace(/\//g, "-");
+  let [year, month, day] = str.slice(0, 10).split("-").map(Number);
   if (!year || !month || !day) return new Date();
+  if (year < 1000) {
+    year += 1911;
+  }
   return new Date(year, month - 1, day, 12);
 }
 
@@ -2415,6 +2545,12 @@ render();
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js?v=20260627-owner-lock-v1").catch(() => {});
+    navigator.serviceWorker.register("./service-worker.js?v=20260628-default-api-v2").catch(() => {});
   });
+}
+
+if (state.currentUser) {
+  requestNotificationPermission();
+  startAutoSync();
+  syncFromCloud(true).catch((e) => console.warn("Initial background sync failed:", e));
 }
