@@ -16,7 +16,7 @@ const HEADERS = {
   projects: ["id", "storeId", "storeName", "salesOwner", "projectName", "projectAddress", "tileDetails", "expectedDeliveryDate", "status", "note", "createdAt", "updatedAt"],
   samples: ["id", "storeId", "storeName", "salesOwner", "itemType", "modelName", "quantity", "status", "driveUrl", "fileId", "note", "createdAt", "updatedAt"],
   complaints: ["id", "storeId", "storeName", "salesOwner", "issueDescription", "category", "driveUrl", "fileId", "status", "coordinationLog", "createdAt", "updatedAt"],
-  users: ["id", "username", "displayName", "password", "role", "salesOwner", "status", "note", "createdAt", "updatedAt"],
+  users: ["id", "username", "displayName", "password", "role", "salesOwner", "status", "note", "createdAt", "updatedAt", "lineUserId"],
   settings: ["key", "value", "updatedAt"],
 };
 
@@ -35,7 +35,13 @@ function doGet(e) {
 
 function doPost(e) {
   try {
-    const data = parseBody(e);
+    const contents = e && e.postData && e.postData.contents ? e.postData.contents : "";
+    if (contents.indexOf('"events"') !== -1) {
+      handleLineWebhook(JSON.parse(contents));
+      return ContentService.createTextOutput("OK");
+    }
+
+    const data = JSON.parse(contents || "{}");
     const action = data.action || "readAll";
     if (action === "setup") return jsonOutput(setupBackend(data));
     if (action === "login") return jsonOutput(loginUser(data));
@@ -134,12 +140,35 @@ function loginUser(data) {
   const password = String(data.password || "");
   if (!username || !password) throw new Error("請輸入帳號與密碼");
 
-  const user = readObjects(SHEETS.users, HEADERS.users).find((item) => {
-    return normalizeLoginValue(item.username) === username || normalizeLoginValue(item.displayName) === username;
+  const usersSheet = ensureSheet(ensureSpreadsheet(), SHEETS.users, HEADERS.users);
+  const users = readObjects(SHEETS.users, HEADERS.users);
+  
+  let userIndex = -1;
+  const user = users.find((item, index) => {
+    const match = normalizeLoginValue(item.username) === username || normalizeLoginValue(item.displayName) === username;
+    if (match) userIndex = index;
+    return match;
   });
   if (!user) throw new Error("帳號或密碼錯誤");
   if (String(user.status || "").trim() !== "啟用") throw new Error("此帳號已停用，請聯絡管理員");
   if (String(user.password || "") !== password) throw new Error("帳號或密碼錯誤");
+
+  // Save lineUserId to the user row in the spreadsheet if provided
+  if (data.lineUserId && String(data.lineUserId).trim().startsWith("U")) {
+    const lineUserId = String(data.lineUserId).trim();
+    user.lineUserId = lineUserId;
+    const rowNum = userIndex + 2;
+    const colIndex = HEADERS.users.indexOf("lineUserId") + 1;
+    if (colIndex > 0) {
+      usersSheet.getRange(rowNum, colIndex).setValue(lineUserId);
+    }
+    
+    // Bind the LINE Salesperson Rich Menu dynamically
+    linkLineRichMenu(lineUserId, user.role);
+    
+    // Send a push confirmation message via the LINE bot
+    sendLinePushMessage(lineUserId, "🎉 帳號綁定成功！\n您的 LINE 帳號已成功綁定為業務「" + user.displayName + "」，選單已切換為業務專用選單。");
+  }
 
   const safeUser = sanitizeUser(user);
   return {
@@ -587,4 +616,285 @@ function jsonOutput(data) {
 
 function triggerAuth() {
   UrlFetchApp.fetch("https://onesignal.com");
+}
+
+const DEFAULT_CHANNEL_ACCESS_TOKEN = 'LmKTad2eoLMSvaTu/WisCm25ONjqkbAj9me4cCcYijIPE1JyFMKL2TTTcYjPb2JI+Qb4t4yZUCdvNlaVd4gCy4TzzPgtwctDMFBdcba9KBdYVH4XmckKkwnkIbwFdhTxzWDX90GRauwvwWhVVrgGhQdB04t89/1O/w1cDnyilFU=';
+
+function sendLinePushMessage(targetId, message) {
+  if (!targetId) return;
+  const token = getSetting("lineChannelAccessToken") || DEFAULT_CHANNEL_ACCESS_TOKEN;
+  if (!token) return;
+
+  const url = "https://api.line.me/v2/bot/message/push";
+  const options = {
+    method: "post",
+    headers: {
+      "Authorization": "Bearer " + token,
+      "Content-Type": "application/json"
+    },
+    payload: JSON.stringify({
+      to: targetId,
+      messages: [{ type: "text", text: message }]
+    }),
+    muteHttpExceptions: true
+  };
+  try {
+    UrlFetchApp.fetch(url, options);
+  } catch (e) {
+    console.error("LINE Messaging API push failed:", e);
+  }
+}
+
+function sendLinePushToOwner(ownerName, message) {
+  if (!ownerName || ownerName === "無") return;
+  
+  if (ownerName === "全部" || ownerName === "管理員") {
+    const admins = readObjects(SHEETS.users, HEADERS.users).filter(u => u.role === "admin" && u.lineUserId);
+    admins.forEach(admin => {
+      sendLinePushMessage(admin.lineUserId, message);
+    });
+  } else {
+    const user = readObjects(SHEETS.users, HEADERS.users).find(u => u.salesOwner === ownerName && u.lineUserId);
+    if (user && user.lineUserId) {
+      sendLinePushMessage(user.lineUserId, message);
+    }
+  }
+}
+
+function linkLineRichMenu(lineUserId, role) {
+  const token = getSetting("lineChannelAccessToken") || DEFAULT_CHANNEL_ACCESS_TOKEN;
+  if (!token) return;
+  
+  const isInternal = role === "admin" || role === "sales";
+  const richMenuSalesId = getSetting("lineRichMenuSales");
+  const richMenuCustomerId = getSetting("lineRichMenuCustomer");
+  
+  if (isInternal && richMenuSalesId) {
+    UrlFetchApp.fetch("https://api.line.me/v2/bot/user/" + lineUserId + "/richmenu/" + richMenuSalesId, {
+      method: "post",
+      headers: { "Authorization": "Bearer " + token },
+      muteHttpExceptions: true
+    });
+  } else if (richMenuCustomerId) {
+    UrlFetchApp.fetch("https://api.line.me/v2/bot/user/" + lineUserId + "/richmenu/" + richMenuCustomerId, {
+      method: "post",
+      headers: { "Authorization": "Bearer " + token },
+      muteHttpExceptions: true
+    });
+  }
+}
+
+function setupLine() {
+  return setupLineRichMenus();
+}
+
+function setupLineRichMenus() {
+  const token = getSetting("lineChannelAccessToken") || DEFAULT_CHANNEL_ACCESS_TOKEN;
+  if (!token) throw new Error("LINE Channel Access Token is not set");
+
+  // 1. Delete all existing rich menus
+  const listUrl = "https://api.line.me/v2/bot/richmenu/list";
+  try {
+    const listRes = UrlFetchApp.fetch(listUrl, {
+      method: "get",
+      headers: { "Authorization": "Bearer " + token },
+      muteHttpExceptions: true
+    });
+    if (listRes.getResponseCode() === 200) {
+      const listObj = JSON.parse(listRes.getContentText());
+      if (listObj.richmenus) {
+        listObj.richmenus.forEach((menu) => {
+          UrlFetchApp.fetch("https://api.line.me/v2/bot/richmenu/" + menu.richMenuId, {
+            method: "delete",
+            headers: { "Authorization": "Bearer " + token },
+            muteHttpExceptions: true
+          });
+        });
+      }
+    }
+  } catch (e) {
+    console.error("Listing rich menus failed:", e);
+  }
+
+  // 2. Define Customer Rich Menu Layout (Compact)
+  const customerMenuConfig = {
+    size: { width: 2500, height: 843 },
+    selected: true,
+    name: "Customer Version Rich Menu",
+    chatBarText: "精選選單",
+    areas: [
+      {
+        bounds: { x: 0, y: 0, width: 833, height: 843 },
+        action: { type: "uri", label: "公司官網", uri: "https://docs.google.com/spreadsheets/d/1BtroF_mFVlC3mXyw7vO09H244636Vc6nVseW_0qS2Ss/edit" }
+      },
+      {
+        bounds: { x: 833, y: 0, width: 833, height: 843 },
+        action: { type: "uri", label: "聯絡客服", uri: "https://line.me/R/ti/p/@your_clerk" }
+      },
+      {
+        bounds: { x: 1666, y: 0, width: 834, height: 843 },
+        action: { type: "uri", label: "最新型錄", uri: "https://docs.google.com/spreadsheets/d/1BtroF_mFVlC3mXyw7vO09H244636Vc6nVseW_0qS2Ss/edit" }
+      }
+    ]
+  };
+
+  // 3. Define Salesperson Rich Menu Layout (Compact)
+  const salesMenuConfig = {
+    size: { width: 2500, height: 843 },
+    selected: true,
+    name: "Salesperson Version Rich Menu",
+    chatBarText: "業務專用選單",
+    areas: [
+      {
+        bounds: { x: 0, y: 0, width: 833, height: 843 },
+        action: { type: "message", label: "查詢保留", text: "查詢保留" }
+      },
+      {
+        bounds: { x: 833, y: 0, width: 833, height: 843 },
+        action: { type: "message", label: "查詢庫存", text: "查詢庫存" }
+      },
+      {
+        bounds: { x: 1666, y: 0, width: 834, height: 843 },
+        action: { type: "uri", label: "系統入口", uri: "https://brown-phi.vercel.app/" }
+      }
+    ]
+  };
+
+  // 4. Create Rich Menus helper
+  const createMenu = (config, imageUrl) => {
+    const res = UrlFetchApp.fetch("https://api.line.me/v2/bot/richmenu", {
+      method: "post",
+      headers: {
+        "Authorization": "Bearer " + token,
+        "Content-Type": "application/json"
+      },
+      payload: JSON.stringify(config),
+      muteHttpExceptions: true
+    });
+    
+    if (res.getResponseCode() !== 200) {
+      throw new Error("Failed to create Rich Menu: " + res.getContentText());
+    }
+    
+    const richMenuId = JSON.parse(res.getContentText()).richMenuId;
+
+    // Upload Image
+    const imgBlob = UrlFetchApp.fetch(imageUrl).getBlob();
+    const uploadRes = UrlFetchApp.fetch("https://api-data.line.me/v2/bot/richmenu/" + richMenuId + "/content", {
+      method: "post",
+      headers: {
+        "Authorization": "Bearer " + token,
+        "Content-Type": "image/jpeg"
+      },
+      payload: imgBlob.getBytes(),
+      muteHttpExceptions: true
+    });
+    
+    if (uploadRes.getResponseCode() !== 200) {
+      throw new Error("Failed to upload Rich Menu image: " + uploadRes.getContentText());
+    }
+
+    return richMenuId;
+  };
+
+  const customerMenuId = createMenu(customerMenuConfig, "https://brown-phi.vercel.app/customer_rich_menu.jpg");
+  const salesMenuId = createMenu(salesMenuConfig, "https://brown-phi.vercel.app/sales_rich_menu.jpg");
+
+  // 5. Set Customer Menu as default
+  UrlFetchApp.fetch("https://api.line.me/v2/bot/user/all/richmenu/" + customerMenuId, {
+    method: "post",
+    headers: { "Authorization": "Bearer " + token },
+    muteHttpExceptions: true
+  });
+
+  // 6. Save settings
+  setSetting("lineRichMenuCustomer", customerMenuId);
+  setSetting("lineRichMenuSales", salesMenuId);
+
+  return { ok: true, message: "LINE 圖文選單建立成功，客戶選單已設為預設。" };
+}
+
+function handleLineWebhook(payload) {
+  if (!payload || !payload.events) return;
+  
+  payload.events.forEach((event) => {
+    if (event.type === "message" && event.message.type === "text") {
+      const text = String(event.message.text).trim();
+      const userId = event.source.userId;
+      
+      if (text === "綁定") {
+        const replyToken = event.replyToken;
+        const bindUrl = "https://brown-phi.vercel.app/?lineUserId=" + userId;
+        const msg = "請點擊以下連結開啟「勁揚業務管家」並登入您的帳號，即可完成 LINE 身分綁定：\n" + bindUrl;
+        replyLineMessage(replyToken, msg);
+      }
+      else if (text === "查詢庫存" || text === "查詢保留") {
+        const user = readObjects(SHEETS.users, HEADERS.users).find(u => u.lineUserId === userId);
+        if (!user || (user.role !== "admin" && user.role !== "sales")) {
+          replyLineMessage(event.replyToken, "⚠️ 您的 LINE 帳號尚未完成內部業務人員身分綁定，無法使用此查詢功能。");
+          return;
+        }
+        
+        if (text === "查詢保留") {
+          const allHolds = readObjects(SHEETS.holds, HEADERS.holds).filter(h => h.status !== "done");
+          const holds = user.role === "admin" ? allHolds : allHolds.filter(h => h.salesOwner === user.salesOwner);
+          
+          if (!holds.length) {
+            replyLineMessage(event.replyToken, "ℹ️ 目前沒有未結案的保留物品項目。");
+          } else {
+            const list = holds.map(h => "- 店家: " + h.storeName + "\n  保留: " + h.item + " (" + (h.quantity || "1") + ")\n  到期: " + (h.expiresAt || "無")).join("\n\n");
+            replyLineMessage(event.replyToken, "📋 您好 " + user.displayName + "，目前有以下保留項目：\n\n" + list);
+          }
+        } else if (text === "查詢庫存") {
+          replyLineMessage(event.replyToken, "🔍 庫存查詢功能：\n請輸入 `庫存 [關鍵字]`（例如：`庫存 白馬`）來為您即時搜尋試算表中的樣品/展架庫存。");
+        }
+      }
+      else if (text.startsWith("庫存 ")) {
+        const user = readObjects(SHEETS.users, HEADERS.users).find(u => u.lineUserId === userId);
+        if (!user || (user.role !== "admin" && user.role !== "sales")) {
+          replyLineMessage(event.replyToken, "⚠️ 您的 LINE 帳號尚未完成內部業務人員身分綁定，無法使用此查詢功能。");
+          return;
+        }
+        
+        const keyword = text.slice(3).trim();
+        if (!keyword) {
+          replyLineMessage(event.replyToken, "⚠️ 請輸入要搜尋的庫存關鍵字，例如：`庫存 白馬`");
+          return;
+        }
+        
+        const samples = readObjects(SHEETS.samples, HEADERS.samples);
+        const matches = samples.filter(s => {
+          return String(s.modelName || "").indexOf(keyword) !== -1 || 
+                 String(s.itemType || "").indexOf(keyword) !== -1 ||
+                 String(s.storeName || "").indexOf(keyword) !== -1;
+        });
+        
+        if (!matches.length) {
+          replyLineMessage(event.replyToken, "ℹ️ 找不到包含「" + keyword + "」的庫存/樣品資料。");
+        } else {
+          const list = matches.slice(0, 10).map(s => "- 樣品: " + (s.modelName || s.itemType) + "\n  店家: " + s.storeName + "\n  數量: " + (s.quantity || "0") + "\n  位置: " + (s.note || "現場")).join("\n\n");
+          replyLineMessage(event.replyToken, "📦 庫存搜尋結果 (最多顯示10筆)：\n\n" + list);
+        }
+      }
+    }
+  });
+}
+
+function replyLineMessage(replyToken, text) {
+  const token = getSetting("lineChannelAccessToken") || DEFAULT_CHANNEL_ACCESS_TOKEN;
+  if (!token) return;
+  
+  const url = "https://api.line.me/v2/bot/message/reply";
+  UrlFetchApp.fetch(url, {
+    method: "post",
+    headers: {
+      "Authorization": "Bearer " + token,
+      "Content-Type": "application/json"
+    },
+    payload: JSON.stringify({
+      replyToken: replyToken,
+      messages: [{ type: "text", text: text }]
+    }),
+    muteHttpExceptions: true
+  });
 }

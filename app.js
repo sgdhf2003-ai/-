@@ -180,6 +180,12 @@ document.querySelector("#loginForm")?.addEventListener("submit", async (event) =
     loginUrl.searchParams.set("action", "login");
     loginUrl.searchParams.set("username", username);
     loginUrl.searchParams.set("password", password);
+    
+    const storedLineUserId = localStorage.getItem("lineUserId");
+    if (storedLineUserId) {
+      loginUrl.searchParams.set("lineUserId", storedLineUserId);
+    }
+    
     const response = await fetch(loginUrl.toString(), {
       method: "GET",
       cache: "no-store"
@@ -198,6 +204,9 @@ document.querySelector("#loginForm")?.addEventListener("submit", async (event) =
 
     state.currentUser = result.user;
     state.currentPermissions = result.permissions;
+    
+    // Clear lineUserId from localStorage on successful login
+    localStorage.removeItem("lineUserId");
 
     const rememberCheckbox = document.querySelector("#loginRememberMe");
     if (rememberCheckbox && rememberCheckbox.checked) {
@@ -2688,11 +2697,21 @@ function applyRoleAesthetic() {
   }
 }
 
+// Check and capture lineUserId from URL query params
+const urlParams = new URLSearchParams(window.location.search);
+const lineUserId = urlParams.get("lineUserId");
+if (lineUserId && lineUserId.trim().startsWith("U")) {
+  localStorage.setItem("lineUserId", lineUserId.trim());
+  toast("已獲取 LINE 身分，請登入您的業務/管理員帳號以完成綁定 🔗");
+  // Clean URL to keep it pretty
+  window.history.replaceState({}, document.title, window.location.pathname);
+}
+
 render();
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js?v=20260628-default-api-v9").catch(() => {});
+    navigator.serviceWorker.register("./service-worker.js?v=20260628-default-api-v10").catch(() => {});
   });
   
   let refreshing = false;
