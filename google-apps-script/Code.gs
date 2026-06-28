@@ -83,12 +83,30 @@ function setupBackend(data) {
 
 function saveSnapshot(data) {
   ensureAllSheets(ensureSpreadsheet());
-  if (Array.isArray(data.stores)) upsertStores(data.stores);
-  if (Array.isArray(data.holds)) upsertHolds(data.holds);
-  if (Array.isArray(data.projects)) upsertProjects(data.projects);
-  if (Array.isArray(data.samples)) upsertSamples(data.samples);
-  if (Array.isArray(data.complaints)) upsertComplaints(data.complaints);
+  if (Array.isArray(data.stores)) upsertStores(data.stores, true);
+  if (Array.isArray(data.holds)) upsertHolds(data.holds, true);
+  if (Array.isArray(data.projects)) upsertProjects(data.projects, true);
+  if (Array.isArray(data.samples)) upsertSamples(data.samples, true);
+  if (Array.isArray(data.complaints)) upsertComplaints(data.complaints, true);
+  if (Array.isArray(data.photos)) upsertPhotos(data.photos, true);
   return { ok: true, message: "目前資料已同步到 Google Sheet" };
+}
+
+function overwriteObjects(sheetName, headers, objects) {
+  const sheet = ensureSheet(ensureSpreadsheet(), sheetName, headers);
+  const lastRow = sheet.getLastRow();
+  if (lastRow > 1) {
+    sheet.getRange(2, 1, lastRow - 1, headers.length).clearContent();
+  }
+  
+  const validObjects = (objects || []).filter(Boolean);
+  if (!validObjects.length) return;
+  
+  const rows = validObjects.map((object) => {
+    return headers.map((header) => object[header] ?? "");
+  });
+  
+  sheet.getRange(2, 1, rows.length, headers.length).setValues(rows);
 }
 
 function readAll() {
@@ -171,16 +189,21 @@ function uploadPhoto(data) {
   return { ok: true, message: "照片已上傳 Google Drive", ...savedPhoto };
 }
 
-function upsertStores(stores) {
-  upsertObjects(SHEETS.stores, HEADERS.stores, stores.filter(Boolean).map((store) => ({
+function upsertStores(stores, isSnapshot) {
+  const rows = stores.filter(Boolean).map((store) => ({
     ...store,
     ownerEdited: normalizeBooleanValue(store.ownerEdited),
     updatedAt: new Date().toISOString(),
-  })));
+  }));
+  if (isSnapshot) {
+    overwriteObjects(SHEETS.stores, HEADERS.stores, rows);
+  } else {
+    upsertObjects(SHEETS.stores, HEADERS.stores, rows);
+  }
   return { ok: true, message: "店家資料已同步" };
 }
 
-function upsertHolds(holds) {
+function upsertHolds(holds, isSnapshot) {
   const storesById = makeLookup(readObjects(SHEETS.stores, HEADERS.stores), "id");
   const existingHolds = makeLookup(readObjects(SHEETS.holds, HEADERS.holds), "id");
   const rows = holds.filter(Boolean).map((hold) => {
@@ -202,12 +225,21 @@ function upsertHolds(holds) {
       updatedAt: new Date().toISOString(),
     };
   });
-  upsertObjects(SHEETS.holds, HEADERS.holds, rows);
+  if (isSnapshot) {
+    overwriteObjects(SHEETS.holds, HEADERS.holds, rows);
+  } else {
+    upsertObjects(SHEETS.holds, HEADERS.holds, rows);
+  }
   return { ok: true, message: "保留物品已同步" };
 }
 
-function upsertPhotos(photos) {
-  upsertObjects(SHEETS.photos, HEADERS.photos, photos.filter(Boolean));
+function upsertPhotos(photos, isSnapshot) {
+  const rows = photos.filter(Boolean);
+  if (isSnapshot) {
+    overwriteObjects(SHEETS.photos, HEADERS.photos, rows);
+  } else {
+    upsertObjects(SHEETS.photos, HEADERS.photos, rows);
+  }
   return { ok: true, message: "照片紀錄已同步" };
 }
 
@@ -365,7 +397,7 @@ function makeLookup(items, key) {
   }, {});
 }
 
-function upsertProjects(projects) {
+function upsertProjects(projects, isSnapshot) {
   const storesById = makeLookup(readObjects(SHEETS.stores, HEADERS.stores), "id");
   const rows = projects.filter(Boolean).map((proj) => {
     const store = storesById[proj.storeId] || {};
@@ -376,11 +408,15 @@ function upsertProjects(projects) {
       updatedAt: new Date().toISOString(),
     };
   });
-  upsertObjects(SHEETS.projects, HEADERS.projects, rows);
+  if (isSnapshot) {
+    overwriteObjects(SHEETS.projects, HEADERS.projects, rows);
+  } else {
+    upsertObjects(SHEETS.projects, HEADERS.projects, rows);
+  }
   return { ok: true, message: "案場報備已同步" };
 }
 
-function upsertSamples(samples) {
+function upsertSamples(samples, isSnapshot) {
   const storesById = makeLookup(readObjects(SHEETS.stores, HEADERS.stores), "id");
   const rows = samples.filter(Boolean).map((item) => {
     const store = storesById[item.storeId] || {};
@@ -391,11 +427,15 @@ function upsertSamples(samples) {
       updatedAt: new Date().toISOString(),
     };
   });
-  upsertObjects(SHEETS.samples, HEADERS.samples, rows);
+  if (isSnapshot) {
+    overwriteObjects(SHEETS.samples, HEADERS.samples, rows);
+  } else {
+    upsertObjects(SHEETS.samples, HEADERS.samples, rows);
+  }
   return { ok: true, message: "樣品與展架已同步" };
 }
 
-function upsertComplaints(complaints) {
+function upsertComplaints(complaints, isSnapshot) {
   const storesById = makeLookup(readObjects(SHEETS.stores, HEADERS.stores), "id");
   const rows = complaints.filter(Boolean).map((comp) => {
     const store = storesById[comp.storeId] || {};
@@ -406,7 +446,11 @@ function upsertComplaints(complaints) {
       updatedAt: new Date().toISOString(),
     };
   });
-  upsertObjects(SHEETS.complaints, HEADERS.complaints, rows);
+  if (isSnapshot) {
+    overwriteObjects(SHEETS.complaints, HEADERS.complaints, rows);
+  } else {
+    upsertObjects(SHEETS.complaints, HEADERS.complaints, rows);
+  }
   return { ok: true, message: "客訴紀錄已同步" };
 }
 
@@ -468,6 +512,7 @@ function saveSettingAction(data) {
 }
 
 function testLineNotifyAction(data) {
+  data = data || {};
   const appId = data.appId || getSetting("oneSignalAppId") || DEFAULT_ONESIGNAL_APP_ID;
   const apiKey = data.apiKey || getSetting("oneSignalApiKey");
   if (!appId || !apiKey) return { ok: false, error: "未設定 OneSignal App ID 或 REST API Key" };
@@ -512,4 +557,8 @@ function testLineNotifyAction(data) {
 
 function jsonOutput(data) {
   return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
+}
+
+function triggerAuth() {
+  UrlFetchApp.fetch("https://onesignal.com");
 }
