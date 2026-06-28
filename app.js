@@ -2683,7 +2683,7 @@ render();
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js?v=20260628-default-api-v5").catch(() => {});
+    navigator.serviceWorker.register("./service-worker.js?v=20260628-default-api-v6").catch(() => {});
   });
   
   let refreshing = false;
