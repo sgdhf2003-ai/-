@@ -243,6 +243,21 @@ document.querySelector("#logoutButton")?.addEventListener("click", () => {
   toast("已登出帳號");
 });
 
+document.querySelector("#pwaReloadButton")?.addEventListener("click", async () => {
+  toast("正在檢查更新並重新整理...");
+  if ("serviceWorker" in navigator) {
+    try {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      for (let registration of registrations) {
+        await registration.update();
+      }
+    } catch (e) {
+      console.warn("Service worker update failed:", e);
+    }
+  }
+  window.location.reload(true);
+});
+
 document.querySelector("#holdForm").addEventListener("submit", async (event) => {
   event.preventDefault();
   syncHoldStoreIdFromInput();
@@ -2546,6 +2561,14 @@ render();
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("./service-worker.js?v=20260628-default-api-v2").catch(() => {});
+  });
+  
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (!refreshing) {
+      refreshing = true;
+      window.location.reload();
+    }
   });
 }
 
