@@ -83,8 +83,9 @@ function setupBackend(data) {
 
 function saveSnapshot(data) {
   ensureAllSheets(ensureSpreadsheet());
+  const userContext = data.userContext || null;
   if (Array.isArray(data.stores)) upsertStores(data.stores, true);
-  if (Array.isArray(data.holds)) upsertHolds(data.holds, true);
+  if (Array.isArray(data.holds)) upsertHolds(data.holds, true, userContext);
   if (Array.isArray(data.projects)) upsertProjects(data.projects, true);
   if (Array.isArray(data.samples)) upsertSamples(data.samples, true);
   if (Array.isArray(data.complaints)) upsertComplaints(data.complaints, true);
@@ -203,9 +204,34 @@ function upsertStores(stores, isSnapshot) {
   return { ok: true, message: "店家資料已同步" };
 }
 
-function upsertHolds(holds, isSnapshot) {
+function upsertHolds(holds, isSnapshot, userContext) {
   const storesById = makeLookup(readObjects(SHEETS.stores, HEADERS.stores), "id");
   const existingHolds = makeLookup(readObjects(SHEETS.holds, HEADERS.holds), "id");
+  
+  // If isSnapshot is true, check for deleted holds to send deduction notifications
+  if (isSnapshot) {
+    const incomingIds = new Set(holds.filter(Boolean).map(h => h.id));
+    const deletedHolds = Object.values(existingHolds).filter(h => h && h.id && !incomingIds.has(h.id));
+    
+    deletedHolds.forEach((hold) => {
+      const store = storesById[hold.storeId] || {};
+      const storeName = hold.storeName || store.name || "未知店家";
+      const owner = hold.salesOwner || store.salesOwner || "無";
+      
+      const title = "保留項目扣除通知 🗑️";
+      if (userContext && userContext.role === "admin") {
+        // Admin deleted the hold -> Notify the local sales rep
+        const body = "管理員已扣除店家 " + storeName + " 的保留項目：" + hold.item + " (" + (hold.quantity || "1") + ")";
+        sendOneSignalPush(owner, title, body);
+      } else {
+        // Sales rep deleted the hold -> Notify the admin (target "全部")
+        const displayName = (userContext && userContext.displayName) || "業務";
+        const body = "業務 " + displayName + " 已扣除店家 " + storeName + " 的保留項目：" + hold.item + " (" + (hold.quantity || "1") + ")";
+        sendOneSignalPush("全部", title, body);
+      }
+    });
+  }
+
   const rows = holds.filter(Boolean).map((hold) => {
     const store = storesById[hold.storeId] || {};
     const isNew = !existingHolds[hold.id];

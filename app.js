@@ -1761,7 +1761,13 @@ async function sendCloudAction(action, payload = {}) {
 }
 
 async function sendCloudWrite(action, payload = {}) {
-  const body = JSON.stringify({ action, ...payload });
+  const userContext = state.currentUser ? {
+    username: state.currentUser.username,
+    displayName: state.currentUser.displayName,
+    role: state.currentUser.role,
+    salesOwner: state.currentUser.salesOwner
+  } : null;
+  const body = JSON.stringify({ action, userContext, ...payload });
   const timeout = new Promise((_, reject) => {
     window.setTimeout(() => reject(new Error("Google 後台回應逾時，但資料可能已送出，請稍後重新整理 Google Sheet 確認。")), 20000);
   });
@@ -2686,7 +2692,7 @@ render();
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js?v=20260628-default-api-v8").catch(() => {});
+    navigator.serviceWorker.register("./service-worker.js?v=20260628-default-api-v9").catch(() => {});
   });
   
   let refreshing = false;
