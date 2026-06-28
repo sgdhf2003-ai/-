@@ -3,7 +3,9 @@ const LEGACY_STORAGE_KEY = "jingyang-sales-workspace-v1";
 const IMPORT_VERSION = "customers-mobile-topbar-2026-06-26-v1";
 const CLOUD_CONFIG_KEY = "jingyang-cloud-config-v1";
 const REMEMBER_ME_KEY = "jingyang-remember-me-v1";
+const APP_SETTINGS_KEY = "jingyang-app-settings-v1";
 const GOOGLE_DRIVE_FOLDER_ID = "1eOqcHag3qUO_Cd7n2Hv4A4Q3K8NKgXvB";
+const DEFAULT_CLOUD_API_URL = "https://script.google.com/macros/s/AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw/exec";
 const SALES_REPORT_URL = "https://script.google.com/macros/s/AKfycbwonMKbfTbmkacvvNFXbqZXIi42KcRpXLtcEaYrLqH2SPbbh7z-A9QPYR257uJ0V0ha/exec";
 
 const initialState = {
@@ -23,6 +25,7 @@ const initialState = {
 let state = loadState();
 mergeImportedStores();
 let cloudConfig = loadCloudConfig();
+let appSettings = loadAppSettings();
 let editingStoreId = null;
 
 const views = {
@@ -52,6 +55,14 @@ const viewNames = {
 };
 
 document.addEventListener("click", (event) => {
+  const shortcut = event.target.closest("[data-shortcut-view]");
+  if (shortcut) {
+    event.preventDefault();
+    event.stopPropagation();
+    setView(shortcut.dataset.shortcutView);
+    return;
+  }
+
   const viewButton = event.target.closest("[data-view]");
   if (!viewButton) return;
   setView(viewButton.dataset.view);
@@ -61,6 +72,13 @@ document.querySelector("#salesFilter").addEventListener("change", (event) => {
   state.activeSalesOwner = event.target.value;
   saveState();
   render();
+});
+
+document.querySelector("#quickShortcutToggle")?.addEventListener("change", (event) => {
+  appSettings.quickShortcutsEnabled = event.target.checked;
+  saveAppSettings();
+  applyQuickShortcutSetting();
+  toast(event.target.checked ? "首頁卡片快捷鍵已開啟" : "首頁卡片快捷鍵已關閉");
 });
 
 setupStoreCombo("storeName");
@@ -151,11 +169,6 @@ document.querySelector("#loginForm")?.addEventListener("submit", async (event) =
     cloudConfig.apiUrl = inputUrl;
     saveCloudConfig();
     toast("已為您自動儲存 API 連線網址");
-  }
-
-  if (!apiUrl) {
-    toast("請先在下方「API 連線設定」中儲存 Apps Script 網址");
-    return;
   }
 
   submitButton.disabled = true;
@@ -819,6 +832,7 @@ document.addEventListener("click", (event) => {
 });
 
 function render() {
+  applyQuickShortcutSetting();
   const loginView = document.querySelector("#loginView");
   const userPill = document.querySelector("#userDisplayName");
   const logoutBtn = document.querySelector("#logoutButton");
@@ -866,6 +880,7 @@ function render() {
   } else if (activeView === "admin") {
     renderSalesOwnerAdmin();
     renderCloudStatus();
+    renderAppSettings();
   }
 
   const openReportLink = document.querySelector("#openOriginalReportLink");
@@ -878,6 +893,15 @@ function render() {
     openReportLink.href = href;
   }
   applyRoleAesthetic();
+}
+
+function renderAppSettings() {
+  const quickShortcutToggle = document.querySelector("#quickShortcutToggle");
+  if (quickShortcutToggle) quickShortcutToggle.checked = appSettings.quickShortcutsEnabled !== false;
+}
+
+function applyQuickShortcutSetting() {
+  document.body.classList.toggle("quick-shortcuts-off", appSettings.quickShortcutsEnabled === false);
 }
 
 function fillRememberedCredentials() {
@@ -1322,13 +1346,8 @@ function renderHome() {
   const adminCard = document.querySelector("#adminCard");
   if (adminCard) adminCard.style.display = permissions.canViewAllStores ? "grid" : "none";
 
-  const navAdminButton = document.querySelector("#navAdminButton");
-  if (navAdminButton) navAdminButton.style.display = permissions.canViewAllStores ? "inline-flex" : "none";
-
   const nav = document.querySelector(".bottom-nav");
-  if (nav) {
-    nav.style.gridTemplateColumns = permissions.canViewAllStores ? "repeat(5, 1fr)" : "repeat(4, 1fr)";
-  }
+  if (nav) nav.style.gridTemplateColumns = "";
 }
 
 
@@ -1370,7 +1389,7 @@ function holdCard(hold, compact = false) {
 
 function loadCloudConfig() {
   try {
-    return JSON.parse(localStorage.getItem(CLOUD_CONFIG_KEY)) || { apiUrl: "" };
+    return { apiUrl: "", ...JSON.parse(localStorage.getItem(CLOUD_CONFIG_KEY)) };
   } catch {
     return { apiUrl: "" };
   }
@@ -1381,33 +1400,24 @@ function saveCloudConfig() {
 }
 
 function getCloudApiUrl() {
-  return String(cloudConfig.apiUrl || "").trim();
+  return String(cloudConfig.apiUrl || DEFAULT_CLOUD_API_URL).trim();
 }
 
 function renderCloudStatus() {
   const urlInput = document.querySelector("#cloudApiUrl");
-  if (urlInput && document.activeElement !== urlInput) urlInput.value = getCloudApiUrl();
+  if (urlInput && document.activeElement !== urlInput) urlInput.value = String(cloudConfig.apiUrl || "");
   const status = document.querySelector("#cloudStatus");
   const summary = document.querySelector("#cloudSummary");
   if (!status || !summary) return;
-  if (!getCloudApiUrl()) {
-    status.textContent = "尚未連線";
-    status.className = "status-pill";
-    summary.textContent = `Drive 資料夾已設定，但尚未填入 Apps Script URL。Folder ID：${GOOGLE_DRIVE_FOLDER_ID}`;
-    return;
-  }
-  status.textContent = "已設定";
+  status.textContent = cloudConfig.apiUrl ? "自訂連線" : "內建連線";
   status.className = "status-pill connected";
-  summary.textContent = `已設定雲端後台。店家 ${state.stores.length} 筆、保留 ${state.holds.length} 筆、照片 ${state.photos.length} 張，可同步到 Google Sheet / Drive。`;
+  summary.textContent = cloudConfig.apiUrl
+    ? `目前使用管理員自訂 Apps Script URL。店家 ${state.stores.length} 筆、保留 ${state.holds.length} 筆、照片 ${state.photos.length} 張，可同步到 Google Sheet / Drive。`
+    : `目前使用程式內建 Apps Script 連線，業務只要帳號密碼即可登入。店家 ${state.stores.length} 筆、保留 ${state.holds.length} 筆、照片 ${state.photos.length} 張，可同步到 Google Sheet / Drive。`;
 }
 
 async function runCloudTask(workingMessage, task) {
   try {
-    if (!getCloudApiUrl()) {
-      toast("請先貼上 Apps Script Web App URL");
-      setView("admin");
-      return;
-    }
     toast(workingMessage);
     const result = await task();
     render();
@@ -2124,6 +2134,18 @@ function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
+function loadAppSettings() {
+  try {
+    return { quickShortcutsEnabled: true, ...JSON.parse(localStorage.getItem(APP_SETTINGS_KEY)) };
+  } catch {
+    return { quickShortcutsEnabled: true };
+  }
+}
+
+function saveAppSettings() {
+  localStorage.setItem(APP_SETTINGS_KEY, JSON.stringify(appSettings));
+}
+
 function fileToDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -2243,7 +2265,7 @@ function applyRoleAesthetic() {
   const isRetail = (role === "retail");
 
   // 1. 首頁選單卡片
-  const storesMenuCard = document.querySelector(".menu-card[data-view='stores']");
+  const storesMenuCard = document.querySelector(".domain-card[data-view='stores']");
   if (storesMenuCard) {
     const strong = storesMenuCard.querySelector("strong");
     const p = storesMenuCard.querySelector("p");
@@ -2251,7 +2273,7 @@ function applyRoleAesthetic() {
     if (p) p.textContent = isRetail ? "查看名下設計公司、設計師、業主案名與工地資料" : "查看業務名下店家、電話、地址與聯絡資料";
   }
 
-  const projectsMenuCard = document.querySelector(".menu-card[data-view='projects']");
+  const projectsMenuCard = document.querySelector(".domain-card[data-view='projects']");
   if (projectsMenuCard) {
     const strong = projectsMenuCard.querySelector("strong");
     const p = projectsMenuCard.querySelector("p");
@@ -2259,7 +2281,7 @@ function applyRoleAesthetic() {
     if (p) p.textContent = isRetail ? "登錄目前跟進的設計案、樣品及估價明細" : "報備進行中的工程案場，保障業務開發權益";
   }
 
-  const samplesMenuCard = document.querySelector(".menu-card[data-view='samples']");
+  const samplesMenuCard = document.querySelector(".domain-card[data-view='samples']");
   if (samplesMenuCard) {
     const strong = samplesMenuCard.querySelector("strong");
     const p = samplesMenuCard.querySelector("p");
@@ -2267,7 +2289,7 @@ function applyRoleAesthetic() {
     if (p) p.textContent = isRetail ? "登記擺放於設計公司的目錄本與展示瓷磚進度" : "追蹤放置於店家的目錄本、展示瓷磚與展架巡查";
   }
 
-  const complaintsMenuCard = document.querySelector(".menu-card[data-view='complaints']");
+  const complaintsMenuCard = document.querySelector(".domain-card[data-view='complaints']");
   if (complaintsMenuCard) {
     const strong = complaintsMenuCard.querySelector("strong");
     const p = complaintsMenuCard.querySelector("p");
@@ -2283,6 +2305,14 @@ function applyRoleAesthetic() {
   const projectsNavBtn = document.querySelector(".bottom-nav .nav-item[data-view='projects']");
   if (projectsNavBtn) {
     projectsNavBtn.textContent = isRetail ? "案場登錄" : "案場";
+  }
+  const samplesNavBtn = document.querySelector(".bottom-nav .nav-item[data-view='samples']");
+  if (samplesNavBtn) {
+    samplesNavBtn.textContent = isRetail ? "樣架" : "樣品";
+  }
+  const complaintsNavBtn = document.querySelector(".bottom-nav .nav-item[data-view='complaints']");
+  if (complaintsNavBtn) {
+    complaintsNavBtn.textContent = isRetail ? "售後" : "客訴";
   }
 
   // 3. 店家表單的 Label 和 Placeholder

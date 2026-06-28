@@ -64,7 +64,7 @@ textarea:focus-visible {
   width: min(100%, 980px);
   min-height: 100vh;
   margin: 0 auto;
-  padding: max(18px, env(safe-area-inset-top)) 14px 112px;
+  padding: max(18px, env(safe-area-inset-top)) 14px 150px;
 }
 
 .topbar {
@@ -200,11 +200,12 @@ h2 {
 
 .domain-card {
   position: relative;
-  min-height: 184px;
+  min-height: 214px;
   display: grid;
-  align-content: space-between;
+  grid-template-rows: auto minmax(0, 1fr);
+  align-content: start;
   gap: 12px;
-  padding: 22px 17px 17px;
+  padding: 22px 17px 66px;
   overflow: hidden;
   border: 1.5px solid rgba(91, 139, 226, 0.62);
   border-radius: 26px;
@@ -284,13 +285,55 @@ h2 {
 }
 
 .domain-card p {
-  min-height: 48px;
+  min-height: 44px;
   margin-top: 8px;
   color: #b8c8e5;
   font-size: 14px;
   line-height: 1.5;
   letter-spacing: 0;
   overflow-wrap: break-word;
+}
+
+.quick-row {
+  position: absolute;
+  left: 17px;
+  right: 17px;
+  bottom: 17px;
+  z-index: 2;
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 0;
+  padding-top: 10px;
+  border-top: 1px solid rgba(126, 170, 255, 0.16);
+}
+
+.quick-chip {
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 11px;
+  border: 1px solid rgba(126, 170, 255, 0.28);
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 22% 20%, rgba(255, 255, 255, 0.14), transparent 34%),
+    rgba(7, 17, 34, 0.5);
+  color: #d6e7ff;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+  box-shadow: inset 0 0 12px rgba(85, 167, 255, 0.08);
+}
+
+.quick-chip:active {
+  transform: scale(0.96);
+}
+
+body.quick-shortcuts-off .quick-row {
+  display: none;
 }
 
 .team-badge {
@@ -441,18 +484,22 @@ textarea {
 
 .search-combo {
   position: relative;
+  width: 100%;
+  min-width: 0;
 }
 
 .search-combo input {
+  display: block;
   padding-right: 58px;
 }
 
 .combo-toggle {
   position: absolute;
-  top: 7px;
+  top: 50%;
   right: 7px;
+  transform: translateY(-50%);
   width: 44px;
-  height: calc(100% - 14px);
+  height: 44px;
   border: 0;
   border-left: 1px solid rgba(105, 160, 255, 0.2);
   border-radius: 12px;
@@ -615,6 +662,37 @@ textarea {
   border: 1px solid rgba(105, 160, 255, 0.2);
 }
 
+.setting-toggle {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 12px;
+  border: 1px solid rgba(105, 160, 255, 0.22);
+  border-radius: 16px;
+  background: rgba(84, 151, 255, 0.08);
+  color: #c5d4ee;
+}
+
+.setting-toggle input {
+  width: 22px;
+  height: 22px;
+  accent-color: #73a9ff;
+}
+
+.setting-toggle strong,
+.setting-toggle small {
+  display: block;
+}
+
+.setting-toggle small {
+  margin-top: 3px;
+  color: #9fb1ce;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .folder-preview {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -743,12 +821,12 @@ textarea {
   bottom: max(12px, env(safe-area-inset-bottom));
   transform: translateX(-50%);
   z-index: 20;
-  width: min(620px, calc(100% - 28px));
-  min-height: 70px;
+  width: min(720px, calc(100% - 18px));
+  min-height: 62px;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 5px;
-  padding: 8px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 4px;
+  padding: 7px;
   border: 1px solid rgba(105, 160, 255, 0.36);
   border-radius: 28px;
   background:
@@ -763,9 +841,11 @@ textarea {
   border-radius: 999px;
   background: transparent;
   color: #a9bbd6;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 900;
   white-space: nowrap;
+  min-width: 0;
+  padding-inline: 6px;
 }
 
 .nav-item.active {
@@ -822,6 +902,96 @@ textarea {
   .entry-form label:last-of-type,
   .entry-form button,
   .form-note {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (min-width: 900px) {
+  .view.active > .entry-form {
+    width: min(100%, calc(100vw - 140px));
+    max-width: 980px;
+    margin-inline: auto;
+    grid-template-columns: minmax(0, 1.05fr) minmax(280px, 0.72fr);
+    align-items: start;
+    column-gap: 24px;
+    row-gap: 16px;
+    overflow: hidden;
+  }
+
+  .view.active > .entry-form label,
+  .view.active > .entry-form .search-combo {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .view.active > .entry-form > label,
+  .view.active > .entry-form > .split-fields {
+    align-content: start;
+    align-self: start;
+  }
+
+  .view.active > .entry-form input,
+  .view.active > .entry-form select,
+  .view.active > .entry-form textarea {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .view.active > .entry-form .combo-toggle {
+    right: 8px;
+    z-index: 3;
+  }
+
+  #sampleForm > label:nth-of-type(1),
+  #complaintForm > label:nth-of-type(1) {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  #sampleForm > .split-fields,
+  #complaintForm > .split-fields {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  #sampleForm > label:nth-of-type(2) {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  #sampleForm > label:nth-of-type(3) {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  #sampleForm > label:nth-of-type(4) {
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+
+  #sampleForm > label:nth-of-type(5) {
+    grid-column: 1 / -1;
+    grid-row: 4;
+  }
+
+  #complaintForm > label:nth-of-type(2) {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  #complaintForm > label:nth-of-type(3) {
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+
+  #complaintForm > label:nth-of-type(4) {
+    grid-column: 1 / -1;
+    grid-row: 4;
+  }
+
+  .view.active > .entry-form label:has(textarea),
+  .view.active > .entry-form label:has(input[type="file"]),
+  .view.active > .entry-form .form-actions {
     grid-column: 1 / -1;
   }
 }

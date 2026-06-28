@@ -10,9 +10,9 @@
     <meta name="apple-mobile-web-app-title" content="勁揚業務管家" />
     <meta name="format-detection" content="telephone=no" />
     <title>勁揚業務管家</title>
-    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=20260627-owner-lock-v1" />
-    <link class="PWA-version" rel="manifest" href="manifest.webmanifest?v=20260627-owner-lock-v1" />
-    <link rel="stylesheet" href="styles.css?v=20260627-owner-lock-v1" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=20260628-default-api-v1" />
+    <link class="PWA-version" rel="manifest" href="manifest.webmanifest?v=20260628-default-api-v1" />
+    <link rel="stylesheet" href="styles.css?v=20260628-default-api-v1" />
   </head>
   <body>
     <!-- 登入頁面遮罩 -->
@@ -40,13 +40,13 @@
         </form>
         
         <details class="login-settings-details">
-          <summary>API 連線設定</summary>
+          <summary>進階連線設定</summary>
           <div class="entry-form" style="margin-top: 10px;">
             <label>
-              Apps Script API 網址
-              <input id="loginApiUrlInput" placeholder="請貼上部署網址" />
+              Apps Script API 網址（管理員維修用）
+              <input id="loginApiUrlInput" placeholder="預設已內建，不需填寫" />
             </label>
-            <button class="secondary-button" id="loginSaveApiButton" type="button">儲存連線網址</button>
+            <button class="secondary-button" id="loginSaveApiButton" type="button">覆蓋連線網址</button>
           </div>
         </details>
       </div>
@@ -89,6 +89,10 @@
                 <strong class="stores-menu-title">店家資料</strong>
                 <p class="stores-menu-desc">查看負責店家、電話、地址與聯絡資料</p>
               </span>
+              <span class="quick-row" data-shortcut-row>
+                <span class="quick-chip" data-shortcut-view="stores">查看店家</span>
+                <span class="quick-chip" data-shortcut-view="holds">保留</span>
+              </span>
             </button>
             <button class="domain-card" data-view="holds" style="--tone: #54e2b0">
               <span class="team-badge"><span id="holdCount">0</span> 筆</span>
@@ -96,6 +100,10 @@
               <span>
                 <strong>保留提醒</strong>
                 <p>實物留貨管理，建立兩個月保留期限與到期提醒</p>
+              </span>
+              <span class="quick-row" data-shortcut-row>
+                <span class="quick-chip" data-shortcut-view="holds">新增保留</span>
+                <span class="quick-chip" data-shortcut-view="stores">找店家</span>
               </span>
             </button>
             <button class="domain-card" data-view="projects" style="--tone: #ff756f">
@@ -105,6 +113,10 @@
                 <strong class="projects-menu-title">案場報備</strong>
                 <p class="projects-menu-desc">登記工程案場、鎖定專案進度與出貨預估</p>
               </span>
+              <span class="quick-row" data-shortcut-row>
+                <span class="quick-chip" data-shortcut-view="projects">新增案場</span>
+                <span class="quick-chip" data-shortcut-view="stores">找店家</span>
+              </span>
             </button>
             <button class="domain-card" data-view="samples" style="--tone: #f4bf58">
               <span class="team-badge"><span id="sampleCount">0</span> 件</span>
@@ -112,6 +124,10 @@
               <span>
                 <strong class="samples-menu-title">樣品與展示架</strong>
                 <p class="samples-menu-desc">管理店面放置的樣品本與展示瓷磚架巡查</p>
+              </span>
+              <span class="quick-row" data-shortcut-row>
+                <span class="quick-chip" data-shortcut-view="samples">新增記錄</span>
+                <span class="quick-chip" data-shortcut-view="stores">找店家</span>
               </span>
             </button>
             <button class="domain-card" data-view="complaints" style="--tone: #ec4899">
@@ -121,6 +137,10 @@
                 <strong class="complaints-menu-title">售後客訴</strong>
                 <p class="complaints-menu-desc">售後服務申報、破損色差等跟進狀態</p>
               </span>
+              <span class="quick-row" data-shortcut-row>
+                <span class="quick-chip" data-shortcut-view="complaints">新增客訴</span>
+                <span class="quick-chip" data-shortcut-view="stores">找店家</span>
+              </span>
             </button>
             <button class="domain-card" data-view="calculator" style="--tone: #ab68ff">
               <span class="team-badge">工具</span>
@@ -128,6 +148,9 @@
               <span>
                 <strong>報價試算器</strong>
                 <p>快速計算瓷磚面積、耗損片數及所需箱數</p>
+              </span>
+              <span class="quick-row" data-shortcut-row>
+                <span class="quick-chip" data-shortcut-view="calculator">開啟試算</span>
               </span>
             </button>
             <button class="domain-card" id="salesReportCard" data-view="salesReport" style="--tone: #3b82f6">
@@ -137,6 +160,9 @@
                 <strong>業績分析</strong>
                 <p>連動業務業績分析表，雙北與外縣市數據</p>
               </span>
+              <span class="quick-row" data-shortcut-row>
+                <span class="quick-chip" data-shortcut-view="salesReport">查看業績</span>
+              </span>
             </button>
             <button class="domain-card" data-view="inventory" style="--tone: #10b981">
               <span class="team-badge">LIVE</span>
@@ -144,6 +170,9 @@
               <span>
                 <strong>庫存查詢</strong>
                 <p>直接在 App 裡查看庫存查詢系統</p>
+              </span>
+              <span class="quick-row" data-shortcut-row>
+                <span class="quick-chip" data-shortcut-view="inventory">查詢庫存</span>
               </span>
             </button>
             <button class="domain-card" id="adminCard" data-view="admin" style="--tone: #ff9552">
@@ -621,6 +650,13 @@
             </section>
             <section class="panel">
               <div class="panel-heading"><h2>系統工具</h2></div>
+              <label class="setting-toggle">
+                <input id="quickShortcutToggle" type="checkbox" />
+                <span>
+                  <strong>首頁卡片快捷鍵</strong>
+                  <small>開啟後，首頁每張功能卡片下方會顯示快捷入口。</small>
+                </span>
+              </label>
               <div class="admin-actions">
                 <button class="primary-button" id="seedButton">建立範例資料</button>
                 <button class="secondary-button" id="importSheetButton">同步已匯入店家</button>
@@ -636,9 +672,9 @@
               <form class="cloud-form" id="cloudConfigForm">
                 <label>
                   Apps Script Web App URL
-                  <input id="cloudApiUrl" name="cloudApiUrl" inputmode="url" placeholder="部署後貼上 https://script.google.com/macros/s/.../exec" />
+                  <input id="cloudApiUrl" name="cloudApiUrl" inputmode="url" placeholder="留空使用內建連線；需要換後台時再貼上新網址" />
                 </label>
-                <p class="form-note">Drive 資料夾已設定：1eOqcHag3qUO_Cd7n2Hv4A4Q3K8NKgXvB</p>
+                <p class="form-note">正式 Apps Script API 已內建在程式內；一般業務只要帳號密碼登入即可。Drive 資料夾已設定：1eOqcHag3qUO_Cd7n2Hv4A4Q3K8NKgXvB</p>
                 <div class="admin-actions">
                   <button class="primary-button" type="submit">儲存連線</button>
                   <button class="secondary-button" type="button" id="cloudSetupButton">建立 Google 後台</button>
@@ -657,12 +693,13 @@
         <button class="nav-item" data-view="stores">店家</button>
         <button class="nav-item" data-view="holds">保留</button>
         <button class="nav-item" data-view="projects">案場</button>
-        <button class="nav-pill" id="navAdminButton" data-view="admin"><span>▣</span> 後台</button>
+        <button class="nav-item" data-view="samples">樣品</button>
+        <button class="nav-item" data-view="complaints">客訴</button>
       </nav>
     </div>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="store-data.js?v=20260627-owner-lock-v1"></script>
-    <script src="app.js?v=20260627-owner-lock-v1"></script>
+    <script src="store-data.js?v=20260628-default-api-v1"></script>
+    <script src="app.js?v=20260628-default-api-v1"></script>
   </body>
 </html>
