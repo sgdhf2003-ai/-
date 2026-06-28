@@ -197,7 +197,7 @@ function upsertHolds(holds) {
                   "📅 起始日期：" + (hold.holdDate || "") + "\n" +
                   "⏳ 到期日期：" + (hold.expiresAt || "") + "\n" +
                   "📝 備註：" + (hold.note || "無");
-      sendLineNotify(msg);
+      sendLinePushMessage(msg);
     }
 
     return {
@@ -426,24 +426,35 @@ function getSetting(key) {
   }
 }
 
-function sendLineNotify(message) {
-  const token = getSetting("lineNotifyToken");
-  if (!token) return;
-  const url = "https://notify-api.line.me/api/notify";
+const DEFAULT_CHANNEL_ACCESS_TOKEN = '[REMOVED_LINE_CHANNEL_ACCESS_TOKEN]';
+
+function sendLinePushMessage(message) {
+  const token = getSetting("lineChannelAccessToken") || DEFAULT_CHANNEL_ACCESS_TOKEN;
+  const targetId = getSetting("lineTargetId");
+  if (!token || !targetId) return;
+
+  const url = "https://api.line.me/v2/bot/message/push";
   const options = {
     method: "post",
     headers: {
-      "Authorization": "Bearer " + token
+      "Authorization": "Bearer " + token,
+      "Content-Type": "application/json"
     },
-    payload: {
-      message: message
-    },
+    payload: JSON.stringify({
+      to: targetId,
+      messages: [
+        {
+          type: "text",
+          text: message
+        }
+      ]
+    }),
     muteHttpExceptions: true
   };
   try {
     UrlFetchApp.fetch(url, options);
   } catch (e) {
-    console.error("LINE Notify push failed:", e);
+    console.error("LINE Messaging API push failed:", e);
   }
 }
 
@@ -453,28 +464,32 @@ function saveSettingAction(data) {
 }
 
 function testLineNotifyAction(data) {
-  const token = data.token || getSetting("lineNotifyToken");
-  if (!token) return { ok: false, error: "未設定權杖 Token" };
-  const msg = "\n測試訊息：勁揚業務管家連線成功！🔔";
-  const url = "https://notify-api.line.me/api/notify";
+  const token = data.token || getSetting("lineChannelAccessToken") || DEFAULT_CHANNEL_ACCESS_TOKEN;
+  const targetId = data.targetId; // Pass targetId directly from front-end
+  if (!token || !targetId) return { ok: false, error: "未設定 Channel Access Token 或 推送目標 ID" };
+  
+  const msg = "測試訊息：勁揚業務管家 LINE 機器人推播成功！🔔";
+  const url = "https://api.line.me/v2/bot/message/push";
   const options = {
     method: "post",
     headers: {
-      "Authorization": "Bearer " + token
+      "Authorization": "Bearer " + token,
+      "Content-Type": "application/json"
     },
-    payload: {
-      message: msg
-    },
+    payload: JSON.stringify({
+      to: targetId,
+      messages: [{ type: "text", text: msg }]
+    }),
     muteHttpExceptions: true
   };
   try {
     const response = UrlFetchApp.fetch(url, options);
     const resText = response.getContentText();
     const resObj = JSON.parse(resText);
-    if (resObj.status === 200) {
-      return { ok: true, message: "測試成功！LINE 已收到通知。" };
+    if (response.getResponseCode() === 200) {
+      return { ok: true, message: "測試成功！LINE 機器人已成功推播訊息。" };
     } else {
-      return { ok: false, error: "LINE Notify 回應失敗: " + resText };
+      return { ok: false, error: "LINE Bot 推送失敗: " + (resObj.message || resText) };
     }
   } catch (e) {
     return { ok: false, error: e.toString() };

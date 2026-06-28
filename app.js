@@ -752,7 +752,8 @@ document.querySelector("#cloudConfigForm")?.addEventListener("submit", (event) =
 document.querySelector("#lineNotifyForm")?.addEventListener("submit", async (event) => {
   event.preventDefault();
   const submitBtn = document.querySelector("#lineNotifySaveButton");
-  const token = String(document.querySelector("#lineNotifyTokenInput")?.value || "").trim();
+  const token = String(document.querySelector("#lineChannelAccessTokenInput")?.value || "").trim();
+  const targetId = String(document.querySelector("#lineTargetIdInput")?.value || "").trim();
 
   if (submitBtn) {
     submitBtn.disabled = true;
@@ -765,34 +766,52 @@ document.querySelector("#lineNotifyForm")?.addEventListener("submit", async (eve
     }
 
     if (!Array.isArray(state.settings)) state.settings = [];
-    let tokenSetting = state.settings.find(s => s.key === "lineNotifyToken");
+    
+    // Save token
+    let tokenSetting = state.settings.find(s => s.key === "lineChannelAccessToken");
     if (tokenSetting) {
       tokenSetting.value = token;
       tokenSetting.updatedAt = new Date().toISOString();
     } else {
       state.settings.push({
-        key: "lineNotifyToken",
+        key: "lineChannelAccessToken",
         value: token,
         updatedAt: new Date().toISOString()
       });
     }
+
+    // Save targetId
+    let targetSetting = state.settings.find(s => s.key === "lineTargetId");
+    if (targetSetting) {
+      targetSetting.value = targetId;
+      targetSetting.updatedAt = new Date().toISOString();
+    } else {
+      state.settings.push({
+        key: "lineTargetId",
+        value: targetId,
+        updatedAt: new Date().toISOString()
+      });
+    }
+
     saveState();
 
-    await sendCloudWrite("saveSetting", { key: "lineNotifyToken", value: token });
-    toast("LINE 通知設定儲存成功");
+    await sendCloudWrite("saveSetting", { key: "lineChannelAccessToken", value: token });
+    await sendCloudWrite("saveSetting", { key: "lineTargetId", value: targetId });
+    toast("LINE 機器人通知設定儲存成功");
   } catch (error) {
     toast(error.message || "儲存通知設定失敗");
   } finally {
     if (submitBtn) {
       submitBtn.disabled = false;
-      submitBtn.textContent = "儲存通知設定";
+      submitBtn.textContent = "儲存設定";
     }
   }
 });
 
 document.querySelector("#lineNotifyTestButton")?.addEventListener("click", async () => {
   const testBtn = document.querySelector("#lineNotifyTestButton");
-  const token = String(document.querySelector("#lineNotifyTokenInput")?.value || "").trim();
+  const token = String(document.querySelector("#lineChannelAccessTokenInput")?.value || "").trim();
+  const targetId = String(document.querySelector("#lineTargetIdInput")?.value || "").trim();
 
   if (testBtn) {
     testBtn.disabled = true;
@@ -807,6 +826,7 @@ document.querySelector("#lineNotifyTestButton")?.addEventListener("click", async
     const testUrl = new URL(getCloudApiUrl());
     testUrl.searchParams.set("action", "testLineNotify");
     testUrl.searchParams.set("token", token);
+    testUrl.searchParams.set("targetId", targetId);
 
     const response = await fetch(testUrl.toString(), {
       method: "GET",
@@ -1031,12 +1051,18 @@ function render() {
 }
 
 function populateSettingsUI() {
-  const tokenInput = document.querySelector("#lineNotifyTokenInput");
-  if (tokenInput && Array.isArray(state.settings)) {
-    const tokenSetting = state.settings.find(s => s.key === "lineNotifyToken");
-    if (tokenSetting && tokenSetting.value) {
-      tokenInput.value = tokenSetting.value;
-    }
+  if (!Array.isArray(state.settings)) return;
+  
+  const tokenSetting = state.settings.find(s => s.key === "lineChannelAccessToken");
+  const tokenInput = document.querySelector("#lineChannelAccessTokenInput");
+  if (tokenInput && tokenSetting && tokenSetting.value) {
+    tokenInput.value = tokenSetting.value;
+  }
+  
+  const targetSetting = state.settings.find(s => s.key === "lineTargetId");
+  const targetInput = document.querySelector("#lineTargetIdInput");
+  if (targetInput && targetSetting && targetSetting.value) {
+    targetInput.value = targetSetting.value;
   }
 }
 
@@ -1668,13 +1694,7 @@ async function syncFromCloud(silent = false) {
   if (Array.isArray(result.photos)) state.photos = mergeById(state.photos, result.photos);
   if (Array.isArray(result.settings)) {
     state.settings = result.settings;
-    const tokenSetting = result.settings.find(s => s.key === "lineNotifyToken");
-    if (tokenSetting) {
-      const tokenInput = document.querySelector("#lineNotifyTokenInput");
-      if (tokenInput) {
-        tokenInput.value = tokenSetting.value;
-      }
-    }
+    populateSettingsUI();
   }
   
   saveState();
@@ -2663,7 +2683,7 @@ render();
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js?v=20260628-default-api-v4").catch(() => {});
+    navigator.serviceWorker.register("./service-worker.js?v=20260628-default-api-v5").catch(() => {});
   });
   
   let refreshing = false;

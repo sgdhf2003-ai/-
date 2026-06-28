@@ -1,11 +1,11 @@
-const CACHE_NAME = "jingyang-manager-pwa-v46-default-api";
+const CACHE_NAME = "jingyang-manager-pwa-v47-default-api";
 const ASSETS = [
   "./",
   "./index.html",
-  "./styles.css?v=20260628-default-api-v4",
-  "./app.js?v=20260628-default-api-v4",
-  "./store-data.js?v=20260628-default-api-v4",
-  "./manifest.webmanifest?v=20260628-default-api-v4",
+  "./styles.css?v=20260628-default-api-v5",
+  "./app.js?v=20260628-default-api-v5",
+  "./store-data.js?v=20260628-default-api-v5",
+  "./manifest.webmanifest?v=20260628-default-api-v5",
   "./icons/icon.svg",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
