@@ -47,6 +47,12 @@ function doPost(e) {
     if (action === "login") return jsonOutput(loginUser(data));
     if (action === "readAll") return jsonOutput(readAll());
     if (action === "snapshot") return jsonOutput(saveSnapshot(data));
+    if (action === "readLogs") {
+      const sheet = ensureSpreadsheet().getSheetByName("Logs");
+      if (!sheet) return jsonOutput({ ok: true, logs: [] });
+      const values = sheet.getDataRange().getValues();
+      return jsonOutput({ ok: true, logs: values });
+    }
     if (action === "upsertStore") return jsonOutput(upsertStores([data.store]));
     if (action === "upsertHold") return jsonOutput(upsertHolds([data.hold]));
     if (action === "upsertProject") return jsonOutput(upsertProjects([data.project]));
@@ -130,6 +136,7 @@ function readAll() {
     samples: readObjects(SHEETS.samples, HEADERS.samples),
     complaints: readObjects(SHEETS.complaints, HEADERS.complaints),
     settings: readObjects(SHEETS.settings, HEADERS.settings),
+    users: readObjects(SHEETS.users, HEADERS.users),
   };
 }
 
@@ -234,6 +241,7 @@ function upsertStores(stores, isSnapshot) {
 }
 
 function upsertHolds(holds, isSnapshot, userContext) {
+  logDebug("upsertHolds called with holds count: " + (holds ? holds.length : 0) + ", isSnapshot: " + isSnapshot + ", userContext: " + JSON.stringify(userContext));
   const storesById = makeLookup(readObjects(SHEETS.stores, HEADERS.stores), "id");
   const existingHolds = makeLookup(readObjects(SHEETS.holds, HEADERS.holds), "id");
   
@@ -241,22 +249,34 @@ function upsertHolds(holds, isSnapshot, userContext) {
   if (isSnapshot) {
     const incomingIds = new Set(holds.filter(Boolean).map(h => h.id));
     const deletedHolds = Object.values(existingHolds).filter(h => h && h.id && !incomingIds.has(h.id));
+    logDebug("Detected deleted holds count: " + deletedHolds.length);
     
     deletedHolds.forEach((hold) => {
       const store = storesById[hold.storeId] || {};
       const storeName = hold.storeName || store.name || "未知店家";
       const owner = hold.salesOwner || store.salesOwner || "無";
       
-      const title = "保留項目扣除通知 🗑️";
+      let msg = "🗑️ 保留項目扣除通知\n";
+      msg += "━━━━━━━━━━━━━━━\n";
+      msg += "🏬 店家：" + storeName + "\n";
+      msg += "📦 項目：" + hold.item + " (" + (hold.quantity || "1") + ")\n";
+      msg += "📅 原保留日：" + (hold.holdDate || "未設定") + "\n";
+      msg += "📍 原保留地：" + (hold.holdAddress || "未填寫") + "\n";
+      msg += "📝 備註：" + (hold.note || "無") + "\n";
+      
       if (userContext && userContext.role === "admin") {
         // Admin deleted the hold -> Notify the local sales rep
-        const body = "管理員已扣除店家 " + storeName + " 的保留項目：" + hold.item + " (" + (hold.quantity || "1") + ")";
-        sendOneSignalPush(owner, title, body);
+        msg += "👤 扣除人員：管理員";
+        logDebug("Admin deleted hold. Notifying owner: " + owner);
+        sendOneSignalPush(owner, "保留扣除通知 🗑️", msg);
+        sendLinePushToOwner(owner, msg);
       } else {
         // Sales rep deleted the hold -> Notify the admin (target "全部")
         const displayName = (userContext && userContext.displayName) || "業務";
-        const body = "業務 " + displayName + " 已扣除店家 " + storeName + " 的保留項目：" + hold.item + " (" + (hold.quantity || "1") + ")";
-        sendOneSignalPush("全部", title, body);
+        msg += "👤 扣除人員：業務 " + displayName;
+        logDebug("Sales rep deleted hold. Notifying admins.");
+        sendOneSignalPush("全部", "保留扣除通知 🗑️", msg);
+        sendLinePushToOwner("全部", msg);
       }
     });
   }
@@ -268,9 +288,18 @@ function upsertHolds(holds, isSnapshot, userContext) {
     if (isNew) {
       const storeName = hold.storeName || store.name || "未知店家";
       const owner = hold.salesOwner || store.salesOwner || "無";
-      const title = "新保留物品提醒 🔔";
-      const body = "店家 " + storeName + " 已新增保留：" + hold.item + " (" + (hold.quantity || "1") + ")";
-      sendOneSignalPush(owner, title, body);
+      
+      let msg = "🔔 新保留物品提醒\n";
+      msg += "━━━━━━━━━━━━━━━\n";
+      msg += "🏬 店家：" + storeName + "\n";
+      msg += "📦 項目：" + hold.item + " (" + (hold.quantity || "1") + ")\n";
+      msg += "📅 日期：" + (hold.holdDate || "未設定") + " 至 " + (hold.expiresAt || "未設定") + "\n";
+      msg += "📍 地點：" + (hold.holdAddress || "未填寫") + "\n";
+      msg += "📝 備註：" + (hold.note || "無");
+      
+      logDebug("New hold created. Store: " + storeName + ", Owner: " + owner + ", Item: " + hold.item);
+      sendOneSignalPush(owner, "新保留提醒 🔔", msg);
+      sendLinePushToOwner(owner, msg);
     }
 
     return {
@@ -621,6 +650,7 @@ function triggerAuth() {
 const DEFAULT_CHANNEL_ACCESS_TOKEN = 'LmKTad2eoLMSvaTu/WisCm25ONjqkbAj9me4cCcYijIPE1JyFMKL2TTTcYjPb2JI+Qb4t4yZUCdvNlaVd4gCy4TzzPgtwctDMFBdcba9KBdYVH4XmckKkwnkIbwFdhTxzWDX90GRauwvwWhVVrgGhQdB04t89/1O/w1cDnyilFU=';
 
 function sendLinePushMessage(targetId, message) {
+  logDebug("sendLinePushMessage called. targetId: " + targetId + ", message: " + message);
   if (!targetId) return;
   const token = getSetting("lineChannelAccessToken") || DEFAULT_CHANNEL_ACCESS_TOKEN;
   if (!token) return;
@@ -639,24 +669,31 @@ function sendLinePushMessage(targetId, message) {
     muteHttpExceptions: true
   };
   try {
-    UrlFetchApp.fetch(url, options);
+    const res = UrlFetchApp.fetch(url, options);
+    logDebug("LINE Push Response: " + res.getResponseCode() + " - " + res.getContentText());
   } catch (e) {
+    logDebug("LINE Messaging API push failed: " + e.toString());
     console.error("LINE Messaging API push failed:", e);
   }
 }
 
 function sendLinePushToOwner(ownerName, message) {
+  logDebug("sendLinePushToOwner called. ownerName: " + ownerName + ", message: " + message);
   if (!ownerName || ownerName === "無") return;
   
   if (ownerName === "全部" || ownerName === "管理員") {
     const admins = readObjects(SHEETS.users, HEADERS.users).filter(u => u.role === "admin" && u.lineUserId);
+    logDebug("Found admins to push: " + admins.map(a => a.displayName).join(", "));
     admins.forEach(admin => {
       sendLinePushMessage(admin.lineUserId, message);
     });
   } else {
     const user = readObjects(SHEETS.users, HEADERS.users).find(u => u.salesOwner === ownerName && u.lineUserId);
     if (user && user.lineUserId) {
+      logDebug("Found owner for push: " + user.displayName + ", lineUserId: " + user.lineUserId);
       sendLinePushMessage(user.lineUserId, message);
+    } else {
+      logDebug("No bound user found for owner: " + ownerName);
     }
   }
 }
@@ -725,15 +762,15 @@ function setupLineRichMenus() {
     areas: [
       {
         bounds: { x: 0, y: 0, width: 833, height: 843 },
-        action: { type: "uri", label: "公司官網", uri: "https://docs.google.com/spreadsheets/d/1BtroF_mFVlC3mXyw7vO09H244636Vc6nVseW_0qS2Ss/edit" }
+        action: { type: "uri", label: "公司官網", uri: "http://www.macarena.com.tw/zh-tw/index.php" }
       },
       {
         bounds: { x: 833, y: 0, width: 833, height: 843 },
-        action: { type: "uri", label: "聯絡客服", uri: "https://line.me/R/ti/p/@your_clerk" }
+        action: { type: "uri", label: "聯絡客服", uri: "https://line.me/ti/p/clerk_line_id" }
       },
       {
         bounds: { x: 1666, y: 0, width: 834, height: 843 },
-        action: { type: "uri", label: "最新型錄", uri: "https://docs.google.com/spreadsheets/d/1BtroF_mFVlC3mXyw7vO09H244636Vc6nVseW_0qS2Ss/edit" }
+        action: { type: "uri", label: "最新型錄", uri: "https://drive.google.com/file/d/1bmTK4_nWz4Hrs0Qe88yKul-d8VtXfFB1/view?usp=sharing" }
       }
     ]
   };
@@ -755,7 +792,7 @@ function setupLineRichMenus() {
       },
       {
         bounds: { x: 1666, y: 0, width: 834, height: 843 },
-        action: { type: "uri", label: "系統入口", uri: "https://brown-phi.vercel.app/" }
+        action: { type: "uri", label: "上傳照片", uri: "https://brown-phi.vercel.app/" }
       }
     ]
   };
@@ -828,7 +865,7 @@ function handleLineWebhook(payload) {
         const msg = "請點擊以下連結開啟「勁揚業務管家」並登入您的帳號，即可完成 LINE 身分綁定：\n" + bindUrl;
         replyLineMessage(replyToken, msg);
       }
-      else if (text === "查詢庫存" || text === "查詢保留") {
+      else if (text === "查詢庫存" || text === "查詢保留" || text === "庫存") {
         const user = readObjects(SHEETS.users, HEADERS.users).find(u => u.lineUserId === userId);
         if (!user || (user.role !== "admin" && user.role !== "sales")) {
           replyLineMessage(event.replyToken, "⚠️ 您的 LINE 帳號尚未完成內部業務人員身分綁定，無法使用此查詢功能。");
@@ -845,20 +882,24 @@ function handleLineWebhook(payload) {
             const list = holds.map(h => "- 店家: " + h.storeName + "\n  保留: " + h.item + " (" + (h.quantity || "1") + ")\n  到期: " + (h.expiresAt || "無")).join("\n\n");
             replyLineMessage(event.replyToken, "📋 您好 " + user.displayName + "，目前有以下保留項目：\n\n" + list);
           }
-        } else if (text === "查詢庫存") {
-          replyLineMessage(event.replyToken, "🔍 庫存查詢功能：\n請輸入 `庫存 [關鍵字]`（例如：`庫存 白馬`）來為您即時搜尋試算表中的樣品/展架庫存。");
+        } else {
+          replyLineMessage(event.replyToken, "🔍 庫存查詢功能：\n請輸入要查詢的「系列」或「編號」來為您即時搜尋試算表中的樣品/展架庫存。");
         }
       }
-      else if (text.startsWith("庫存 ")) {
+      else {
+        // Any other message - check if it is a keyword query
         const user = readObjects(SHEETS.users, HEADERS.users).find(u => u.lineUserId === userId);
         if (!user || (user.role !== "admin" && user.role !== "sales")) {
-          replyLineMessage(event.replyToken, "⚠️ 您的 LINE 帳號尚未完成內部業務人員身分綁定，無法使用此查詢功能。");
           return;
         }
         
-        const keyword = text.slice(3).trim();
+        let keyword = text;
+        if (text.startsWith("庫存 ")) {
+          keyword = text.slice(3).trim();
+        }
+        
         if (!keyword) {
-          replyLineMessage(event.replyToken, "⚠️ 請輸入要搜尋的庫存關鍵字，例如：`庫存 白馬`");
+          replyLineMessage(event.replyToken, "🔍 庫存查詢功能：\n請輸入要查詢的「系列」或「編號」來為您即時搜尋試算表中的樣品/展架庫存。");
           return;
         }
         
@@ -897,4 +938,18 @@ function replyLineMessage(replyToken, text) {
     }),
     muteHttpExceptions: true
   });
+}
+
+function logDebug(message) {
+  try {
+    const ss = ensureSpreadsheet();
+    let sheet = ss.getSheetByName("Logs");
+    if (!sheet) {
+      sheet = ss.insertSheet("Logs");
+      sheet.appendRow(["Timestamp", "Message"]);
+    }
+    sheet.appendRow([new Date().toISOString(), message]);
+  } catch (e) {
+    // ignore
+  }
 }
