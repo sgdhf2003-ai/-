@@ -2686,7 +2686,7 @@ render();
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js?v=20260628-default-api-v7").catch(() => {});
+    navigator.serviceWorker.register("./service-worker.js?v=20260628-default-api-v8").catch(() => {});
   });
   
   let refreshing = false;
