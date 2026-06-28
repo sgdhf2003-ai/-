@@ -190,14 +190,9 @@ function upsertHolds(holds) {
     if (isNew) {
       const storeName = hold.storeName || store.name || "未知店家";
       const owner = hold.salesOwner || store.salesOwner || "無";
-      const msg = "\n🔔 【新保留提醒】\n" +
-                  "🏢 店家：" + storeName + "\n" +
-                  "👤 負責業務：" + owner + "\n" +
-                  "📦 保留物品：" + hold.item + " (" + (hold.quantity || "1") + ")\n" +
-                  "📅 起始日期：" + (hold.holdDate || "") + "\n" +
-                  "⏳ 到期日期：" + (hold.expiresAt || "") + "\n" +
-                  "📝 備註：" + (hold.note || "無");
-      sendLinePushMessage(msg);
+      const title = "新保留物品提醒 🔔";
+      const body = "店家 " + storeName + " 已新增保留：" + hold.item + " (" + (hold.quantity || "1") + ")";
+      sendOneSignalPush(owner, title, body);
     }
 
     return {
@@ -426,35 +421,44 @@ function getSetting(key) {
   }
 }
 
-const DEFAULT_CHANNEL_ACCESS_TOKEN = '[REMOVED_LINE_CHANNEL_ACCESS_TOKEN]';
+const DEFAULT_ONESIGNAL_APP_ID = 'eb4c23ab-9624-45f4-b5ef-0a8236b6fb22';
 
-function sendLinePushMessage(message) {
-  const token = getSetting("lineChannelAccessToken") || DEFAULT_CHANNEL_ACCESS_TOKEN;
-  const targetId = getSetting("lineTargetId");
-  if (!token || !targetId) return;
+function sendOneSignalPush(salesperson, title, body) {
+  const appId = getSetting("oneSignalAppId") || DEFAULT_ONESIGNAL_APP_ID;
+  const apiKey = getSetting("oneSignalApiKey");
+  if (!appId || !apiKey) return;
 
-  const url = "https://api.line.me/v2/bot/message/push";
+  const url = "https://onesignal.com/api/v1/notifications";
+  const payload = {
+    app_id: appId,
+    include_aliases: {
+      external_id: [salesperson]
+    },
+    target_channel: "push",
+    contents: {
+      en: body,
+      zh: body
+    },
+    headings: {
+      en: title,
+      zh: title
+    }
+  };
+
   const options = {
     method: "post",
+    contentType: "application/json",
     headers: {
-      "Authorization": "Bearer " + token,
-      "Content-Type": "application/json"
+      "Authorization": "Key " + apiKey
     },
-    payload: JSON.stringify({
-      to: targetId,
-      messages: [
-        {
-          type: "text",
-          text: message
-        }
-      ]
-    }),
+    payload: JSON.stringify(payload),
     muteHttpExceptions: true
   };
   try {
-    UrlFetchApp.fetch(url, options);
+    const response = UrlFetchApp.fetch(url, options);
+    console.log("OneSignal push response: " + response.getContentText());
   } catch (e) {
-    console.error("LINE Messaging API push failed:", e);
+    console.error("OneSignal push failed:", e);
   }
 }
 
@@ -464,32 +468,42 @@ function saveSettingAction(data) {
 }
 
 function testLineNotifyAction(data) {
-  const token = data.token || getSetting("lineChannelAccessToken") || DEFAULT_CHANNEL_ACCESS_TOKEN;
-  const targetId = data.targetId; // Pass targetId directly from front-end
-  if (!token || !targetId) return { ok: false, error: "未設定 Channel Access Token 或 推送目標 ID" };
+  const appId = data.appId || getSetting("oneSignalAppId") || DEFAULT_ONESIGNAL_APP_ID;
+  const apiKey = data.apiKey || getSetting("oneSignalApiKey");
+  if (!appId || !apiKey) return { ok: false, error: "未設定 OneSignal App ID 或 REST API Key" };
   
-  const msg = "測試訊息：勁揚業務管家 LINE 機器人推播成功！🔔";
-  const url = "https://api.line.me/v2/bot/message/push";
+  const url = "https://onesignal.com/api/v1/notifications";
+  const payload = {
+    app_id: appId,
+    included_segments: ["Subscribed Users"],
+    contents: {
+      en: "測試推播成功！感謝您使用勁揚業務工作管家推播服務。🔔",
+      zh: "測試推播成功！感謝您使用勁揚業務工作管家推播服務。🔔"
+    },
+    headings: {
+      en: "勁揚業務管家測試通知",
+      zh: "勁揚業務管家測試通知"
+    }
+  };
+
   const options = {
     method: "post",
+    contentType: "application/json",
     headers: {
-      "Authorization": "Bearer " + token,
-      "Content-Type": "application/json"
+      "Authorization": "Key " + apiKey
     },
-    payload: JSON.stringify({
-      to: targetId,
-      messages: [{ type: "text", text: msg }]
-    }),
+    payload: JSON.stringify(payload),
     muteHttpExceptions: true
   };
+
   try {
     const response = UrlFetchApp.fetch(url, options);
     const resText = response.getContentText();
     const resObj = JSON.parse(resText);
     if (response.getResponseCode() === 200) {
-      return { ok: true, message: "測試成功！LINE 機器人已成功推播訊息。" };
+      return { ok: true, message: "測試成功！OneSignal 已發送廣播推播。" };
     } else {
-      return { ok: false, error: "LINE Bot 推送失敗: " + (resObj.message || resText) };
+      return { ok: false, error: "OneSignal 推送失敗: " + (resObj.errors ? resObj.errors.join(", ") : resText) };
     }
   } catch (e) {
     return { ok: false, error: e.toString() };

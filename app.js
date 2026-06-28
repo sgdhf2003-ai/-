@@ -240,6 +240,9 @@ document.querySelector("#logoutButton")?.addEventListener("click", () => {
   state.activeSalesOwner = "all";
   stopAutoSync();
   saveState();
+  if (window.OneSignal) {
+    OneSignal.logout().catch(e => console.warn("OneSignal logout failed:", e));
+  }
   render();
   toast("已登出帳號");
 });
@@ -752,8 +755,8 @@ document.querySelector("#cloudConfigForm")?.addEventListener("submit", (event) =
 document.querySelector("#lineNotifyForm")?.addEventListener("submit", async (event) => {
   event.preventDefault();
   const submitBtn = document.querySelector("#lineNotifySaveButton");
-  const token = String(document.querySelector("#lineChannelAccessTokenInput")?.value || "").trim();
-  const targetId = String(document.querySelector("#lineTargetIdInput")?.value || "").trim();
+  const appId = String(document.querySelector("#oneSignalAppIdInput")?.value || "").trim();
+  const apiKey = String(document.querySelector("#oneSignalApiKeyInput")?.value || "").trim();
 
   if (submitBtn) {
     submitBtn.disabled = true;
@@ -767,39 +770,39 @@ document.querySelector("#lineNotifyForm")?.addEventListener("submit", async (eve
 
     if (!Array.isArray(state.settings)) state.settings = [];
     
-    // Save token
-    let tokenSetting = state.settings.find(s => s.key === "lineChannelAccessToken");
-    if (tokenSetting) {
-      tokenSetting.value = token;
-      tokenSetting.updatedAt = new Date().toISOString();
+    // Save App ID
+    let appIdSetting = state.settings.find(s => s.key === "oneSignalAppId");
+    if (appIdSetting) {
+      appIdSetting.value = appId;
+      appIdSetting.updatedAt = new Date().toISOString();
     } else {
       state.settings.push({
-        key: "lineChannelAccessToken",
-        value: token,
+        key: "oneSignalAppId",
+        value: appId,
         updatedAt: new Date().toISOString()
       });
     }
 
-    // Save targetId
-    let targetSetting = state.settings.find(s => s.key === "lineTargetId");
-    if (targetSetting) {
-      targetSetting.value = targetId;
-      targetSetting.updatedAt = new Date().toISOString();
+    // Save API Key
+    let apiKeySetting = state.settings.find(s => s.key === "oneSignalApiKey");
+    if (apiKeySetting) {
+      apiKeySetting.value = apiKey;
+      apiKeySetting.updatedAt = new Date().toISOString();
     } else {
       state.settings.push({
-        key: "lineTargetId",
-        value: targetId,
+        key: "oneSignalApiKey",
+        value: apiKey,
         updatedAt: new Date().toISOString()
       });
     }
 
     saveState();
 
-    await sendCloudWrite("saveSetting", { key: "lineChannelAccessToken", value: token });
-    await sendCloudWrite("saveSetting", { key: "lineTargetId", value: targetId });
-    toast("LINE 機器人通知設定儲存成功");
+    await sendCloudWrite("saveSetting", { key: "oneSignalAppId", value: appId });
+    await sendCloudWrite("saveSetting", { key: "oneSignalApiKey", value: apiKey });
+    toast("OneSignal 推播設定儲存成功");
   } catch (error) {
-    toast(error.message || "儲存通知設定失敗");
+    toast(error.message || "儲存推播設定失敗");
   } finally {
     if (submitBtn) {
       submitBtn.disabled = false;
@@ -810,8 +813,8 @@ document.querySelector("#lineNotifyForm")?.addEventListener("submit", async (eve
 
 document.querySelector("#lineNotifyTestButton")?.addEventListener("click", async () => {
   const testBtn = document.querySelector("#lineNotifyTestButton");
-  const token = String(document.querySelector("#lineChannelAccessTokenInput")?.value || "").trim();
-  const targetId = String(document.querySelector("#lineTargetIdInput")?.value || "").trim();
+  const appId = String(document.querySelector("#oneSignalAppIdInput")?.value || "").trim();
+  const apiKey = String(document.querySelector("#oneSignalApiKeyInput")?.value || "").trim();
 
   if (testBtn) {
     testBtn.disabled = true;
@@ -825,8 +828,8 @@ document.querySelector("#lineNotifyTestButton")?.addEventListener("click", async
 
     const testUrl = new URL(getCloudApiUrl());
     testUrl.searchParams.set("action", "testLineNotify");
-    testUrl.searchParams.set("token", token);
-    testUrl.searchParams.set("targetId", targetId);
+    testUrl.searchParams.set("appId", appId);
+    testUrl.searchParams.set("apiKey", apiKey);
 
     const response = await fetch(testUrl.toString(), {
       method: "GET",
@@ -841,7 +844,7 @@ document.querySelector("#lineNotifyTestButton")?.addEventListener("click", async
       throw new Error(result.error || "測試訊息發送失敗");
     }
   } catch (error) {
-    toast(error.message || "測試連線失敗");
+    toast(error.message || "測試連線失敗，請確認 API Key 是否填寫正確");
   } finally {
     if (testBtn) {
       testBtn.disabled = false;
@@ -1053,16 +1056,16 @@ function render() {
 function populateSettingsUI() {
   if (!Array.isArray(state.settings)) return;
   
-  const tokenSetting = state.settings.find(s => s.key === "lineChannelAccessToken");
-  const tokenInput = document.querySelector("#lineChannelAccessTokenInput");
-  if (tokenInput && tokenSetting && tokenSetting.value) {
-    tokenInput.value = tokenSetting.value;
+  const appIdSetting = state.settings.find(s => s.key === "oneSignalAppId");
+  const appIdInput = document.querySelector("#oneSignalAppIdInput");
+  if (appIdInput && appIdSetting && appIdSetting.value) {
+    appIdInput.value = appIdSetting.value;
   }
   
-  const targetSetting = state.settings.find(s => s.key === "lineTargetId");
-  const targetInput = document.querySelector("#lineTargetIdInput");
-  if (targetInput && targetSetting && targetSetting.value) {
-    targetInput.value = targetSetting.value;
+  const apiKeySetting = state.settings.find(s => s.key === "oneSignalApiKey");
+  const apiKeyInput = document.querySelector("#oneSignalApiKeyInput");
+  if (apiKeyInput && apiKeySetting && apiKeySetting.value) {
+    apiKeyInput.value = apiKeySetting.value;
   }
 }
 
@@ -2683,7 +2686,7 @@ render();
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js?v=20260628-default-api-v6").catch(() => {});
+    navigator.serviceWorker.register("./service-worker.js?v=20260628-default-api-v7").catch(() => {});
   });
   
   let refreshing = false;
@@ -2700,3 +2703,59 @@ if (state.currentUser) {
   startAutoSync();
   syncFromCloud(true).catch((e) => console.warn("Initial background sync failed:", e));
 }
+
+// OneSignal Web SDK Initialization
+window.OneSignalDeferred = window.OneSignalDeferred || [];
+window.OneSignalDeferred.push(async function(OneSignal) {
+  const customAppIdSetting = state.settings && state.settings.find(s => s.key === "oneSignalAppId");
+  const appId = (customAppIdSetting && customAppIdSetting.value) || "eb4c23ab-9624-45f4-b5ef-0a8236b6fb22";
+  
+  await OneSignal.init({
+    appId: appId,
+    allowLocalhostAsSecureOrigin: true
+  });
+
+  updatePushSubscriptionUI();
+
+  OneSignal.Notifications.addEventListener("permissionChange", () => {
+    updatePushSubscriptionUI();
+  });
+});
+
+async function updatePushSubscriptionUI() {
+  const subscribeBtn = document.querySelector("#oneSignalSubscribeButton");
+  if (!subscribeBtn) return;
+
+  if (window.OneSignal && OneSignal.Notifications) {
+    const isPermissionGranted = OneSignal.Notifications.permission;
+    if (isPermissionGranted) {
+      subscribeBtn.style.display = "none";
+      if (state.currentUser && state.currentUser.salesOwner) {
+        try {
+          await OneSignal.login(state.currentUser.salesOwner);
+        } catch (e) {
+          console.warn("OneSignal login alias binding failed:", e);
+        }
+      }
+    } else {
+      subscribeBtn.style.display = "inline-flex";
+    }
+  }
+}
+
+document.addEventListener("click", (e) => {
+  if (e.target && e.target.id === "oneSignalSubscribeButton") {
+    if (window.OneSignal && OneSignal.Notifications) {
+      OneSignal.Notifications.requestPermission().then((permission) => {
+        if (permission) {
+          toast("推播通知已啟用！");
+          updatePushSubscriptionUI();
+        }
+      }).catch(() => {
+        toast("喚起通知設定失敗，請至手機瀏覽器設定中開啟通知權限");
+      });
+    } else {
+      toast("推播元件載入中，請稍後再試...");
+    }
+  }
+});
