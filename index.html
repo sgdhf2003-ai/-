@@ -10,9 +10,9 @@
     <meta name="apple-mobile-web-app-title" content="勁揚業務管家" />
     <meta name="format-detection" content="telephone=no" />
     <title>勁揚業務管家</title>
-    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=20260628-default-api-v3" />
-    <link class="PWA-version" rel="manifest" href="manifest.webmanifest?v=20260628-default-api-v3" />
-    <link rel="stylesheet" href="styles.css?v=20260628-default-api-v3" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=20260628-default-api-v4" />
+    <link class="PWA-version" rel="manifest" href="manifest.webmanifest?v=20260628-default-api-v4" />
+    <link rel="stylesheet" href="styles.css?v=20260628-default-api-v4" />
   </head>
   <body>
     <!-- 登入頁面遮罩 -->
@@ -685,6 +685,26 @@
               </form>
               <div class="cloud-summary" id="cloudSummary">尚未設定 Apps Script URL。照片上傳會先存在本機，連線後即可同步到 Drive。</div>
             </section>
+            
+            <section class="panel">
+              <div class="panel-heading">
+                <h2>LINE 外部通知設定</h2>
+              </div>
+              <form class="cloud-form" id="lineNotifyForm">
+                <label>
+                  LINE Notify 存取權杖 (Token)
+                  <input id="lineNotifyTokenInput" name="lineNotifyToken" type="password" placeholder="貼上 LINE Notify 申請的權杖 Token" />
+                </label>
+                <p class="form-note">
+                  申請流程：開啟 <a href="https://notify-bot.line.me/" target="_blank" rel="noopener">LINE Notify 官網</a> 登入 ➡️ 點選「個人頁面」 ➡️ 點選「發行權杖」 ➡️ 選擇要接收通知的聊天室（或群組） ➡️ 將權杖貼於此處儲存。
+                  <br /><strong>※ 記得將「LINE Notify」官方帳號邀請進您的聊天室/群組中！</strong>
+                </p>
+                <div class="admin-actions">
+                  <button class="primary-button" type="submit" id="lineNotifySaveButton">儲存通知設定</button>
+                  <button class="secondary-button" type="button" id="lineNotifyTestButton">發送測試訊息</button>
+                </div>
+              </form>
+            </section>
           </div>
         </section>
       </main>
@@ -700,7 +720,7 @@
     </div>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="store-data.js?v=20260628-default-api-v3"></script>
-    <script src="app.js?v=20260628-default-api-v3"></script>
+    <script src="store-data.js?v=20260628-default-api-v4"></script>
+    <script src="app.js?v=20260628-default-api-v4"></script>
   </body>
 </html>

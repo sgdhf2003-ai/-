@@ -26,6 +26,7 @@ function doGet(e) {
     const action = data.action || "readAll";
     if (action === "setup") return jsonOutput(setupBackend(data));
     if (action === "login") return jsonOutput(loginUser(data));
+    if (action === "testLineNotify") return jsonOutput(testLineNotifyAction(data));
     return jsonOutput(readAll());
   } catch (error) {
     return jsonOutput({ ok: false, error: error.message || String(error) });
@@ -46,6 +47,8 @@ function doPost(e) {
     if (action === "upsertSample") return jsonOutput(upsertSamples([data.sample]));
     if (action === "upsertComplaint") return jsonOutput(upsertComplaints([data.complaint]));
     if (action === "uploadPhoto") return jsonOutput(uploadPhoto(data));
+    if (action === "saveSetting") return jsonOutput(saveSettingAction(data));
+    if (action === "testLineNotify") return jsonOutput(testLineNotifyAction(data));
     throw new Error("Unknown action: " + action);
   } catch (error) {
     return jsonOutput({ ok: false, error: error.message || String(error) });
@@ -101,6 +104,7 @@ function readAll() {
     projects: readObjects(SHEETS.projects, HEADERS.projects),
     samples: readObjects(SHEETS.samples, HEADERS.samples),
     complaints: readObjects(SHEETS.complaints, HEADERS.complaints),
+    settings: readObjects(SHEETS.settings, HEADERS.settings),
   };
 }
 
@@ -178,8 +182,24 @@ function upsertStores(stores) {
 
 function upsertHolds(holds) {
   const storesById = makeLookup(readObjects(SHEETS.stores, HEADERS.stores), "id");
+  const existingHolds = makeLookup(readObjects(SHEETS.holds, HEADERS.holds), "id");
   const rows = holds.filter(Boolean).map((hold) => {
     const store = storesById[hold.storeId] || {};
+    const isNew = !existingHolds[hold.id];
+
+    if (isNew) {
+      const storeName = hold.storeName || store.name || "未知店家";
+      const owner = hold.salesOwner || store.salesOwner || "無";
+      const msg = "\n🔔 【新保留提醒】\n" +
+                  "🏢 店家：" + storeName + "\n" +
+                  "👤 負責業務：" + owner + "\n" +
+                  "📦 保留物品：" + hold.item + " (" + (hold.quantity || "1") + ")\n" +
+                  "📅 起始日期：" + (hold.holdDate || "") + "\n" +
+                  "⏳ 到期日期：" + (hold.expiresAt || "") + "\n" +
+                  "📝 備註：" + (hold.note || "無");
+      sendLineNotify(msg);
+    }
+
     return {
       ...hold,
       storeName: hold.storeName || store.name || "",
@@ -393,6 +413,72 @@ function upsertComplaints(complaints) {
   });
   upsertObjects(SHEETS.complaints, HEADERS.complaints, rows);
   return { ok: true, message: "客訴紀錄已同步" };
+}
+
+function getSetting(key) {
+  try {
+    const settings = readObjects(SHEETS.settings, HEADERS.settings);
+    const setting = settings.find((s) => s.key === key);
+    return setting ? setting.value : "";
+  } catch (e) {
+    console.error("Read setting error:", e);
+    return "";
+  }
+}
+
+function sendLineNotify(message) {
+  const token = getSetting("lineNotifyToken");
+  if (!token) return;
+  const url = "https://notify-api.line.me/api/notify";
+  const options = {
+    method: "post",
+    headers: {
+      "Authorization": "Bearer " + token
+    },
+    payload: {
+      message: message
+    },
+    muteHttpExceptions: true
+  };
+  try {
+    UrlFetchApp.fetch(url, options);
+  } catch (e) {
+    console.error("LINE Notify push failed:", e);
+  }
+}
+
+function saveSettingAction(data) {
+  setSetting(data.key, data.value);
+  return { ok: true, message: "設定已儲存" };
+}
+
+function testLineNotifyAction(data) {
+  const token = data.token || getSetting("lineNotifyToken");
+  if (!token) return { ok: false, error: "未設定權杖 Token" };
+  const msg = "\n測試訊息：勁揚業務管家連線成功！🔔";
+  const url = "https://notify-api.line.me/api/notify";
+  const options = {
+    method: "post",
+    headers: {
+      "Authorization": "Bearer " + token
+    },
+    payload: {
+      message: msg
+    },
+    muteHttpExceptions: true
+  };
+  try {
+    const response = UrlFetchApp.fetch(url, options);
+    const resText = response.getContentText();
+    const resObj = JSON.parse(resText);
+    if (resObj.status === 200) {
+      return { ok: true, message: "測試成功！LINE 已收到通知。" };
+    } else {
+      return { ok: false, error: "LINE Notify 回應失敗: " + resText };
+    }
+  } catch (e) {
+    return { ok: false, error: e.toString() };
+  }
 }
 
 function jsonOutput(data) {

@@ -20,6 +20,7 @@ const initialState = {
   photos: [],
   currentUser: null,
   currentPermissions: null,
+  settings: [],
 };
 
 let state = loadState();
@@ -748,6 +749,87 @@ document.querySelector("#cloudConfigForm")?.addEventListener("submit", (event) =
   toast(cloudConfig.apiUrl ? "Google 雲端連線已儲存" : "已清除雲端連線");
 });
 
+document.querySelector("#lineNotifyForm")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const submitBtn = document.querySelector("#lineNotifySaveButton");
+  const token = String(document.querySelector("#lineNotifyTokenInput")?.value || "").trim();
+
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = "儲存中...";
+  }
+
+  try {
+    if (!getCloudApiUrl()) {
+      throw new Error("請先設定 Google 雲端連線網址");
+    }
+
+    if (!Array.isArray(state.settings)) state.settings = [];
+    let tokenSetting = state.settings.find(s => s.key === "lineNotifyToken");
+    if (tokenSetting) {
+      tokenSetting.value = token;
+      tokenSetting.updatedAt = new Date().toISOString();
+    } else {
+      state.settings.push({
+        key: "lineNotifyToken",
+        value: token,
+        updatedAt: new Date().toISOString()
+      });
+    }
+    saveState();
+
+    await sendCloudWrite("saveSetting", { key: "lineNotifyToken", value: token });
+    toast("LINE 通知設定儲存成功");
+  } catch (error) {
+    toast(error.message || "儲存通知設定失敗");
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "儲存通知設定";
+    }
+  }
+});
+
+document.querySelector("#lineNotifyTestButton")?.addEventListener("click", async () => {
+  const testBtn = document.querySelector("#lineNotifyTestButton");
+  const token = String(document.querySelector("#lineNotifyTokenInput")?.value || "").trim();
+
+  if (testBtn) {
+    testBtn.disabled = true;
+    testBtn.textContent = "發送中...";
+  }
+
+  try {
+    if (!getCloudApiUrl()) {
+      throw new Error("請先設定 Google 雲端連線網址");
+    }
+
+    const testUrl = new URL(getCloudApiUrl());
+    testUrl.searchParams.set("action", "testLineNotify");
+    testUrl.searchParams.set("token", token);
+
+    const response = await fetch(testUrl.toString(), {
+      method: "GET",
+      cache: "no-store"
+    });
+    const text = await response.text();
+    const result = JSON.parse(text);
+
+    if (result.ok) {
+      toast(result.message || "測試訊息發送成功！");
+    } else {
+      throw new Error(result.error || "測試訊息發送失敗");
+    }
+  } catch (error) {
+    toast(error.message || "測試連線失敗");
+  } finally {
+    if (testBtn) {
+      testBtn.disabled = false;
+      testBtn.textContent = "發送測試訊息";
+    }
+  }
+});
+
 document.querySelector("#cloudSetupButton")?.addEventListener("click", async () => {
   await runCloudTask("正在建立 Google 後台...", setupCloudBackend);
 });
@@ -933,6 +1015,7 @@ function render() {
     renderSalesOwnerAdmin();
     renderCloudStatus();
     renderAppSettings();
+    populateSettingsUI();
   }
 
   const openReportLink = document.querySelector("#openOriginalReportLink");
@@ -945,6 +1028,16 @@ function render() {
     openReportLink.href = href;
   }
   applyRoleAesthetic();
+}
+
+function populateSettingsUI() {
+  const tokenInput = document.querySelector("#lineNotifyTokenInput");
+  if (tokenInput && Array.isArray(state.settings)) {
+    const tokenSetting = state.settings.find(s => s.key === "lineNotifyToken");
+    if (tokenSetting && tokenSetting.value) {
+      tokenInput.value = tokenSetting.value;
+    }
+  }
 }
 
 function renderAppSettings() {
@@ -1573,6 +1666,16 @@ async function syncFromCloud(silent = false) {
   if (Array.isArray(result.samples)) state.samples = mergeById(state.samples || [], result.samples);
   if (Array.isArray(result.complaints)) state.complaints = mergeById(state.complaints || [], result.complaints);
   if (Array.isArray(result.photos)) state.photos = mergeById(state.photos, result.photos);
+  if (Array.isArray(result.settings)) {
+    state.settings = result.settings;
+    const tokenSetting = result.settings.find(s => s.key === "lineNotifyToken");
+    if (tokenSetting) {
+      const tokenInput = document.querySelector("#lineNotifyTokenInput");
+      if (tokenInput) {
+        tokenInput.value = tokenSetting.value;
+      }
+    }
+  }
   
   saveState();
 
@@ -2560,7 +2663,7 @@ render();
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js?v=20260628-default-api-v2").catch(() => {});
+    navigator.serviceWorker.register("./service-worker.js?v=20260628-default-api-v4").catch(() => {});
   });
   
   let refreshing = false;
