@@ -10,10 +10,10 @@
     <meta name="apple-mobile-web-app-title" content="勁揚業務管家" />
     <meta name="format-detection" content="telephone=no" />
     <title>勁揚業務管家</title>
-    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=20260628-default-api-v10" />
-    <link class="PWA-version" rel="manifest" href="manifest.webmanifest?v=20260628-default-api-v10" />
-    <link rel="stylesheet" href="styles.css?v=20260628-default-api-v10" />
-    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=20260628-default-api-v11" />
+    <link class="PWA-version" rel="manifest" href="manifest.webmanifest?v=20260628-default-api-v11" />
+    <link rel="stylesheet" href="styles.css?v=20260628-default-api-v11" />
+
   </head>
   <body>
     <!-- 登入頁面遮罩 -->
@@ -72,7 +72,7 @@
           <select id="salesFilter" aria-label="業務篩選">
             <option value="all">全部業務</option>
           </select>
-          <button class="secondary-button small-button" id="pwaReloadButton">更新系統 <span id="appVersionLabel" style="font-size: 0.75rem; opacity: 0.8; font-weight: normal; margin-left: 4px;">(v10)</span></button>
+          <button class="secondary-button small-button" id="pwaReloadButton">更新系統 <span id="appVersionLabel" style="font-size: 0.75rem; opacity: 0.8; font-weight: normal; margin-left: 4px;">(v11)</span></button>
           <button class="secondary-button small-button" id="logoutButton" style="display: none;">登出</button>
         </div>
       </header>
@@ -82,7 +82,7 @@
           <div class="section-title">
             <span class="title-dot"></span>
             <h1>選擇功能</h1>
-            <button class="secondary-button small-button" id="oneSignalSubscribeButton" style="display: none; margin-left: auto;">🔔 啟用手機推播</button>
+
           </div>
           <div class="domain-grid">
             <button class="domain-card" data-view="stores" style="--tone: #58a8ff">
@@ -688,29 +688,7 @@
               <div class="cloud-summary" id="cloudSummary">尚未設定 Apps Script URL。照片上傳會先存在本機，連線後即可同步到 Drive。</div>
             </section>
             
-            <section class="panel">
-              <div class="panel-heading">
-                <h2>OneSignal 手機推播設定</h2>
-              </div>
-              <form class="cloud-form" id="lineNotifyForm">
-                <label>
-                  OneSignal App ID
-                  <input id="oneSignalAppIdInput" name="oneSignalAppId" placeholder="預設使用 eb4c23ab-9624-45f4-b5ef-0a8236b6fb22" />
-                </label>
-                <label>
-                  OneSignal REST API Key
-                  <input id="oneSignalApiKeyInput" name="oneSignalApiKey" type="password" required placeholder="請貼上您在 OneSignal Settings > Keys & IDs 複製的 REST API Key" />
-                </label>
-                <p class="form-note">
-                  這將串接 OneSignal 推播 API，使業務在手機背景或鎖屏狀態下能即時收到保留物品的原生手機推播通知。
-                  <br /><strong>※ 請至 OneSignal 控制台設定的 Keys & IDs 分頁複製 REST API Key 並貼於此處儲存。</strong>
-                </p>
-                <div class="admin-actions">
-                  <button class="primary-button" type="submit" id="lineNotifySaveButton">儲存設定</button>
-                  <button class="secondary-button" type="button" id="lineNotifyTestButton">發送測試訊息</button>
-                </div>
-              </form>
-            </section>
+
           </div>
         </section>
       </main>
@@ -726,7 +704,7 @@
     </div>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="store-data.js?v=20260628-default-api-v10"></script>
-    <script src="app.js?v=20260628-default-api-v10"></script>
+    <script src="store-data.js?v=20260628-default-api-v11"></script>
+    <script src="app.js?v=20260628-default-api-v11"></script>
   </body>
 </html>

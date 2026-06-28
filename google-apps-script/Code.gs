@@ -38,7 +38,7 @@ function doPost(e) {
     const contents = e && e.postData && e.postData.contents ? e.postData.contents : "";
     if (contents.indexOf('"events"') !== -1) {
       handleLineWebhook(JSON.parse(contents));
-      return ContentService.createTextOutput("OK");
+      return HtmlService.createHtmlOutput("OK");
     }
 
     const data = JSON.parse(contents || "{}");
