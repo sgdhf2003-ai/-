@@ -136,7 +136,6 @@ function readAll() {
     samples: readObjects(SHEETS.samples, HEADERS.samples),
     complaints: readObjects(SHEETS.complaints, HEADERS.complaints),
     settings: readObjects(SHEETS.settings, HEADERS.settings),
-    users: readObjects(SHEETS.users, HEADERS.users),
   };
 }
 
@@ -766,7 +765,7 @@ function setupLineRichMenus() {
       },
       {
         bounds: { x: 833, y: 0, width: 833, height: 843 },
-        action: { type: "uri", label: "聯絡客服", uri: "https://line.me/ti/p/clerk_line_id" }
+        action: { type: "uri", label: "聯絡客服", uri: "https://line.me/ti/p/w5RBglOOph" }
       },
       {
         bounds: { x: 1666, y: 0, width: 834, height: 843 },
@@ -855,6 +854,7 @@ function handleLineWebhook(payload) {
   if (!payload || !payload.events) return;
   
   payload.events.forEach((event) => {
+    logDebug("LINE Webhook Event: " + JSON.stringify(event));
     if (event.type === "message" && event.message.type === "text") {
       const text = String(event.message.text).trim();
       const userId = event.source.userId;
@@ -894,8 +894,11 @@ function handleLineWebhook(payload) {
         }
         
         let keyword = text;
+        let isExplicit = false;
+        
         if (text.startsWith("庫存 ")) {
           keyword = text.slice(3).trim();
+          isExplicit = true;
         }
         
         if (!keyword) {
@@ -910,11 +913,11 @@ function handleLineWebhook(payload) {
                  String(s.storeName || "").indexOf(keyword) !== -1;
         });
         
-        if (!matches.length) {
-          replyLineMessage(event.replyToken, "ℹ️ 找不到包含「" + keyword + "」的庫存/樣品資料。");
-        } else {
+        if (matches.length > 0) {
           const list = matches.slice(0, 10).map(s => "- 樣品: " + (s.modelName || s.itemType) + "\n  店家: " + s.storeName + "\n  數量: " + (s.quantity || "0") + "\n  位置: " + (s.note || "現場")).join("\n\n");
           replyLineMessage(event.replyToken, "📦 庫存搜尋結果 (最多顯示10筆)：\n\n" + list);
+        } else if (isExplicit) {
+          replyLineMessage(event.replyToken, "ℹ️ 找不到包含「" + keyword + "」的庫存/樣品資料。");
         }
       }
     }
