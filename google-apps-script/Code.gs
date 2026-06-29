@@ -699,13 +699,14 @@ function sendLinePushToOwner(ownerName, message) {
 
 function linkLineRichMenu(lineUserId, role) {
   const token = getSetting("lineChannelAccessToken") || DEFAULT_CHANNEL_ACCESS_TOKEN;
-  if (!token) return;
+  if (!token || !lineUserId) return;
   
-  const isInternal = role === "admin" || role === "sales";
-  const richMenuSalesId = getSetting("lineRichMenuSales");
+  const isInternal = role === "admin" || role === "sales" || role === "retail";
   const richMenuCustomerId = getSetting("lineRichMenuCustomer");
   
-  if (isInternal && richMenuSalesId) {
+  if (isInternal) {
+    const richMenuSalesId = ensureJingyangBusinessRichMenu(token);
+    setSetting("lineRichMenuSales", richMenuSalesId);
     UrlFetchApp.fetch("https://api.line.me/v2/bot/user/" + lineUserId + "/richmenu/" + richMenuSalesId, {
       method: "post",
       headers: { "Authorization": "Bearer " + token },
@@ -717,6 +718,75 @@ function linkLineRichMenu(lineUserId, role) {
       headers: { "Authorization": "Bearer " + token },
       muteHttpExceptions: true
     });
+  }
+}
+
+function ensureJingyangBusinessRichMenu(token) {
+  const menuName = "Jingyang Business Manager Menu v3";
+  const existingId = findLineRichMenuByName(token, menuName);
+  if (existingId) return existingId;
+
+  const menuConfig = {
+    size: { width: 2500, height: 843 },
+    selected: true,
+    name: menuName,
+    chatBarText: "業務管家",
+    areas: [
+      { bounds: { x: 0, y: 0, width: 833, height: 843 }, action: { type: "message", label: "查詢保留", text: "今日保留" } },
+      { bounds: { x: 833, y: 0, width: 833, height: 843 }, action: { type: "uri", label: "查詢庫存", uri: "https://brown-phi.vercel.app/?view=inventory" } },
+      { bounds: { x: 1666, y: 0, width: 834, height: 843 }, action: { type: "uri", label: "上傳照片", uri: "https://brown-phi.vercel.app/?view=samples" } }
+    ]
+  };
+
+  const createRes = UrlFetchApp.fetch("https://api.line.me/v2/bot/richmenu", {
+    method: "post",
+    headers: {
+      "Authorization": "Bearer " + token,
+      "Content-Type": "application/json"
+    },
+    payload: JSON.stringify(menuConfig),
+    muteHttpExceptions: true
+  });
+  if (createRes.getResponseCode() !== 200) {
+    throw new Error("建立業務選單失敗：" + createRes.getContentText());
+  }
+
+  const richMenuId = JSON.parse(createRes.getContentText()).richMenuId;
+  uploadJingyangBusinessRichMenuImage(token, richMenuId);
+  return richMenuId;
+}
+
+function findLineRichMenuByName(token, menuName) {
+  const res = UrlFetchApp.fetch("https://api.line.me/v2/bot/richmenu/list", {
+    method: "get",
+    headers: { "Authorization": "Bearer " + token },
+    muteHttpExceptions: true
+  });
+  if (res.getResponseCode() !== 200) return "";
+
+  const menus = JSON.parse(res.getContentText() || "{}").richmenus || [];
+  const matched = menus.find(menu => menu.name === menuName);
+  return matched ? matched.richMenuId : "";
+}
+
+function uploadJingyangBusinessRichMenuImage(token, richMenuId) {
+  const imageUrl = "https://brown-phi.vercel.app/sales_rich_menu.jpg";
+  const imageRes = UrlFetchApp.fetch(imageUrl, { muteHttpExceptions: true });
+  if (imageRes.getResponseCode() < 200 || imageRes.getResponseCode() >= 300) {
+    throw new Error("讀取業務選單圖片失敗 HTTP " + imageRes.getResponseCode());
+  }
+
+  const uploadRes = UrlFetchApp.fetch("https://api-data.line.me/v2/bot/richmenu/" + richMenuId + "/content", {
+    method: "post",
+    headers: {
+      "Authorization": "Bearer " + token,
+      "Content-Type": "image/jpeg"
+    },
+    payload: imageRes.getBlob().getBytes(),
+    muteHttpExceptions: true
+  });
+  if (uploadRes.getResponseCode() !== 200) {
+    throw new Error("上傳業務選單圖片失敗：" + uploadRes.getContentText());
   }
 }
 
@@ -783,15 +853,15 @@ function setupLineRichMenus() {
     areas: [
       {
         bounds: { x: 0, y: 0, width: 833, height: 843 },
-        action: { type: "message", label: "查詢保留", text: "查詢保留" }
+        action: { type: "message", label: "查詢保留", text: "今日保留" }
       },
       {
         bounds: { x: 833, y: 0, width: 833, height: 843 },
-        action: { type: "message", label: "查詢庫存", text: "查詢庫存" }
+        action: { type: "uri", label: "查詢庫存", uri: "https://brown-phi.vercel.app/?view=inventory" }
       },
       {
         bounds: { x: 1666, y: 0, width: 834, height: 843 },
-        action: { type: "uri", label: "上傳照片", uri: "https://brown-phi.vercel.app/" }
+        action: { type: "uri", label: "上傳照片", uri: "https://brown-phi.vercel.app/?view=samples" }
       }
     ]
   };
@@ -865,19 +935,27 @@ function handleLineWebhook(payload) {
         const msg = "請點擊以下連結開啟「勁揚業務管家」並登入您的帳號，即可完成 LINE 身分綁定：\n" + bindUrl;
         replyLineMessage(replyToken, msg);
       }
-      else if (text === "查詢庫存" || text === "查詢保留" || text === "庫存") {
+      else if (text === "查詢庫存" || text === "查詢保留" || text === "今日保留" || text === "庫存") {
         const user = readObjects(SHEETS.users, HEADERS.users).find(u => u.lineUserId === userId);
-        if (!user || (user.role !== "admin" && user.role !== "sales")) {
+        if (!user || (user.role !== "admin" && user.role !== "sales" && user.role !== "retail")) {
           replyLineMessage(event.replyToken, "⚠️ 您的 LINE 帳號尚未完成內部業務人員身分綁定，無法使用此查詢功能。");
           return;
         }
         
-        if (text === "查詢保留") {
+        if (text === "查詢保留" || text === "今日保留") {
+          const now = new Date();
+          const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          const sevenDays = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
           const allHolds = readObjects(SHEETS.holds, HEADERS.holds).filter(h => h.status !== "done");
-          const holds = user.role === "admin" ? allHolds : allHolds.filter(h => h.salesOwner === user.salesOwner);
+          const visibleHolds = user.role === "admin" ? allHolds : allHolds.filter(h => h.salesOwner === user.salesOwner);
+          const holds = visibleHolds.filter(h => {
+            const rawDate = h.expiresAt || h.holdDate || h.createdAt;
+            const due = rawDate ? new Date(rawDate) : null;
+            return due && !isNaN(due.getTime()) && due <= sevenDays;
+          });
           
           if (!holds.length) {
-            replyLineMessage(event.replyToken, "ℹ️ 目前沒有未結案的保留物品項目。");
+            replyLineMessage(event.replyToken, "ℹ️ 目前沒有一週內即將到期的保留提醒。");
           } else {
             const list = holds.map(h => "- 店家: " + h.storeName + "\n  保留: " + h.item + " (" + (h.quantity || "1") + ")\n  到期: " + (h.expiresAt || "無")).join("\n\n");
             replyLineMessage(event.replyToken, "📋 您好 " + user.displayName + "，目前有以下保留項目：\n\n" + list);
@@ -889,7 +967,7 @@ function handleLineWebhook(payload) {
       else {
         // Any other message - check if it is a keyword query
         const user = readObjects(SHEETS.users, HEADERS.users).find(u => u.lineUserId === userId);
-        if (!user || (user.role !== "admin" && user.role !== "sales")) {
+        if (!user || (user.role !== "admin" && user.role !== "sales" && user.role !== "retail")) {
           return;
         }
         

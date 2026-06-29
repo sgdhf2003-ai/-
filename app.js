@@ -226,7 +226,7 @@ document.querySelector("#loginForm")?.addEventListener("submit", async (event) =
     requestNotificationPermission();
     startAutoSync();
     syncFromCloud(true).catch((e) => console.warn("Sync on login failed:", e));
-    setView("home");
+    setView(consumePendingInitialView() || "home");
   } catch (error) {
     toast(error.message || "登入連線失敗，請檢查網路或 API 網址");
   } finally {
@@ -1892,6 +1892,19 @@ function updatePhotoUploadRequirement() {
   input.closest("label")?.classList.toggle("is-optional", category === "下架");
 }
 
+
+function normalizeInitialView(view) {
+  const allowed = new Set(["home", "stores", "holds", "projects", "samples", "complaints", "calculator", "salesReport", "inventory", "admin"]);
+  const normalized = String(view || "").trim();
+  return allowed.has(normalized) ? normalized : "";
+}
+
+function consumePendingInitialView() {
+  const view = normalizeInitialView(localStorage.getItem("pendingInitialView"));
+  if (view) localStorage.removeItem("pendingInitialView");
+  return view;
+}
+
 function setView(view) {
   if (!views[view]) {
     toast("找不到這個頁面");
@@ -2697,17 +2710,26 @@ function applyRoleAesthetic() {
   }
 }
 
-// Check and capture lineUserId from URL query params
+// Check and capture LINE/query params
 const urlParams = new URLSearchParams(window.location.search);
 const lineUserId = urlParams.get("lineUserId");
+const requestedView = normalizeInitialView(urlParams.get("view"));
+if (requestedView) {
+  localStorage.setItem("pendingInitialView", requestedView);
+}
 if (lineUserId && lineUserId.trim().startsWith("U")) {
   localStorage.setItem("lineUserId", lineUserId.trim());
   toast("已獲取 LINE 身分，請登入您的業務/管理員帳號以完成綁定 🔗");
-  // Clean URL to keep it pretty
+}
+if (lineUserId || requestedView) {
   window.history.replaceState({}, document.title, window.location.pathname);
 }
 
 render();
+const initialView = consumePendingInitialView();
+if (state.currentUser && initialView) {
+  setView(initialView);
+}
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
