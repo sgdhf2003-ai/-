@@ -2610,18 +2610,29 @@ function handleAssistantPostback_(event) {
   var action = params.action;
   if (!action) return false;
 
-  if (operatorRole === "boss" && action !== "view_blocked_reason" && action !== "assistant_show_abnormal") {
+  // Intercept other actions for this stage
+  if (action === "complete_flow" || action === "problem_flow" || action === "missing_data_flow") {
+    replyToLine(replyToken, "💡 此功能下一階段開放，敬請期待！", true);
+    return true;
+  }
+
+  if (operatorRole === "boss" && action !== "view_blocked_reason" && action !== "assistant_show_abnormal" && action !== "assistant_start_flow") {
     replyToLine(replyToken, "主管帳戶為唯讀權限，無法修改或操作工作項目。", true);
     return true;
   }
 
   if (action === "assistant_start_flow") {
+    if (operatorRole !== "assistant" && operatorRole !== "admin" && operatorRole !== "boss") {
+      replyToLine(replyToken, "權限不足，只有助理、管理員或主管能進入助理中心處理工作。😊", true);
+      return true;
+    }
+
     var tasks = getAssistantTasks_();
     var activeTasks = tasks.filter(function(t) {
       return t.assignedRole === "assistant" && ["Created", "Started", "Waiting", "Blocked"].includes(t.status);
     });
     if (activeTasks.length === 0) {
-      replyToLine(replyToken, "目前沒有待處理的工作，辛苦了！", true);
+      replyToLine(replyToken, "目前沒有助理待處理工作", true);
       return true;
     }
     
