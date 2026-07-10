@@ -1674,4 +1674,30 @@ textarea {
   box-shadow: 0 0 10px rgba(84, 151, 255, 0.15);
 }
 
+/* Task Center Spacing & Text Selectability - Stage 4-3.1 */
+#tasksView {
+  padding-bottom: calc(140px + env(safe-area-inset-bottom));
+}
+
+.task-detail-panel,
+.task-detail-panel * {
+  user-select: text;
+}
+
+.task-detail-panel {
+  background: rgba(5, 18, 42, 0.72);
+}
+
+.task-detail-panel strong,
+.task-detail-panel h4,
+.task-history h5 {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.task-detail-panel div,
+.task-detail-panel pre,
+.task-history li {
+  background: transparent;
+}
+
 
