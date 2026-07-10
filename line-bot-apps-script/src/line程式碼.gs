@@ -1172,6 +1172,10 @@ function writeLogToSheet(userMessage, replyText, status, rawContent) {
   }
 }
 
+function isPromoCardEnabled_() {
+  return false;
+}
+
 // 負責把訊息傳回給 LINE 的底層程式（支援傳送純文字或 LINE 訊息物件陣列）
 function replyToLine(replyToken, replyData, skipPromo) {
   var url = 'https://api.line.me/v2/bot/message/reply';
@@ -1186,7 +1190,7 @@ function replyToLine(replyToken, replyData, skipPromo) {
   }
   
   // 如果不跳過促銷，且目前回覆訊息長度小於 5
-  if (!skipPromo && messages.length < 5) {
+  if (isPromoCardEnabled_() && !skipPromo && messages.length < 5) {
     var promoButtonMsg = {
       "type": "template",
       "altText": "客倌：我有一批貨很便宜，要不要試試看",
