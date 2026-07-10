@@ -83,6 +83,19 @@ document.addEventListener("click", (event) => {
     return;
   }
 
+  const summaryFilterBtn = event.target.closest("[data-task-summary-filter]");
+  if (summaryFilterBtn) {
+    event.preventDefault();
+    event.stopPropagation();
+    const targetStatus = summaryFilterBtn.dataset.taskSummaryFilter;
+    const statusSelect = document.querySelector("#filterTaskStatus");
+    if (statusSelect) {
+      statusSelect.value = targetStatus;
+      renderTasks();
+    }
+    return;
+  }
+
   const viewButton = event.target.closest("[data-view]");
   if (!viewButton) return;
   setView(viewButton.dataset.view);
@@ -2810,28 +2823,51 @@ function renderTasks() {
 
   let tasks = state.tasks || [];
 
-  const filtered = tasks.filter(task => {
-    // 1. Role-based Data Boundary Check
+  const visibleTasks = tasks.filter(task => {
     if (userRole === "retail" || userRole === "showroom" || userRole === "retailSales" || userRole === "showroomSales" || userRole === "sales") {
       const isAssignedToMe = (task.assignedTo && (task.assignedTo === username || task.assignedTo === displayName || task.assignedTo === salesOwner));
       const isCreatedByMe = (task.createdBy && (task.createdBy === username || task.createdBy === displayName));
-      if (!isAssignedToMe && !isCreatedByMe) return false;
+      return isAssignedToMe || isCreatedByMe;
     } else if (userRole === "assistant") {
       const isAssignedToMe = (task.assignedTo && (task.assignedTo === username || task.assignedTo === displayName || task.assignedTo === salesOwner));
-      if (task.assignedRole !== "assistant" && !isAssignedToMe) return false;
+      return task.assignedRole === "assistant" || isAssignedToMe;
     } else if (userRole === "admin" || userRole === "boss") {
-      // Can see all tasks
-    } else {
-      return false;
+      return true;
     }
+    return false;
+  });
 
+  const stats = getTaskSummaryStats_(visibleTasks);
+
+  const filtered = visibleTasks.filter(task => {
     // 2. Status Filter
     if (statusFilter === "assistantActive") {
       if (task.assignedRole !== "assistant") return false;
       if (task.status === "Finished" || task.status === "done") return false;
     } else if (statusFilter === "dueToday") {
       const todayStr = getTodayDateString_();
-      if (task.dueDate !== todayStr) return false;
+      const parseToLocalYYYYMMDD = (val) => {
+        if (!val) return "";
+        if (val.includes("T")) {
+          try {
+            const d = new Date(val);
+            if (!isNaN(d.getTime())) {
+              const tzOffset = 8 * 60; // UTC+8
+              const localTime = new Date(d.getTime() + tzOffset * 60000);
+              const year = localTime.getUTCFullYear();
+              const month = String(localTime.getUTCMonth() + 1).padStart(2, '0');
+              const day = String(localTime.getUTCDate()).padStart(2, '0');
+              return `${year}-${month}-${day}`;
+            }
+          } catch (e) {}
+        }
+        const match = val.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (match) {
+          return match[0];
+        }
+        return val.split("T")[0];
+      };
+      if (parseToLocalYYYYMMDD(task.dueDate) !== todayStr) return false;
     } else if (statusFilter !== "all") {
       if (task.status !== statusFilter) return false;
     }
@@ -2849,8 +2885,37 @@ function renderTasks() {
     return true;
   });
 
+  const summaryHTML = `
+    <div class="task-summary-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px;">
+      <div class="task-summary-card ${statusFilter === 'all' ? 'active' : ''}" data-task-summary-filter="all" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;">
+        <div style="font-size: 11px; color: rgba(255,255,255,0.55);">全部</div>
+        <div style="font-size: 20px; font-weight: bold; margin-top: 4px; color: #fff;">${stats.total}</div>
+      </div>
+      <div class="task-summary-card ${statusFilter === 'assistantActive' ? 'active' : ''}" data-task-summary-filter="assistantActive" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;">
+        <div style="font-size: 11px; color: #ab68ff;">助理待處理</div>
+        <div style="font-size: 20px; font-weight: bold; margin-top: 4px; color: #ab68ff;">${stats.assistantActive}</div>
+      </div>
+      <div class="task-summary-card ${statusFilter === 'Waiting' ? 'active' : ''}" data-task-summary-filter="Waiting" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;">
+        <div style="font-size: 11px; color: #f4bf58;">等待補資料</div>
+        <div style="font-size: 20px; font-weight: bold; margin-top: 4px; color: #f4bf58;">${stats.waiting}</div>
+      </div>
+      <div class="task-summary-card ${statusFilter === 'Blocked' ? 'active' : ''}" data-task-summary-filter="Blocked" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;">
+        <div style="font-size: 11px; color: #ff756f;">異常</div>
+        <div style="font-size: 20px; font-weight: bold; margin-top: 4px; color: #ff756f;">${stats.blocked}</div>
+      </div>
+      <div class="task-summary-card ${statusFilter === 'dueToday' ? 'active' : ''}" data-task-summary-filter="dueToday" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;">
+        <div style="font-size: 11px; color: #58a8ff;">今天到期</div>
+        <div style="font-size: 20px; font-weight: bold; margin-top: 4px; color: #58a8ff;">${stats.dueToday}</div>
+      </div>
+      <div class="task-summary-card ${statusFilter === 'Finished' ? 'active' : ''}" data-task-summary-filter="Finished" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;">
+        <div style="font-size: 11px; color: #54e2b0;">已完成</div>
+        <div style="font-size: 20px; font-weight: bold; margin-top: 4px; color: #54e2b0;">${stats.finished}</div>
+      </div>
+    </div>
+  `;
+
   if (!filtered.length) {
-    container.innerHTML = `<div class="empty-state">目前沒有符合篩選條件的工作</div>`;
+    container.innerHTML = summaryHTML + `<div class="empty-state">目前沒有符合篩選條件的工作</div>`;
     return;
   }
 
@@ -2927,7 +2992,7 @@ function renderTasks() {
     return roleMap[role] || role || "無";
   };
 
-  container.innerHTML = filtered.map(t => {
+  container.innerHTML = summaryHTML + filtered.map(t => {
     const detailKey = encodeURIComponent(String(t.id || ""));
     const typeLabel = typeMap[t.type] || t.type || "無";
     const statusLabel = statusMap[t.status] || t.status || "無";
@@ -3133,6 +3198,75 @@ function renderTaskAuditHistory_(workId) {
       </ul>
     </div>
   `;
+}
+
+function getTaskSummaryStats_(tasks) {
+  const stats = {
+    total: 0,
+    assistantActive: 0,
+    waiting: 0,
+    blocked: 0,
+    dueToday: 0,
+    finished: 0
+  };
+
+  const todayStr = getTodayDateString_();
+
+  const parseToLocalYYYYMMDD = (val) => {
+    if (!val) return "";
+    if (val.includes("T")) {
+      try {
+        const d = new Date(val);
+        if (!isNaN(d.getTime())) {
+          const tzOffset = 8 * 60; // UTC+8
+          const localTime = new Date(d.getTime() + tzOffset * 60000);
+          const year = localTime.getUTCFullYear();
+          const month = String(localTime.getUTCMonth() + 1).padStart(2, '0');
+          const day = String(localTime.getUTCDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        }
+      } catch (e) {}
+    }
+    const match = val.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+      return match[0];
+    }
+    return val.split("T")[0];
+  };
+
+  tasks.forEach(task => {
+    stats.total++;
+
+    // assistantActive
+    if (task.assignedRole === "assistant" && task.status !== "Finished" && task.status !== "done") {
+      stats.assistantActive++;
+    }
+
+    // waiting
+    if (task.status === "Waiting") {
+      stats.waiting++;
+    }
+
+    // blocked
+    if (task.status === "Blocked" || task.status === "blocked") {
+      stats.blocked++;
+    }
+
+    // dueToday
+    if (task.dueDate) {
+      const taskLocalDate = parseToLocalYYYYMMDD(task.dueDate);
+      if (taskLocalDate === todayStr) {
+        stats.dueToday++;
+      }
+    }
+
+    // finished
+    if (task.status === "Finished" || task.status === "done") {
+      stats.finished++;
+    }
+  });
+
+  return stats;
 }
 
 
