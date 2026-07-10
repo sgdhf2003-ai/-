@@ -18,6 +18,9 @@ const initialState = {
   samples: [],
   complaints: [],
   photos: [],
+  tasks: [],
+  auditLogs: [],
+  deletedRecords: [],
   currentUser: null,
   currentPermissions: null,
   settings: [],
@@ -40,6 +43,7 @@ const views = {
   salesReport: document.querySelector("#salesReportView"),
   inventory: document.querySelector("#inventoryView"),
   admin: document.querySelector("#adminView"),
+  tasks: document.querySelector("#tasksView"),
 };
 
 const viewNames = {
@@ -53,6 +57,7 @@ const viewNames = {
   salesReport: "業績分析",
   inventory: "庫存查詢",
   admin: "後台管理",
+  tasks: "工作任務",
 };
 
 document.addEventListener("click", (event) => {
@@ -1043,6 +1048,8 @@ function render() {
     renderSamples();
   } else if (activeView === "complaints") {
     renderComplaints();
+  } else if (activeView === "tasks") {
+    renderTasks();
   } else if (activeView === "admin") {
     renderSalesOwnerAdmin();
     renderCloudStatus();
@@ -1704,6 +1711,7 @@ async function syncFromCloud(silent = false) {
   if (Array.isArray(result.samples)) state.samples = mergeById(state.samples || [], result.samples);
   if (Array.isArray(result.complaints)) state.complaints = mergeById(state.complaints || [], result.complaints);
   if (Array.isArray(result.photos)) state.photos = mergeById(state.photos, result.photos);
+  if (Array.isArray(result.tasks)) state.tasks = mergeById(state.tasks || [], result.tasks);
   if (Array.isArray(result.settings)) {
     state.settings = result.settings;
     populateSettingsUI();
@@ -2749,6 +2757,178 @@ if (state.currentUser) {
   requestNotificationPermission();
   startAutoSync();
   syncFromCloud(true).catch((e) => console.warn("Initial background sync failed:", e));
+}
+
+// Task Center MVP Helpers & Listeners
+document.querySelector("#filterTaskStatus")?.addEventListener("change", () => renderTasks());
+document.querySelector("#filterTaskRole")?.addEventListener("change", () => renderTasks());
+document.querySelector("#filterTaskAssignee")?.addEventListener("change", () => renderTasks());
+
+function renderTasks() {
+  const container = document.querySelector("#tasksList");
+  if (!container) return;
+
+  populateTaskAssignees();
+
+  const statusSelect = document.querySelector("#filterTaskStatus");
+  if (statusSelect && !statusSelect.dataset.initialized) {
+    if (state.currentUser?.role === "assistant") {
+      statusSelect.value = "assistantActive";
+    } else {
+      statusSelect.value = "all";
+    }
+    statusSelect.dataset.initialized = "true";
+  }
+
+  const statusFilter = statusSelect?.value || "all";
+  const roleFilter = document.querySelector("#filterTaskRole")?.value || "all";
+  const assigneeFilter = document.querySelector("#filterTaskAssignee")?.value || "all";
+
+  const userRole = state.currentUser ? state.currentUser.role : null;
+  const username = state.currentUser ? state.currentUser.username : "";
+  const displayName = state.currentUser ? state.currentUser.displayName : "";
+  const salesOwner = state.currentUser ? state.currentUser.salesOwner : "";
+
+  if (!userRole) {
+    container.innerHTML = `<div class="empty-state">沒有權限查看工作任務</div>`;
+    return;
+  }
+
+  let tasks = state.tasks || [];
+
+  const filtered = tasks.filter(task => {
+    // 1. Role-based Data Boundary Check
+    if (userRole === "retail" || userRole === "showroom" || userRole === "retailSales" || userRole === "showroomSales" || userRole === "sales") {
+      const isAssignedToMe = (task.assignedTo && (task.assignedTo === username || task.assignedTo === displayName || task.assignedTo === salesOwner));
+      const isCreatedByMe = (task.createdBy && (task.createdBy === username || task.createdBy === displayName));
+      if (!isAssignedToMe && !isCreatedByMe) return false;
+    } else if (userRole === "assistant") {
+      const isAssignedToMe = (task.assignedTo && (task.assignedTo === username || task.assignedTo === displayName || task.assignedTo === salesOwner));
+      if (task.assignedRole !== "assistant" && !isAssignedToMe) return false;
+    } else if (userRole === "admin" || userRole === "boss") {
+      // Can see all tasks
+    } else {
+      return false;
+    }
+
+    // 2. Status Filter
+    if (statusFilter === "assistantActive") {
+      if (task.assignedRole !== "assistant") return false;
+      if (task.status === "Finished" || task.status === "done") return false;
+    } else if (statusFilter === "dueToday") {
+      const todayStr = getTodayDateString_();
+      if (task.dueDate !== todayStr) return false;
+    } else if (statusFilter !== "all") {
+      if (task.status !== statusFilter) return false;
+    }
+
+    // 3. Role Filter
+    if (roleFilter !== "all") {
+      if (task.assignedRole !== roleFilter) return false;
+    }
+
+    // 4. Assignee Filter
+    if (assigneeFilter !== "all") {
+      if (task.assignedTo !== assigneeFilter) return false;
+    }
+
+    return true;
+  });
+
+  if (!filtered.length) {
+    container.innerHTML = `<div class="empty-state">目前沒有符合篩選條件的工作</div>`;
+    return;
+  }
+
+  const typeMap = {
+    delivery: "🚚 送貨 (delivery)",
+    reservation: "📦 保留 (reservation)",
+    processing: "🏭 加工 (processing)",
+    reminder: "☎ 回電 (reminder)",
+    visit: "👤 拜訪 (visit)",
+    quote: "📄 報價 (quote)",
+    complaint: "⚠ 客訴 (complaint)",
+    return: "🚛 收退貨 (return)",
+    sample: "🧱 送樣 (sample)",
+    other: "📝 其他 (other)"
+  };
+
+  const statusMap = {
+    Created: "已建立 (Created)",
+    Started: "執行中 (Started)",
+    Waiting: "等待中 (Waiting)",
+    Finished: "已完成 (Finished)",
+    Blocked: "已異常 (Blocked)",
+    Cancelled: "已取消 (Cancelled)",
+    open: "待處理 (open)",
+    inProgress: "處理中 (inProgress)",
+    done: "已完成 (done)",
+    delayed: "已延後 (delayed)",
+    blocked: "已異常 (Blocked)",
+    cancelled: "已取消 (Cancelled)"
+  };
+
+  const priorityMap = {
+    normal: "🔵 普通",
+    high: "🟡 重要",
+    urgent: "🔴 緊急"
+  };
+
+  container.innerHTML = filtered.map(t => {
+    const typeLabel = typeMap[t.type] || t.type || "無";
+    const statusLabel = statusMap[t.status] || t.status || "無";
+    const priorityLabel = priorityMap[t.priority] || t.priority || "無";
+
+    let priorityClass = "";
+    if (t.priority === "urgent") priorityClass = "danger";
+    else if (t.priority === "high") priorityClass = "warning";
+
+    return `
+      <article class="info-card">
+        <div class="card-header">
+          <h2>${escapeHtml(t.title || "無標題")}</h2>
+          <span class="badge ${priorityClass}">${escapeHtml(priorityLabel)}</span>
+        </div>
+        <div class="meta">
+          類別：${escapeHtml(typeLabel)}<br />
+          到期：<strong>${escapeHtml(t.dueDate || "無")}</strong><br />
+          狀態：<strong>${escapeHtml(statusLabel)}</strong><br />
+          指派對象：${escapeHtml(t.assignedTo || "未指派")} (角色: ${escapeHtml(t.assignedRole || "無")})<br />
+          ${t.customerName ? `客戶/店家：${escapeHtml(t.customerName)}<br />` : ""}
+          ${t.productName ? `商品/數量：${escapeHtml(t.productName)} x ${escapeHtml(t.quantity || 1)}<br />` : ""}
+          ${t.sourceUser ? `交辦人：${escapeHtml(t.sourceUser)} ${t.sourceRole ? `(${escapeHtml(t.sourceRole)})` : ""}<br />` : (t.createdBy ? `交辦人：${escapeHtml(t.createdBy)}<br />` : "")}
+          ${t.parentWorkId ? `來源工作 ID：${escapeHtml(t.parentWorkId)}<br />` : ""}
+          ${t.updatedAt ? `最後更新：${escapeHtml(t.updatedAt.slice(0, 16).replace('T', ' '))} ${t.updatedBy ? `by ${escapeHtml(t.updatedBy)}` : ""}<br />` : ""}
+          ${t.description ? `<pre class="pre-text">說明：${escapeHtml(t.description)}</pre>` : ""}
+          ${t.note ? `<pre class="pre-text" style="border-left: 3px solid var(--gold); padding-left: 8px;">備註：${escapeHtml(t.note)}</pre>` : ""}
+          ${t.blockedReason ? `<div style="color: #ff5252; margin-top: 4px; font-weight: bold;">異常原因：${escapeHtml(t.blockedReason)}</div>` : ""}
+        </div>
+      </article>
+    `;
+  }).join("");
+}
+
+function populateTaskAssignees() {
+  const filterAssignee = document.querySelector("#filterTaskAssignee");
+  if (!filterAssignee) return;
+  
+  const owners = state.salesOwners || [];
+  
+  if (filterAssignee.children.length <= 1) {
+    let filterHtml = `<option value="all">所有指派對象</option>`;
+    owners.forEach(owner => {
+      filterHtml += `<option value="${escapeHtml(owner)}">${escapeHtml(owner)}</option>`;
+    });
+    filterAssignee.innerHTML = filterHtml;
+  }
+}
+
+function getTodayDateString_() {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 
