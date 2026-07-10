@@ -1827,4 +1827,45 @@ textarea {
   cursor: not-allowed;
 }
 
+/* Task Detail Waiting Buttons - Stage 5-2D */
+.task-waiting-toggle-button {
+  background: #f4bf58 !important;
+  border-color: #f4bf58 !important;
+  color: #1e293b !important;
+  font-weight: bold;
+  padding: 6px 16px;
+  font-size: 13px;
+  border-radius: 6px;
+}
+.task-waiting-toggle-button:hover {
+  background: #e2ae47 !important;
+}
+.task-waiting-toggle-button:disabled {
+  background: #6b7280 !important;
+  border-color: #6b7280 !important;
+  color: #fff !important;
+  cursor: not-allowed;
+}
+
+.task-waiting-option-btn {
+  background: #37474f !important;
+  border-color: #455a64 !important;
+  color: #fff !important;
+  font-size: 12px !important;
+  padding: 6px 12px !important;
+  border-radius: 4px !important;
+  font-weight: normal !important;
+  transition: all 0.2s ease;
+}
+.task-waiting-option-btn:hover {
+  background: #4f5b66 !important;
+  border-color: #4f5b66 !important;
+}
+.task-waiting-option-btn:disabled {
+  background: #263238 !important;
+  border-color: #263238 !important;
+  color: #78909c !important;
+  cursor: not-allowed;
+}
+
 
