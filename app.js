@@ -69,6 +69,20 @@ document.addEventListener("click", (event) => {
     return;
   }
 
+  const detailToggle = event.target.closest("[data-task-detail-toggle]");
+  if (detailToggle) {
+    event.preventDefault();
+    event.stopPropagation();
+    const taskId = detailToggle.dataset.taskDetailToggle;
+    const panel = document.getElementById(`detail-panel-${taskId}`);
+    if (panel) {
+      const isHidden = panel.style.display === "none";
+      panel.style.display = isHidden ? "block" : "none";
+      detailToggle.textContent = isHidden ? "收合詳情" : "查看詳情";
+    }
+    return;
+  }
+
   const viewButton = event.target.closest("[data-view]");
   if (!viewButton) return;
   setView(viewButton.dataset.view);
@@ -2914,6 +2928,7 @@ function renderTasks() {
   };
 
   container.innerHTML = filtered.map(t => {
+    const detailKey = encodeURIComponent(String(t.id || ""));
     const typeLabel = typeMap[t.type] || t.type || "無";
     const statusLabel = statusMap[t.status] || t.status || "無";
     const priorityLabel = priorityMap[t.priority] || t.priority || "無";
@@ -2953,6 +2968,34 @@ function renderTasks() {
           ${t.note ? `<pre class="pre-text" style="border-left: 3px solid var(--gold); padding-left: 8px;">備註：${escapeHtml(t.note)}</pre>` : ""}
           ${t.blockedReason ? `<div style="color: #ff5252; margin-top: 4px; font-weight: bold;">異常原因：${escapeHtml(t.blockedReason)}</div>` : ""}
         </div>
+        <div style="margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 8px; display: flex; justify-content: flex-end;">
+          <button type="button" class="secondary-button" style="padding: 4px 10px; font-size: 13px;" data-task-detail-toggle="${escapeHtml(detailKey)}">查看詳情</button>
+        </div>
+        <div class="task-detail-panel" id="detail-panel-${escapeHtml(detailKey)}" style="display: none; margin-top: 12px; padding: 12px; background: var(--panel-2); border-radius: 8px; border-left: 3px solid var(--accent, #8b5cf6);">
+          <h4 style="margin-top: 0; margin-bottom: 8px; color: #fff; font-size: 14px;">工作完整詳情</h4>
+          <div class="task-detail-grid" style="display: grid; grid-template-columns: 1fr; gap: 6px; font-size: 13px; color: rgba(255,255,255,0.7);">
+            <div><strong>任務 ID：</strong>${escapeHtml(t.id || "無")}</div>
+            <div><strong>工作類型：</strong>${escapeHtml(typeLabel)} (${escapeHtml(t.type || "無")})</div>
+            <div><strong>標題：</strong>${escapeHtml(t.title || "無")}</div>
+            <div><strong>狀態：</strong>${escapeHtml(statusLabel)} (${escapeHtml(t.status || "無")})</div>
+            <div><strong>優先權：</strong>${escapeHtml(priorityLabel)}</div>
+            <div><strong>到期日：</strong>${escapeHtml(formatTaskDate_(t.dueDate))}</div>
+            <div><strong>指派角色：</strong>${escapeHtml(formatTaskRole_(t.assignedRole))}</div>
+            <div><strong>指派對象：</strong>${escapeHtml(assigneeText)}</div>
+            ${t.customerName ? `<div><strong>客戶/店家：</strong>${escapeHtml(t.customerName)}</div>` : ""}
+            ${t.productName ? `<div><strong>商品/數量：</strong>${escapeHtml(t.productName)} x ${escapeHtml(t.quantity || 1)}</div>` : ""}
+            <div><strong>交辦人：</strong>${escapeHtml(t.sourceUser || t.createdBy || "無")}</div>
+            ${t.sourceRole ? `<div><strong>交辦角色：</strong>${escapeHtml(formatTaskRole_(t.sourceRole))}</div>` : ""}
+            ${t.parentWorkId ? `<div><strong>來源工作 ID：</strong>${escapeHtml(t.parentWorkId)}</div>` : ""}
+            ${t.startedAt ? `<div><strong>開始時間：</strong>${escapeHtml(formatTaskDate_(t.startedAt))}</div>` : ""}
+            ${t.completedAt ? `<div><strong>完成時間：</strong>${escapeHtml(formatTaskDate_(t.completedAt))}</div>` : ""}
+            ${t.updatedAt ? `<div><strong>最後更新：</strong>${escapeHtml(formatTaskDate_(t.updatedAt))} ${t.updatedBy ? `by ${escapeHtml(t.updatedBy)}` : ""}</div>` : ""}
+            ${t.blockedReason ? `<div style="color: #ff5252; font-weight: bold;"><strong>異常原因：</strong>${escapeHtml(t.blockedReason)}</div>` : ""}
+          </div>
+          ${t.description ? `<div style="margin-top: 8px; font-size: 13px; color: rgba(255,255,255,0.85);"><strong style="display:block;margin-bottom:2px;">詳細說明：</strong><pre class="pre-text" style="margin:0; white-space: pre-wrap;">${escapeHtml(t.description)}</pre></div>` : ""}
+          ${t.note ? `<div style="margin-top: 8px; font-size: 13px; color: rgba(255,255,255,0.85);"><strong style="display:block;margin-bottom:2px;">備註：</strong><pre class="pre-text" style="margin:0; border-left: 3px solid var(--gold); padding-left: 8px; white-space: pre-wrap;">${escapeHtml(t.note)}</pre></div>` : ""}
+          ${renderTaskAuditHistory_(t.id)}
+        </div>
       </article>
     `;
   }).join("");
@@ -2979,6 +3022,117 @@ function getTodayDateString_() {
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+function renderTaskAuditHistory_(workId) {
+  const auditLogs = state.auditLogs || [];
+  const related = auditLogs.filter(log => log.workId === workId || log.taskId === workId);
+  
+  if (!related.length) {
+    return `
+      <div class="task-history" style="margin-top: 12px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 8px;">
+        <h5 style="margin: 0 0 6px 0; font-size: 13px; color: #fff;">操作歷程</h5>
+        <div style="font-size: 12px; color: rgba(255,255,255,0.5);">目前沒有操作紀錄</div>
+      </div>
+    `;
+  }
+
+  const sorted = [...related].sort((a, b) => {
+    const timeA = a.createdAt || a.timestamp || "";
+    const timeB = b.createdAt || b.timestamp || "";
+    return timeB.localeCompare(timeA);
+  }).slice(0, 5);
+
+  const formatLogDate = (val) => {
+    if (!val) return "無";
+    if (val.includes("T")) {
+      try {
+        const d = new Date(val);
+        if (!isNaN(d.getTime())) {
+          const tzOffset = 8 * 60;
+          const localTime = new Date(d.getTime() + tzOffset * 60000);
+          const month = String(localTime.getUTCMonth() + 1).padStart(2, '0');
+          const day = String(localTime.getUTCDate()).padStart(2, '0');
+          const hour = String(localTime.getUTCHours()).padStart(2, '0');
+          const min = String(localTime.getUTCMinutes()).padStart(2, '0');
+          return `${month}/${day} ${hour}:${min}`;
+        }
+      } catch (e) {}
+    }
+    return val.replace(/^\d{4}-/, "").replace("T", " ").slice(0, 16);
+  };
+
+  const actionMap = {
+    "create": "建立任務",
+    "status_change": "變更狀態",
+    "add_note": "新增備註",
+    "Blocked": "回報異常",
+    "Waiting": "等待資料",
+    "Finished": "完成任務",
+    "reopen": "重啟處理",
+    "resolved": "異常排除"
+  };
+
+  const statusMap = {
+    "Created": "已建立",
+    "Started": "執行中",
+    "Waiting": "等待中",
+    "Finished": "已完成",
+    "Blocked": "已異常",
+    "Cancelled": "已取消",
+    "open": "待處理",
+    "inProgress": "處理中",
+    "done": "已完成",
+    "delayed": "已延後",
+    "blocked": "已異常",
+    "cancelled": "已取消"
+  };
+
+  const formatTaskRoleGlobal_ = (role) => {
+    const roleMap = {
+      assistant: "助理",
+      sales: "業務",
+      retailSales: "零售業務",
+      showroomSales: "門市業務",
+      admin: "管理員",
+      boss: "主管"
+    };
+    return roleMap[role] || role || "無";
+  };
+
+  const logItems = sorted.map(log => {
+    const actionLabel = actionMap[log.action] || log.action || "操作";
+    const fromLabel = statusMap[log.fromStatus] || log.fromStatus;
+    const toLabel = statusMap[log.toStatus] || log.toStatus;
+    const operatorLabel = log.operator || "系統";
+    const roleLabel = log.operatorRole ? `(${formatTaskRoleGlobal_(log.operatorRole)})` : "";
+    const detailText = log.details ? ` (${log.details})` : "";
+    const timeText = formatLogDate(log.createdAt || log.timestamp);
+
+    let statusTransition = "";
+    if (fromLabel && toLabel) {
+      statusTransition = ` [${fromLabel} ➔ ${toLabel}]`;
+    }
+
+    return `
+      <li style="margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px dashed rgba(255,255,255,0.05);">
+        <div style="display: flex; justify-content: space-between; color: rgba(255,255,255,0.4); font-size: 11px;">
+          <span>${escapeHtml(operatorLabel)}${escapeHtml(roleLabel)}</span>
+          <span>${escapeHtml(timeText)}</span>
+        </div>
+        <div style="margin-top: 2px; color: rgba(255,255,255,0.8); font-size: 12px;">${escapeHtml(actionLabel)}${escapeHtml(statusTransition)}${escapeHtml(detailText)}</div>
+      </li>
+    `;
+  }).join("");
+
+  return `
+    <div class="task-history" style="margin-top: 12px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 8px;">
+      <h5 style="margin: 0 0 6px 0; font-size: 13px; color: #fff;">操作歷程 (最近 5 筆)</h5>
+      <ul style="margin: 0; padding: 0; list-style: none;">
+        ${logItems}
+      </ul>
+    </div>
+  `;
 }
 
 
