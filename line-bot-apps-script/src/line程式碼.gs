@@ -2610,23 +2610,27 @@ function handleAssistantPostback_(event) {
   var action = params.action;
   if (!action) return false;
 
-  // Intercept other actions for this stage
-  if (action === "complete_flow" || action === "problem_flow" || action === "missing_data_flow") {
-    replyToLine(replyToken, "💡 此功能下一階段開放，敬請期待！", true);
-    return true;
+  // Central role permission guard for Stage 3-2
+  var actionsToGuard = ["assistant_start_flow", "complete_flow", "complete_notify", "problem_flow", "missing_data_flow", "change_status"];
+  if (actionsToGuard.includes(action)) {
+    if (operatorRole !== "assistant" && operatorRole !== "admin" && operatorRole !== "boss") {
+      replyToLine(replyToken, "權限不足，無法操作助理工作。", true);
+      return true;
+    }
   }
 
-  if (operatorRole === "boss" && action !== "view_blocked_reason" && action !== "assistant_show_abnormal" && action !== "assistant_start_flow") {
+  // Adjust boss read-only restriction to allow all assistant center actions
+  var allowedBossActions = [
+    "assistant_start_flow", "complete_flow", "complete_notify", 
+    "problem_flow", "missing_data_flow", "change_status", 
+    "view_blocked_reason", "assistant_show_abnormal"
+  ];
+  if (operatorRole === "boss" && !allowedBossActions.includes(action)) {
     replyToLine(replyToken, "主管帳戶為唯讀權限，無法修改或操作工作項目。", true);
     return true;
   }
 
   if (action === "assistant_start_flow") {
-    if (operatorRole !== "assistant" && operatorRole !== "admin" && operatorRole !== "boss") {
-      replyToLine(replyToken, "權限不足，只有助理、管理員或主管能進入助理中心處理工作。😊", true);
-      return true;
-    }
-
     var tasks = getAssistantTasks_();
     var activeTasks = tasks.filter(function(t) {
       return t.assignedRole === "assistant" && ["Created", "Started", "Waiting", "Blocked"].includes(t.status);
@@ -2657,24 +2661,52 @@ function handleAssistantPostback_(event) {
   if (action === "change_status") {
     var id = params.id;
     var to = params.to;
+    var reason = params.reason ? decodeURIComponent(params.reason) : "";
     var task = getTaskById_(id);
     if (!task) {
       replyToLine(replyToken, "找不到該工作項目。", true);
       return true;
     }
+    
+    var allowedStates = ["Started", "Waiting", "Blocked", "Finished"];
+    if (!to || !allowedStates.includes(to)) {
+      replyToLine(replyToken, "無效的目標狀態：" + to, true);
+      return true;
+    }
+    
+    if (task.status === "Finished" && to === "Started") {
+      replyToLine(replyToken, "工作已完成，不允許重新開啟為執行中狀態。", true);
+      return true;
+    }
+    
     var fromStatus = task.status;
     task.status = to;
+    task.updatedAt = new Date().toISOString();
+    task.updatedBy = operatorName;
+    
     if (to === "Started" && !task.startedAt) {
       task.startedAt = new Date().toISOString();
     }
-    task.updatedAt = new Date().toISOString();
-    task.updatedBy = operatorName;
+    if (to === "Blocked" || to === "Waiting") {
+      task.blockedReason = reason;
+    }
+    if (to === "Finished") {
+      task.completedAt = new Date().toISOString();
+    }
+    
     updateTaskInSheet_(task);
     
-    var actionName = "assistant_work_started";
-    if (to === "Finished") actionName = "assistant_work_finished";
-    else if (to === "Cancelled") actionName = "assistant_work_cancelled";
-    appendAuditLog_(task.id, actionName, operatorName, operatorRole, fromStatus, to, "狀態變更為 " + to);
+    var detailStr = reason ? "reason=" + reason : "status change";
+    appendAuditLog_(task.id, "change_status", operatorName, operatorRole, fromStatus, to, detailStr);
+    
+    // Push notification to creator if blocked or waiting
+    if (to === "Blocked" || to === "Waiting") {
+      var creatorLineId = findUserLineId_(task.createdBy);
+      if (creatorLineId) {
+        var prefix = to === "Blocked" ? "⚠️ 異常通知：" : "🔔 缺資料通知：";
+        sendLinePushMessage_(creatorLineId, prefix + "工作「" + task.title + "」已標記為【" + (to === "Blocked" ? "已異常" : "等待中") + "】，原因：【" + reason + "】");
+      }
+    }
     
     var cardMsg = buildSingleTaskCard_(task, userContext);
     replyToLine(replyToken, cardMsg, true);
@@ -2683,22 +2715,13 @@ function handleAssistantPostback_(event) {
 
   if (action === "missing_data_flow") {
     var id = params.id;
-    var task = getTaskById_(id);
-    if (!task) {
-      replyToLine(replyToken, "找不到該工作項目。", true);
-      return true;
-    }
-    
     var qItems = [
-      { type: "action", action: { type: "postback", label: "缺客戶資料", data: "action=missing_data_select&id=" + id + "&reason=" + encodeURIComponent("缺客戶資料"), displayText: "缺客戶資料" } },
-      { type: "action", action: { type: "postback", label: "缺商品型號", data: "action=missing_data_select&id=" + id + "&reason=" + encodeURIComponent("缺商品型號"), displayText: "缺商品型號" } },
-      { type: "action", action: { type: "postback", label: "缺數量", data: "action=missing_data_select&id=" + id + "&reason=" + encodeURIComponent("缺數量"), displayText: "缺數量" } },
-      { type: "action", action: { type: "postback", label: "缺送貨日期", data: "action=missing_data_select&id=" + id + "&reason=" + encodeURIComponent("缺送貨日期"), displayText: "缺送貨日期" } },
-      { type: "action", action: { type: "postback", label: "缺送貨地址", data: "action=missing_data_select&id=" + id + "&reason=" + encodeURIComponent("缺送貨地址"), displayText: "缺送貨地址" } },
-      { type: "action", action: { type: "postback", label: "缺加工尺寸", data: "action=missing_data_select&id=" + id + "&reason=" + encodeURIComponent("缺加工尺寸"), displayText: "缺加工尺寸" } },
-      { type: "action", action: { type: "postback", label: "其他原因", data: "action=missing_data_other&id=" + id, displayText: "其他原因" } }
+      { type: "action", action: { type: "postback", label: "缺客戶資料", data: "action=change_status&id=" + id + "&to=Waiting&reason=" + encodeURIComponent("缺客戶資料"), displayText: "缺客戶資料" } },
+      { type: "action", action: { type: "postback", label: "缺商品型號", data: "action=change_status&id=" + id + "&to=Waiting&reason=" + encodeURIComponent("缺商品型號"), displayText: "缺商品型號" } },
+      { type: "action", action: { type: "postback", label: "缺數量", data: "action=change_status&id=" + id + "&to=Waiting&reason=" + encodeURIComponent("缺數量"), displayText: "缺數量" } },
+      { type: "action", action: { type: "postback", label: "缺送貨資訊", data: "action=change_status&id=" + id + "&to=Waiting&reason=" + encodeURIComponent("缺送貨資訊"), displayText: "缺送貨資訊" } },
+      { type: "action", action: { type: "postback", label: "缺價格確認", data: "action=change_status&id=" + id + "&to=Waiting&reason=" + encodeURIComponent("缺價格確認"), displayText: "缺價格確認" } }
     ];
-    
     replyToLine(replyToken, {
       type: "text",
       text: "請選擇缺少的資料類型：",
@@ -2707,52 +2730,14 @@ function handleAssistantPostback_(event) {
     return true;
   }
 
-  if (action === "missing_data_select") {
-    var id = params.id;
-    var reason = params.reason;
-    var task = getTaskById_(id);
-    if (!task) {
-      replyToLine(replyToken, "找不到該工作項目。", true);
-      return true;
-    }
-    
-    var fromStatus = task.status;
-    task.status = "Waiting";
-    task.blockedReason = reason;
-    task.updatedAt = new Date().toISOString();
-    task.updatedBy = operatorName;
-    updateTaskInSheet_(task);
-    
-    var creatorLineId = findUserLineId_(task.createdBy);
-    if (creatorLineId) {
-      var ok = sendLinePushMessage_(creatorLineId, "🔔 助理通知：您交辦的工作「" + task.title + "」缺少資料，原因：【" + reason + "】，請儘速補齊資料！");
-      appendAuditLog_(task.id, ok ? "assistant_notification_sent" : "assistant_notification_failed", operatorName, operatorRole, fromStatus, "Waiting", "通知交辦人：" + task.createdBy);
-    } else {
-      appendAuditLog_(task.id, "assistant_notification_failed", operatorName, operatorRole, fromStatus, "Waiting", "找不到交辦人：" + task.createdBy);
-    }
-    
-    appendAuditLog_(task.id, "assistant_work_waiting", operatorName, operatorRole, fromStatus, "Waiting", reason);
-    replyToLine(replyToken, "已將狀態標記為【等待中】，並通知交辦人！", true);
-    return true;
-  }
-
-  if (action === "missing_data_other") {
-    var id = params.id;
-    CacheService.getScriptCache().put("state_" + lineUserId, "waiting_missing_" + id, 300);
-    replyToLine(replyToken, "請直接輸入缺少資料的說明（或輸入「取消」）：", true);
-    return true;
-  }
-
   if (action === "problem_flow") {
     var id = params.id;
     var qItems = [
-      { type: "action", action: { type: "postback", label: "庫存不足", data: "action=problem_select&id=" + id + "&reason=" + encodeURIComponent("庫存不足"), displayText: "庫存不足" } },
-      { type: "action", action: { type: "postback", label: "保留衝突", data: "action=problem_select&id=" + id + "&reason=" + encodeURIComponent("保留衝突"), displayText: "保留衝突" } },
-      { type: "action", action: { type: "postback", label: "加工異常", data: "action=problem_select&id=" + id + "&reason=" + encodeURIComponent("加工異常"), displayText: "加工異常" } },
-      { type: "action", action: { type: "postback", label: "送貨無法安排", data: "action=problem_select&id=" + id + "&reason=" + encodeURIComponent("送貨無法安排"), displayText: "送貨無法安排" } },
-      { type: "action", action: { type: "postback", label: "客戶資料錯誤", data: "action=problem_select&id=" + id + "&reason=" + encodeURIComponent("客戶資料錯誤"), displayText: "客戶資料錯誤" } },
-      { type: "action", action: { type: "postback", label: "價格／訂單問題", data: "action=problem_select&id=" + id + "&reason=" + encodeURIComponent("價格／訂單問題"), displayText: "價格／訂單問題" } },
-      { type: "action", action: { type: "postback", label: "其他原因", data: "action=problem_other&id=" + id, displayText: "其他原因" } }
+      { type: "action", action: { type: "postback", label: "庫存不足", data: "action=change_status&id=" + id + "&to=Blocked&reason=" + encodeURIComponent("庫存不足"), displayText: "庫存不足" } },
+      { type: "action", action: { type: "postback", label: "保留衝突", data: "action=change_status&id=" + id + "&to=Blocked&reason=" + encodeURIComponent("保留衝突"), displayText: "保留衝突" } },
+      { type: "action", action: { type: "postback", label: "商品型號疑似錯誤", data: "action=change_status&id=" + id + "&to=Blocked&reason=" + encodeURIComponent("商品型號疑似錯誤"), displayText: "商品型號疑似錯誤" } },
+      { type: "action", action: { type: "postback", label: "交期無法確認", data: "action=change_status&id=" + id + "&to=Blocked&reason=" + encodeURIComponent("交期無法確認"), displayText: "交期無法確認" } },
+      { type: "action", action: { type: "postback", label: "客戶資料不完整", data: "action=change_status&id=" + id + "&to=Blocked&reason=" + encodeURIComponent("客戶資料不完整"), displayText: "客戶資料不完整" } }
     ];
     replyToLine(replyToken, {
       type: "text",
@@ -2762,48 +2747,11 @@ function handleAssistantPostback_(event) {
     return true;
   }
 
-  if (action === "problem_select") {
-    var id = params.id;
-    var reason = params.reason;
-    var task = getTaskById_(id);
-    if (!task) {
-      replyToLine(replyToken, "找不到該工作項目。", true);
-      return true;
-    }
-    
-    var fromStatus = task.status;
-    task.status = "Blocked";
-    task.blockedReason = reason;
-    task.updatedAt = new Date().toISOString();
-    task.updatedBy = operatorName;
-    updateTaskInSheet_(task);
-    
-    var creatorLineId = findUserLineId_(task.createdBy);
-    if (creatorLineId) {
-      sendLinePushMessage_(creatorLineId, "⚠️ 助理通知：您交辦的工作「" + task.title + "」發生問題：【" + reason + "】！");
-    }
-    if (task.priority === "urgent") {
-      notifyBosses_("🚨 緊急工作異常通知：由 " + task.createdBy + " 交辦的「" + task.title + "」發生問題：【" + reason + "】，請協助處理！");
-    }
-    
-    appendAuditLog_(task.id, "assistant_work_blocked", operatorName, operatorRole, fromStatus, "Blocked", reason);
-    replyToLine(replyToken, "已將工作標記為【已異常】，並通知相關人員！", true);
-    return true;
-  }
-
-  if (action === "problem_other") {
-    var id = params.id;
-    CacheService.getScriptCache().put("state_" + lineUserId, "waiting_problem_" + id, 300);
-    replyToLine(replyToken, "請直接輸入問題的說明（或輸入「取消」）：", true);
-    return true;
-  }
-
   if (action === "complete_flow") {
     var id = params.id;
     var qItems = [
-      { type: "action", action: { type: "postback", label: "通知交辦人", data: "action=complete_notify&id=" + id + "&notify=true", displayText: "通知交辦人" } },
-      { type: "action", action: { type: "postback", label: "不用通知", data: "action=complete_notify&id=" + id + "&notify=false", displayText: "不用通知" } },
-      { type: "action", action: { type: "postback", label: "完成並處理下一件", data: "action=complete_notify&id=" + id + "&notify=next", displayText: "完成並處理下一件" } }
+      { type: "action", action: { type: "postback", label: "通知交辦人", data: "action=complete_notify&id=" + id + "&notify=yes", displayText: "通知交辦人" } },
+      { type: "action", action: { type: "postback", label: "不用通知", data: "action=complete_notify&id=" + id + "&notify=no", displayText: "不用通知" } }
     ];
     replyToLine(replyToken, {
       type: "text",
@@ -2829,45 +2777,22 @@ function handleAssistantPostback_(event) {
     task.updatedBy = operatorName;
     updateTaskInSheet_(task);
     
-    appendAuditLog_(task.id, "assistant_work_finished", operatorName, operatorRole, fromStatus, "Finished", "完成工作");
+    appendAuditLog_(task.id, "complete_notify", operatorName, operatorRole, fromStatus, "Finished", "notify=" + notify);
     
-    if (notify === "true" || notify === "next") {
-      var creatorLineId = findUserLineId_(task.createdBy);
+    if (notify === "yes") {
+      var targetName = task.sourceUser || task.createdBy;
+      var creatorLineId = findUserLineId_(targetName);
       if (creatorLineId) {
         var msg = "✅ 助理通知：您交辦的「" + (task.customerName ? task.customerName + "－" : "") + task.title + "」已完成。";
         sendLinePushMessage_(creatorLineId, msg);
+        replyToLine(replyToken, "工作已標記為【已完成】並發出通知！", true);
+      } else {
+        replyToLine(replyToken, "工作已標記為【已完成】！(找不到交辦人 " + targetName + " 的 LINE ID，未發送推播)", true);
       }
-    }
-    
-    if (notify === "next") {
-      var tasks = getAssistantTasks_();
-      var activeTasks = tasks.filter(function(t) {
-        return t.assignedRole === "assistant" && ["Created", "Started", "Waiting", "Blocked"].includes(t.status);
-      });
-      if (activeTasks.length === 0) {
-        replyToLine(replyToken, "工作已標記為【已完成】並發出通知！目前已無其他待處理工作，辛苦了！", true);
-        return true;
-      }
-      var sorted = getSortedTasks_(activeTasks);
-      var topTask = sorted[0];
-      
-      var topFrom = topTask.status;
-      if (topTask.status === "Created") {
-        topTask.status = "Started";
-        topTask.startedAt = new Date().toISOString();
-        topTask.updatedAt = new Date().toISOString();
-        topTask.updatedBy = operatorName;
-        updateTaskInSheet_(topTask);
-        appendAuditLog_(topTask.id, "assistant_work_started", operatorName, operatorRole, topFrom, "Started", "完成上筆後自動開始處理下一件");
-      }
-      
-      var cardMsg = buildSingleTaskCard_(topTask, userContext);
-      replyToLine(replyToken, cardMsg, true);
-      return true;
     } else {
       replyToLine(replyToken, "工作已標記為【已完成】！", true);
-      return true;
     }
+    return true;
   }
 
   if (action === "reassign_flow") {
