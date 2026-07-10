@@ -1,0 +1,15 @@
+{
+  "projectName": "jingyang-sales-app",
+  "projectRoot": "/Users/chenhaoan/Documents/jingyang-sales-app",
+  "appsScriptSource": "google-apps-script",
+  "scriptId": "1vRepq_HNkjbs8vRQvbkkDE8unGPHfksfhOTrkrNZthFZHs2GSHO8Gasc",
+  "deploymentId": "AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw",
+  "webAppUrl": "https://script.google.com/macros/s/AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw/exec",
+  "environment": "production",
+  "lineBot": {
+    "appsScriptSource": "line-bot-apps-script",
+    "scriptId": "19rYFpT-RE77oT52QfFIpIBqjcXSWemKRs0ClExMXo0lImf_OFb_DJ_AD",
+    "deploymentId": "AKfycbxioavjvzENr9duOtomZQRmbycbDtJOzKNAuSgcnE1ptNquTStiWMZwygLEHaYfPxOn",
+    "webAppUrl": "https://script.google.com/macros/s/AKfycbxioavjvzENr9duOtomZQRmbycbDtJOzKNAuSgcnE1ptNquTStiWMZwygLEHaYfPxOn/exec"
+  }
+}
