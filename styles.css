@@ -1768,4 +1768,23 @@ textarea {
   background: #9ca3af;
 }
 
+/* Task Detail Complete Button - Stage 5-1B */
+.task-complete-button {
+  background: #10b981 !important;
+  border-color: #10b981 !important;
+  color: #fff !important;
+  font-weight: bold;
+  padding: 6px 16px;
+  font-size: 13px;
+  border-radius: 6px;
+}
+.task-complete-button:hover {
+  background: #059669 !important;
+}
+.task-complete-button:disabled {
+  background: #6b7280 !important;
+  border-color: #6b7280 !important;
+  cursor: not-allowed;
+}
+
 

@@ -31,6 +31,7 @@ mergeImportedStores();
 let cloudConfig = loadCloudConfig();
 let appSettings = loadAppSettings();
 let editingStoreId = null;
+const pwaTaskStatusInFlight = new Set();
 
 const views = {
   home: document.querySelector("#homeView"),
@@ -66,6 +67,15 @@ document.addEventListener("click", (event) => {
     event.preventDefault();
     event.stopPropagation();
     setView(shortcut.dataset.shortcutView);
+    return;
+  }
+
+  const completeBtn = event.target.closest("[data-task-complete-btn]");
+  if (completeBtn) {
+    event.preventDefault();
+    event.stopPropagation();
+    const taskId = decodeURIComponent(completeBtn.dataset.taskCompleteBtn);
+    completeTaskFromPwa_(taskId);
     return;
   }
 
@@ -3051,6 +3061,11 @@ function renderTasks() {
           ${t.description ? `<div style="margin-top: 8px; font-size: 13px; color: rgba(255,255,255,0.85);"><strong style="display:block;margin-bottom:2px;">詳細說明：</strong><pre class="pre-text" style="margin:0; white-space: pre-wrap;">${escapeHtml(t.description)}</pre></div>` : ""}
           ${t.note ? `<div style="margin-top: 8px; font-size: 13px; color: rgba(255,255,255,0.85);"><strong style="display:block;margin-bottom:2px;">備註：</strong><pre class="pre-text" style="margin:0; border-left: 3px solid var(--gold); padding-left: 8px; white-space: pre-wrap;">${escapeHtml(t.note)}</pre></div>` : ""}
           ${renderTaskAuditHistory_(t.id)}
+          ${canCurrentUserCompleteTask_(t) ? `
+            <div style="margin-top: 12px; display: flex; justify-content: flex-end; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 12px;">
+              <button type="button" class="primary-button task-complete-button" data-task-complete-btn="${escapeHtml(detailKey)}">完成工作</button>
+            </div>
+          ` : ""}
         </div>
       </article>
     `;
@@ -3316,6 +3331,136 @@ function getTaskStatusMeta_(status) {
     className: "task-status-unknown",
     tone: "unknown"
   };
+}
+
+function canCurrentUserCompleteTask_(task) {
+  if (!state.currentUser || !state.currentUser.role) return false;
+  const role = state.currentUser.role;
+  const username = state.currentUser.username || "";
+  const displayName = state.currentUser.displayName || "";
+  const salesOwner = state.currentUser.salesOwner || "";
+  
+  if (task.status === "Finished" || task.status === "done" || task.status === "Cancelled" || task.status === "cancelled") {
+    return false;
+  }
+  
+  if (role === "admin" || role === "boss") {
+    return true;
+  }
+  
+  if (role === "assistant") {
+    return (
+      task.assignedRole === "assistant" ||
+      task.assignedTo === username ||
+      task.assignedTo === displayName ||
+      task.assignedTo === salesOwner
+    );
+  }
+  
+  if (role === "retailSales" || role === "showroomSales" || role === "sales") {
+    const isAssignedToMe = (
+      task.assignedTo && (
+        task.assignedTo === username ||
+        task.assignedTo === displayName ||
+        task.assignedTo === salesOwner
+      )
+    );
+    const isCreatedByMe = (
+      task.createdBy && (
+        task.createdBy === username ||
+        task.createdBy === displayName ||
+        task.createdBy === salesOwner
+      )
+    );
+    return isAssignedToMe || isCreatedByMe;
+  }
+  
+  return false;
+}
+
+function buildTaskUserContext_() {
+  if (!state.currentUser) return null;
+  return {
+    role: state.currentUser.role || "",
+    username: state.currentUser.username || "",
+    displayName: state.currentUser.displayName || "",
+    salesOwner: state.currentUser.salesOwner || "",
+    lineUserId: state.currentUser.lineUserId || ""
+  };
+}
+
+async function completeTaskFromPwa_(taskId) {
+  if (pwaTaskStatusInFlight.has(taskId)) return;
+  
+  const task = state.tasks.find(t => t.id === taskId);
+  if (!task) {
+    toast("找不到該任務");
+    return;
+  }
+  
+  if (!canCurrentUserCompleteTask_(task)) {
+    toast("權限不足，無法完成此任務");
+    return;
+  }
+  
+  if (!confirm("確定要完成此工作任務嗎？")) {
+    return;
+  }
+  
+  pwaTaskStatusInFlight.add(taskId);
+  
+  // Disable button visually
+  const btn = document.querySelector(`[data-task-complete-btn="${escapeHtml(encodeURIComponent(taskId))}"]`);
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "提交中...";
+  }
+  
+  try {
+    const userContext = buildTaskUserContext_();
+    const result = await sendCloudAction("updateTaskStatus", {
+      id: taskId,
+      status: "Finished",
+      note: "PWA 完成工作",
+      userContext
+    });
+    
+    if (result && result.ok) {
+      const fromStatus = task.status;
+      task.status = "Finished";
+      task.completedAt = new Date().toISOString();
+      task.updatedAt = new Date().toISOString();
+      task.updatedBy = userContext.displayName || userContext.username || "unknown";
+      
+      // Also add local audit log for instant update in details panel
+      state.auditLogs.unshift({
+        id: "audit-pwa-" + Date.now(),
+        workId: taskId,
+        action: "pwa_update_status",
+        operator: userContext.displayName || userContext.username || "unknown",
+        operatorRole: userContext.role || "",
+        fromStatus: fromStatus || "",
+        toStatus: "Finished",
+        details: "PWA 完成工作",
+        createdAt: new Date().toISOString()
+      });
+      
+      saveState();
+      renderTasks();
+      toast("任務已完成！");
+    } else {
+      throw new Error((result && result.message) || "提交失敗");
+    }
+  } catch (err) {
+    console.error(err);
+    toast(err.message || "完成任務時發生錯誤");
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "完成工作";
+    }
+  } finally {
+    pwaTaskStatusInFlight.delete(taskId);
+  }
 }
 
 
