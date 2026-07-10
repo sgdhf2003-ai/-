@@ -2850,6 +2850,11 @@ function renderTasks() {
     complaint: "⚠ 客訴 (complaint)",
     return: "🚛 收退貨 (return)",
     sample: "🧱 送樣 (sample)",
+    orderInput: "📝 待打訂單 (orderInput)",
+    reservationConfirm: "📦 待確認保留 (reservationConfirm)",
+    processingArrange: "🏭 待安排加工 (processingArrange)",
+    deliveryArrange: "🚚 待安排送貨 (deliveryArrange)",
+    productReply: "💬 待回覆問貨 (productReply)",
     other: "📝 其他 (other)"
   };
 
@@ -2874,6 +2879,40 @@ function renderTasks() {
     urgent: "🔴 緊急"
   };
 
+  const formatTaskDate_ = (value) => {
+    if (!value) return "無";
+    if (value.includes("T")) {
+      try {
+        const d = new Date(value);
+        if (!isNaN(d.getTime())) {
+          const tzOffset = 8 * 60; // UTC+8
+          const localTime = new Date(d.getTime() + tzOffset * 60000);
+          const year = localTime.getUTCFullYear();
+          const month = String(localTime.getUTCMonth() + 1).padStart(2, '0');
+          const day = String(localTime.getUTCDate()).padStart(2, '0');
+          return `${year}/${month}/${day}`;
+        }
+      } catch (e) {}
+    }
+    const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (match) {
+      return `${match[1]}/${match[2]}/${match[3]}`;
+    }
+    return value.replace(/-/g, "/").split("T")[0];
+  };
+
+  const formatTaskRole_ = (role) => {
+    const roleMap = {
+      assistant: "助理",
+      sales: "業務",
+      retailSales: "零售業務",
+      showroomSales: "門市業務",
+      admin: "管理員",
+      boss: "主管"
+    };
+    return roleMap[role] || role || "無";
+  };
+
   container.innerHTML = filtered.map(t => {
     const typeLabel = typeMap[t.type] || t.type || "無";
     const statusLabel = statusMap[t.status] || t.status || "無";
@@ -2883,6 +2922,17 @@ function renderTasks() {
     if (t.priority === "urgent") priorityClass = "danger";
     else if (t.priority === "high") priorityClass = "warning";
 
+    let assigneeText = "";
+    if (t.assignedTo) {
+      assigneeText = t.assignedTo;
+    } else if (t.assignedRole === "assistant") {
+      assigneeText = "助理群組";
+    } else if (t.assignedRole) {
+      assigneeText = "未指定人員";
+    } else {
+      assigneeText = "未指派";
+    }
+
     return `
       <article class="info-card">
         <div class="card-header">
@@ -2891,14 +2941,14 @@ function renderTasks() {
         </div>
         <div class="meta">
           類別：${escapeHtml(typeLabel)}<br />
-          到期：<strong>${escapeHtml(t.dueDate || "無")}</strong><br />
+          到期：<strong>${escapeHtml(formatTaskDate_(t.dueDate))}</strong><br />
           狀態：<strong>${escapeHtml(statusLabel)}</strong><br />
-          指派對象：${escapeHtml(t.assignedTo || "未指派")} (角色: ${escapeHtml(t.assignedRole || "無")})<br />
+          指派對象：<strong>${escapeHtml(assigneeText)}</strong> ${t.assignedRole ? `(角色: ${escapeHtml(formatTaskRole_(t.assignedRole))})` : ""}<br />
           ${t.customerName ? `客戶/店家：${escapeHtml(t.customerName)}<br />` : ""}
           ${t.productName ? `商品/數量：${escapeHtml(t.productName)} x ${escapeHtml(t.quantity || 1)}<br />` : ""}
-          ${t.sourceUser ? `交辦人：${escapeHtml(t.sourceUser)} ${t.sourceRole ? `(${escapeHtml(t.sourceRole)})` : ""}<br />` : (t.createdBy ? `交辦人：${escapeHtml(t.createdBy)}<br />` : "")}
+          ${t.sourceUser ? `交辦人：${escapeHtml(t.sourceUser)} ${t.sourceRole ? `(${escapeHtml(formatTaskRole_(t.sourceRole))})` : ""}<br />` : (t.createdBy ? `交辦人：${escapeHtml(t.createdBy)}<br />` : "")}
           ${t.parentWorkId ? `來源工作 ID：${escapeHtml(t.parentWorkId)}<br />` : ""}
-          ${t.updatedAt ? `最後更新：${escapeHtml(t.updatedAt.slice(0, 16).replace('T', ' '))} ${t.updatedBy ? `by ${escapeHtml(t.updatedBy)}` : ""}<br />` : ""}
+          ${t.updatedAt ? `最後更新：${escapeHtml(formatTaskDate_(t.updatedAt))} ${t.updatedBy ? `by ${escapeHtml(t.updatedBy)}` : ""}<br />` : ""}
           ${t.description ? `<pre class="pre-text">說明：${escapeHtml(t.description)}</pre>` : ""}
           ${t.note ? `<pre class="pre-text" style="border-left: 3px solid var(--gold); padding-left: 8px;">備註：${escapeHtml(t.note)}</pre>` : ""}
           ${t.blockedReason ? `<div style="color: #ff5252; margin-top: 4px; font-weight: bold;">異常原因：${escapeHtml(t.blockedReason)}</div>` : ""}
