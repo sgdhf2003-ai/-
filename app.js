@@ -2937,20 +2937,7 @@ function renderTasks() {
     other: "📝 其他 (other)"
   };
 
-  const statusMap = {
-    Created: "已建立 (Created)",
-    Started: "執行中 (Started)",
-    Waiting: "等待中 (Waiting)",
-    Finished: "已完成 (Finished)",
-    Blocked: "已異常 (Blocked)",
-    Cancelled: "已取消 (Cancelled)",
-    open: "待處理 (open)",
-    inProgress: "處理中 (inProgress)",
-    done: "已完成 (done)",
-    delayed: "已延後 (delayed)",
-    blocked: "已異常 (Blocked)",
-    cancelled: "已取消 (Cancelled)"
-  };
+  // statusMap removed for getTaskStatusMeta_ helper
 
   const priorityMap = {
     normal: "🔵 普通",
@@ -2995,7 +2982,8 @@ function renderTasks() {
   container.innerHTML = summaryHTML + filtered.map(t => {
     const detailKey = encodeURIComponent(String(t.id || ""));
     const typeLabel = typeMap[t.type] || t.type || "無";
-    const statusLabel = statusMap[t.status] || t.status || "無";
+    const statusMeta = getTaskStatusMeta_(t.status);
+    const statusLabel = statusMeta.label;
     const priorityLabel = priorityMap[t.priority] || t.priority || "無";
 
     let priorityClass = "";
@@ -3014,15 +3002,18 @@ function renderTasks() {
     }
 
     return `
-      <article class="info-card">
+      <article class="info-card task-card ${statusMeta.className}">
         <div class="card-header">
           <h2>${escapeHtml(t.title || "無標題")}</h2>
-          <span class="badge ${priorityClass}">${escapeHtml(priorityLabel)}</span>
+          <div style="display: flex; gap: 6px; align-items: center;">
+            <span class="task-status-badge ${statusMeta.className}">${escapeHtml(statusLabel)}</span>
+            <span class="badge ${priorityClass}">${escapeHtml(priorityLabel)}</span>
+          </div>
         </div>
         <div class="meta">
           類別：${escapeHtml(typeLabel)}<br />
           到期：<strong>${escapeHtml(formatTaskDate_(t.dueDate))}</strong><br />
-          狀態：<strong>${escapeHtml(statusLabel)}</strong><br />
+          狀態：<strong>${escapeHtml(statusLabel)} (${escapeHtml(t.status || "無")})</strong><br />
           指派對象：<strong>${escapeHtml(assigneeText)}</strong> ${t.assignedRole ? `(角色: ${escapeHtml(formatTaskRole_(t.assignedRole))})` : ""}<br />
           ${t.customerName ? `客戶/店家：${escapeHtml(t.customerName)}<br />` : ""}
           ${t.productName ? `商品/數量：${escapeHtml(t.productName)} x ${escapeHtml(t.quantity || 1)}<br />` : ""}
@@ -3267,6 +3258,64 @@ function getTaskSummaryStats_(tasks) {
   });
 
   return stats;
+}
+
+function getTaskStatusMeta_(status) {
+  const norm = String(status || "").trim();
+  if (norm === "Created" || norm === "open") {
+    return {
+      label: "已建立",
+      code: norm,
+      className: "task-status-created",
+      tone: "created"
+    };
+  }
+  if (norm === "Started" || norm === "inProgress") {
+    return {
+      label: "執行中",
+      code: norm,
+      className: "task-status-started",
+      tone: "started"
+    };
+  }
+  if (norm === "Waiting" || norm === "delayed") {
+    return {
+      label: "等待補資料",
+      code: norm,
+      className: "task-status-waiting",
+      tone: "waiting"
+    };
+  }
+  if (norm === "Blocked" || norm === "blocked") {
+    return {
+      label: "異常",
+      code: norm,
+      className: "task-status-blocked",
+      tone: "blocked"
+    };
+  }
+  if (norm === "Finished" || norm === "done") {
+    return {
+      label: "已完成",
+      code: norm,
+      className: "task-status-finished",
+      tone: "finished"
+    };
+  }
+  if (norm === "Cancelled" || norm === "cancelled") {
+    return {
+      label: "已取消",
+      code: norm,
+      className: "task-status-cancelled",
+      tone: "cancelled"
+    };
+  }
+  return {
+    label: norm || "無",
+    code: norm,
+    className: "task-status-unknown",
+    tone: "unknown"
+  };
 }
 
 

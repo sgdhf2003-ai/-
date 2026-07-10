@@ -1700,4 +1700,72 @@ textarea {
   background: transparent;
 }
 
+/* Task Card Status Badges & Borders - Stage 4-4 */
+.task-status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: bold;
+  border-radius: 4px;
+  line-height: 1.4;
+  color: #fff;
+}
+
+/* Created: Blue */
+.task-card.task-status-created {
+  border-left: 4px solid #3b82f6 !important;
+}
+.task-status-badge.task-status-created {
+  background: #3b82f6;
+}
+
+/* Started: Purple */
+.task-card.task-status-started {
+  border-left: 4px solid #8b5cf6 !important;
+}
+.task-status-badge.task-status-started {
+  background: #8b5cf6;
+}
+
+/* Waiting: Yellow */
+.task-card.task-status-waiting {
+  border-left: 4px solid #f59e0b !important;
+}
+.task-status-badge.task-status-waiting {
+  background: #f59e0b;
+  color: #1e293b;
+}
+
+/* Blocked: Red */
+.task-card.task-status-blocked {
+  border-left: 4px solid #ef4444 !important;
+}
+.task-status-badge.task-status-blocked {
+  background: #ef4444;
+}
+
+/* Finished: Green */
+.task-card.task-status-finished {
+  border-left: 4px solid #10b981 !important;
+}
+.task-status-badge.task-status-finished {
+  background: #10b981;
+}
+
+/* Cancelled: Gray */
+.task-card.task-status-cancelled {
+  border-left: 4px solid #6b7280 !important;
+}
+.task-status-badge.task-status-cancelled {
+  background: #6b7280;
+}
+
+/* Unknown: Light Gray */
+.task-card.task-status-unknown {
+  border-left: 4px solid #9ca3af !important;
+}
+.task-status-badge.task-status-unknown {
+  background: #9ca3af;
+}
+
 
