@@ -1674,6 +1674,15 @@ function updateTaskStatus(data) {
     return { ok: false, message: "權限不足" };
   }
   
+  // 1.5. 狀態原因白名單校驗
+  if (status === "Blocked" || status === "Waiting") {
+    const reason = getTaskStatusReason_(data);
+    if (!reason || !isAllowedTaskStatusReason_(status, reason)) {
+      const errMsg = status === "Blocked" ? "異常原因不合法" : "補資料原因不合法";
+      return { ok: false, message: errMsg };
+    }
+  }
+  
   // 2. 欄位一致性與狀態更新
   const fromStatus = task.status;
   task.status = status;
@@ -1687,7 +1696,7 @@ function updateTaskStatus(data) {
   }
   
   if (status === "Blocked" || status === "Waiting") {
-    const reason = data.reason || note || "";
+    const reason = getTaskStatusReason_(data);
     if (reason) {
       task.blockedReason = reason;
     }
@@ -2177,4 +2186,24 @@ function appendAuditLog_(payload) {
     console.error("appendAuditLog_ failed: " + err.toString());
     return { ok: false, error: err.toString() };
   }
+}
+
+function getTaskStatusReason_(data) {
+  return data.reason || data.note || "";
+}
+
+function isAllowedTaskStatusReason_(status, reason) {
+  const allowed = getAllowedTaskStatusReasons_(status);
+  if (!allowed) return true;
+  return allowed.indexOf(reason) !== -1;
+}
+
+function getAllowedTaskStatusReasons_(status) {
+  if (status === "Blocked" || status === "blocked") {
+    return ["庫存不足", "保留衝突", "商品型號疑似錯誤", "交期無法確認", "客戶資料不完整"];
+  }
+  if (status === "Waiting" || status === "delayed") {
+    return ["缺客戶資料", "缺商品型號", "缺數量", "缺送貨資訊", "缺價格確認"];
+  }
+  return null;
 }
