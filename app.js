@@ -32,6 +32,7 @@ let cloudConfig = loadCloudConfig();
 let appSettings = loadAppSettings();
 let editingStoreId = null;
 const pwaTaskStatusInFlight = new Set();
+const pwaTaskIssueReasonOpen = new Set();
 
 const views = {
   home: document.querySelector("#homeView"),
@@ -76,6 +77,30 @@ document.addEventListener("click", (event) => {
     event.stopPropagation();
     const taskId = decodeURIComponent(completeBtn.dataset.taskCompleteBtn);
     completeTaskFromPwa_(taskId);
+    return;
+  }
+
+  const issueToggleBtn = event.target.closest("[data-task-issue-toggle-btn]");
+  if (issueToggleBtn) {
+    event.preventDefault();
+    event.stopPropagation();
+    const taskId = decodeURIComponent(issueToggleBtn.dataset.taskIssueToggleBtn);
+    if (pwaTaskIssueReasonOpen.has(taskId)) {
+      pwaTaskIssueReasonOpen.delete(taskId);
+    } else {
+      pwaTaskIssueReasonOpen.add(taskId);
+    }
+    renderTasks();
+    return;
+  }
+
+  const issueSubmitBtn = event.target.closest("[data-task-issue-submit-btn]");
+  if (issueSubmitBtn) {
+    event.preventDefault();
+    event.stopPropagation();
+    const taskId = decodeURIComponent(issueSubmitBtn.dataset.taskIssueSubmitBtn);
+    const reason = issueSubmitBtn.dataset.reason;
+    reportTaskIssueFromPwa_(taskId, reason);
     return;
   }
 
@@ -3061,9 +3086,26 @@ function renderTasks() {
           ${t.description ? `<div style="margin-top: 8px; font-size: 13px; color: rgba(255,255,255,0.85);"><strong style="display:block;margin-bottom:2px;">詳細說明：</strong><pre class="pre-text" style="margin:0; white-space: pre-wrap;">${escapeHtml(t.description)}</pre></div>` : ""}
           ${t.note ? `<div style="margin-top: 8px; font-size: 13px; color: rgba(255,255,255,0.85);"><strong style="display:block;margin-bottom:2px;">備註：</strong><pre class="pre-text" style="margin:0; border-left: 3px solid var(--gold); padding-left: 8px; white-space: pre-wrap;">${escapeHtml(t.note)}</pre></div>` : ""}
           ${renderTaskAuditHistory_(t.id)}
-          ${canCurrentUserCompleteTask_(t) ? `
-            <div style="margin-top: 12px; display: flex; justify-content: flex-end; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 12px;">
-              <button type="button" class="primary-button task-complete-button" data-task-complete-btn="${escapeHtml(detailKey)}">完成工作</button>
+          ${(canCurrentUserCompleteTask_(t) || canCurrentUserReportTaskIssue_(t)) ? `
+            <div class="task-action-group" style="margin-top: 12px; display: flex; flex-direction: column; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 12px; gap: 8px;">
+              <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                ${canCurrentUserReportTaskIssue_(t) ? `
+                  <button type="button" class="primary-button task-issue-toggle-button" data-task-issue-toggle-btn="${escapeHtml(detailKey)}" style="background-color: #e53935; border-color: #d32f2f;">回報異常</button>
+                ` : ""}
+                ${canCurrentUserCompleteTask_(t) ? `
+                  <button type="button" class="primary-button task-complete-button" data-task-complete-btn="${escapeHtml(detailKey)}">完成工作</button>
+                ` : ""}
+              </div>
+              ${pwaTaskIssueReasonOpen.has(t.id) ? `
+                <div class="task-issue-options-panel" style="margin-top: 4px; display: flex; flex-direction: column; gap: 6px; background: rgba(255,255,255,0.03); padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.06);">
+                  <div style="font-size: 12px; color: rgba(255,255,255,0.6); margin-bottom: 2px;">選擇發生的問題類型（固定選項）：</div>
+                  <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                    ${getPwaBlockedReasons_().map(reason => `
+                      <button type="button" class="primary-button task-issue-option-btn" data-task-issue-submit-btn="${escapeHtml(detailKey)}" data-reason="${escapeHtml(reason)}" style="font-size: 12px; padding: 6px 12px; background: #37474f; border: 1px solid #455a64; color: #fff;">${escapeHtml(reason)}</button>
+                    `).join("")}
+                  </div>
+                </div>
+              ` : ""}
             </div>
           ` : ""}
         </div>
@@ -3460,6 +3502,145 @@ async function completeTaskFromPwa_(taskId) {
     }
   } finally {
     pwaTaskStatusInFlight.delete(taskId);
+  }
+}
+
+function canCurrentUserReportTaskIssue_(task) {
+  if (!state.currentUser || !state.currentUser.role) return false;
+  const role = state.currentUser.role;
+  const username = state.currentUser.username || "";
+  const displayName = state.currentUser.displayName || "";
+  const salesOwner = state.currentUser.salesOwner || "";
+  
+  if (task.status === "Finished" || task.status === "done" || task.status === "Cancelled" || task.status === "cancelled" || task.status === "Blocked") {
+    return false;
+  }
+  
+  if (role === "admin" || role === "boss") {
+    return true;
+  }
+  
+  if (role === "assistant") {
+    const isAssignedToMe = (
+      task.assignedTo && (
+        task.assignedTo === username ||
+        task.assignedTo === displayName ||
+        task.assignedTo === salesOwner
+      )
+    );
+    return task.assignedRole === "assistant" || isAssignedToMe;
+  }
+  
+  if (role === "retailSales" || role === "showroomSales" || role === "sales") {
+    const isAssignedToMe = (
+      task.assignedTo && (
+        task.assignedTo === username ||
+        task.assignedTo === displayName ||
+        task.assignedTo === salesOwner
+      )
+    );
+    const isCreatedByMe = (
+      task.createdBy && (
+        task.createdBy === username ||
+        task.createdBy === displayName ||
+        task.createdBy === salesOwner
+      )
+    );
+    return isAssignedToMe || isCreatedByMe;
+  }
+  
+  return false;
+}
+
+function isValidPwaBlockedReason_(reason) {
+  return getPwaBlockedReasons_().indexOf(reason) !== -1;
+}
+
+function getPwaBlockedReasons_() {
+  return ["庫存不足", "保留衝突", "商品型號疑似錯誤", "交期無法確認", "客戶資料不完整"];
+}
+
+async function reportTaskIssueFromPwa_(taskId, reason) {
+  if (pwaTaskStatusInFlight.has(taskId)) return;
+  if (!isValidPwaBlockedReason_(reason)) {
+    toast("異常原因不合法");
+    return;
+  }
+  
+  const task = state.tasks.find(t => t.id === taskId);
+  if (!task) {
+    toast("找不到該任務");
+    return;
+  }
+  
+  if (!canCurrentUserReportTaskIssue_(task)) {
+    toast("權限不足，無法更動此任務");
+    return;
+  }
+  
+  if (!confirm(`確定要將此任務回報為異常（原因：${reason}）嗎？`)) {
+    return;
+  }
+  
+  pwaTaskStatusInFlight.add(taskId);
+  
+  // Disable buttons visually
+  const allBtns = document.querySelectorAll(`[data-task-issue-submit-btn="${escapeHtml(encodeURIComponent(taskId))}"], [data-task-issue-toggle-btn="${escapeHtml(encodeURIComponent(taskId))}"], [data-task-complete-btn="${escapeHtml(encodeURIComponent(taskId))}"]`);
+  allBtns.forEach(btn => {
+    btn.disabled = true;
+    if (btn.classList.contains("task-issue-option-btn") && btn.dataset.reason === reason) {
+      btn.textContent = "提交中...";
+    }
+  });
+  
+  try {
+    const userContext = buildTaskUserContext_();
+    const result = await sendCloudAction("updateTaskStatus", {
+      id: taskId,
+      status: "Blocked",
+      reason: reason,
+      note: reason,
+      userContext
+    });
+    
+    if (result && result.ok) {
+      const fromStatus = task.status;
+      if (result.task) {
+        state.tasks = state.tasks.map(t => t.id === taskId ? result.task : t);
+      } else {
+        task.status = "Blocked";
+        task.blockedReason = reason;
+        task.updatedAt = new Date().toISOString();
+        task.updatedBy = userContext.displayName || userContext.username || "unknown";
+      }
+      
+      // Update local audit logs immediately
+      if (!state.auditLogs) state.auditLogs = [];
+      const operatorName = userContext.displayName || userContext.username || "unknown";
+      state.auditLogs.unshift({
+        id: "audit-pwa-" + Date.now(),
+        workId: taskId,
+        action: "pwa_update_status",
+        operator: operatorName,
+        operatorRole: userContext.role || "",
+        fromStatus: fromStatus || "",
+        toStatus: "Blocked",
+        details: reason,
+        createdAt: new Date().toISOString()
+      });
+      
+      pwaTaskIssueReasonOpen.delete(taskId);
+      saveState();
+      toast("任務已成功回報為異常");
+    } else {
+      throw new Error((result && result.message) || "回報異常失敗");
+    }
+  } catch (err) {
+    console.error(err);
+    toast(err.message || "回報異常時發生錯誤");
+  } finally {
+    pwaTaskStatusInFlight.delete(taskId);
+    renderTasks();
   }
 }
 
