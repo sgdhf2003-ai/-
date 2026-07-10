@@ -1654,26 +1654,64 @@ function updateTaskStatus(data) {
   const id = data.id;
   const status = data.status;
   const note = data.note;
+  const userContext = data.userContext || null;
   
   if (!id) throw new Error("缺少任務 ID");
+  if (!status) throw new Error("缺少狀態代碼");
+  
+  // 1. 權限檢查
+  if (!userContext || !userContext.role) {
+    return { ok: false, message: "權限不足" };
+  }
   
   const tasks = readObjects(SHEETS.tasks, HEADERS.tasks);
   const taskIndex = tasks.findIndex(t => t.id === id);
   if (taskIndex === -1) throw new Error("找不到該任務");
   
   const task = tasks[taskIndex];
+  
+  if (!canUserUpdateTask_(task, userContext)) {
+    return { ok: false, message: "權限不足" };
+  }
+  
+  // 2. 欄位一致性與狀態更新
+  const fromStatus = task.status;
   task.status = status;
   task.updatedAt = new Date().toISOString();
-  if (status === "done") {
+  
+  const operatorName = getTaskOperatorName_(userContext);
+  task.updatedBy = operatorName;
+  
+  if (status === "Finished" || status === "done") {
     task.completedAt = new Date().toISOString();
   }
-  if (note !== undefined) {
+  
+  if (status === "Blocked" || status === "Waiting") {
+    const reason = data.reason || note || "";
+    if (reason) {
+      task.blockedReason = reason;
+    }
+  }
+  
+  if (note !== undefined && note !== "") {
     if (task.note) {
       task.note += "\n" + note;
     } else {
       task.note = note;
     }
   }
+  
+  // 3. 寫入 Audit Log
+  const detailsStr = (data.reason || note || "");
+  appendAuditLog_({
+    workId: task.id,
+    action: "pwa_update_status",
+    operator: operatorName,
+    operatorRole: userContext.role || "",
+    fromStatus: fromStatus || "",
+    toStatus: status || "",
+    details: detailsStr
+  });
   
   upsertObjects(SHEETS.tasks, HEADERS.tasks, [task]);
   return { ok: true, message: "任務狀態已更新", task };
@@ -1685,15 +1723,27 @@ function appendTaskNote(data) {
   
   const id = data.id;
   const note = data.note;
+  const userContext = data.userContext || null;
   
   if (!id) throw new Error("缺少任務 ID");
   if (!note) throw new Error("備註內容不可為空");
+  
+  // 1. 權限檢查
+  if (!userContext || !userContext.role) {
+    return { ok: false, message: "權限不足" };
+  }
   
   const tasks = readObjects(SHEETS.tasks, HEADERS.tasks);
   const taskIndex = tasks.findIndex(t => t.id === id);
   if (taskIndex === -1) throw new Error("找不到該任務");
   
   const task = tasks[taskIndex];
+  
+  if (!canUserUpdateTask_(task, userContext)) {
+    return { ok: false, message: "權限不足" };
+  }
+  
+  // 2. 備註追加
   if (task.note) {
     task.note += "\n" + note;
   } else {
@@ -1701,8 +1751,68 @@ function appendTaskNote(data) {
   }
   task.updatedAt = new Date().toISOString();
   
+  const operatorName = getTaskOperatorName_(userContext);
+  task.updatedBy = operatorName;
+  
+  // 3. 寫入 Audit Log
+  appendAuditLog_({
+    workId: task.id,
+    action: "pwa_append_note",
+    operator: operatorName,
+    operatorRole: userContext.role || "",
+    fromStatus: task.status || "",
+    toStatus: task.status || "",
+    details: note
+  });
+  
   upsertObjects(SHEETS.tasks, HEADERS.tasks, [task]);
   return { ok: true, message: "備註已新增", task };
+}
+
+function getTaskOperatorName_(userContext) {
+  if (!userContext) return "unknown";
+  return userContext.displayName || userContext.username || userContext.salesOwner || userContext.lineUserId || "unknown";
+}
+
+function canUserUpdateTask_(task, userContext) {
+  if (!userContext) return false;
+  const role = userContext.role;
+  const username = userContext.username || "";
+  const displayName = userContext.displayName || "";
+  const salesOwner = userContext.salesOwner || "";
+  
+  if (role === "admin" || role === "boss") {
+    return true;
+  }
+  
+  if (role === "assistant") {
+    return (
+      task.assignedRole === "assistant" ||
+      task.assignedTo === username ||
+      task.assignedTo === displayName ||
+      task.assignedTo === salesOwner
+    );
+  }
+  
+  if (role === "retailSales" || role === "showroomSales" || role === "sales") {
+    const isAssignedToMe = (
+      task.assignedTo && (
+        task.assignedTo === username ||
+        task.assignedTo === displayName ||
+        task.assignedTo === salesOwner
+      )
+    );
+    const isCreatedByMe = (
+      task.createdBy && (
+        task.createdBy === username ||
+        task.createdBy === displayName ||
+        task.createdBy === salesOwner
+      )
+    );
+    return isAssignedToMe || isCreatedByMe;
+  }
+  
+  return false;
 }
 
 function replyLineCustomMessage(replyToken, messagesArray) {
