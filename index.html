@@ -650,7 +650,12 @@
               <h2>工作清單與篩選</h2>
             </div>
             
-            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;">
+            <div class="task-search-row" style="display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; width: 100%;">
+              <input type="text" id="taskSearchKeyword" placeholder="搜尋任務、客戶、商品、指派人、狀態..." autocomplete="off" style="flex: 1; min-width: 200px; min-height: 40px; border-radius: 8px; padding-inline: 12px; background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(255,255,255,0.1); font-size: 13px;" />
+              <button type="button" id="clearTaskFilters" style="min-height: 40px; border-radius: 8px; padding-inline: 16px; background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.15); cursor: pointer; font-size: 13px; transition: all 0.2s;">清除篩選</button>
+            </div>
+            
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; width: 100%;">
               <select id="filterTaskStatus" style="flex: 1; min-width: 120px; min-height: 40px; border-radius: 8px; padding-inline: 8px; background: rgba(84,151,255,0.1); color: #fff; border: 1px solid rgba(84,151,255,0.2);">
                 <option value="all">全部工作</option>
                 <option value="assistantActive">助理待處理</option>

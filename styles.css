@@ -1868,4 +1868,21 @@ textarea {
   cursor: not-allowed;
 }
 
+/* Task List Search & Filter styles - Stage 7-1 */
+#taskSearchKeyword::placeholder {
+  color: rgba(255, 255, 255, 0.45);
+}
+#taskSearchKeyword:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+}
+#clearTaskFilters:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+}
+#clearTaskFilters:active {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
 

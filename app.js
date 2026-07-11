@@ -34,6 +34,7 @@ let editingStoreId = null;
 const pwaTaskStatusInFlight = new Set();
 const pwaTaskIssueReasonOpen = new Set();
 const pwaTaskWaitingReasonOpen = new Set();
+let taskSearchKeyword = "";
 
 const views = {
   home: document.querySelector("#homeView"),
@@ -2851,6 +2852,30 @@ document.querySelector("#filterTaskStatus")?.addEventListener("change", () => re
 document.querySelector("#filterTaskRole")?.addEventListener("change", () => renderTasks());
 document.querySelector("#filterTaskAssignee")?.addEventListener("change", () => renderTasks());
 
+document.querySelector("#taskSearchKeyword")?.addEventListener("input", (e) => {
+  taskSearchKeyword = e.target.value;
+  renderTasks();
+});
+
+document.querySelector("#clearTaskFilters")?.addEventListener("click", () => {
+  taskSearchKeyword = "";
+  const searchInput = document.querySelector("#taskSearchKeyword");
+  if (searchInput) searchInput.value = "";
+
+  const statusSelect = document.querySelector("#filterTaskStatus");
+  if (statusSelect) {
+    statusSelect.value = (state.currentUser?.role === "assistant") ? "assistantActive" : "all";
+  }
+
+  const roleSelect = document.querySelector("#filterTaskRole");
+  if (roleSelect) roleSelect.value = "all";
+
+  const assigneeSelect = document.querySelector("#filterTaskAssignee");
+  if (assigneeSelect) assigneeSelect.value = "all";
+
+  renderTasks();
+});
+
 function renderTasks() {
   const container = document.querySelector("#tasksList");
   if (!container) return;
@@ -2940,6 +2965,28 @@ function renderTasks() {
     // 4. Assignee Filter
     if (assigneeFilter !== "all") {
       if (task.assignedTo !== assigneeFilter) return false;
+    }
+
+    // 5. Keyword Filter
+    if (taskSearchKeyword && taskSearchKeyword.trim() !== "") {
+      const q = taskSearchKeyword.trim().toLowerCase();
+      const matchFields = [
+        task.id,
+        task.title,
+        task.description,
+        task.customerName,
+        task.productName,
+        task.assignedTo,
+        task.assignedRole,
+        task.createdBy,
+        task.status,
+        task.blockedReason
+      ];
+      const isMatched = matchFields.some(field => {
+        if (!field) return false;
+        return String(field).toLowerCase().includes(q);
+      });
+      if (!isMatched) return false;
     }
 
     return true;
