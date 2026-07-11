@@ -141,7 +141,7 @@ document.addEventListener("click", (event) => {
     if (panel) {
       const isHidden = panel.style.display === "none";
       panel.style.display = isHidden ? "block" : "none";
-      detailToggle.textContent = isHidden ? "收合詳情" : "查看詳情";
+      detailToggle.innerHTML = isHidden ? "收合詳情 ▴" : "查看詳情 ▾";
     }
     return;
   }
@@ -3194,7 +3194,7 @@ function renderTasks() {
           </div>
         </div>
         <div style="margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 8px; display: flex; justify-content: flex-end;">
-          <button type="button" class="secondary-button" style="padding: 4px 10px; font-size: 13px;" data-task-detail-toggle="${escapeHtml(detailKey)}">查看詳情</button>
+          <button type="button" class="secondary-button" style="padding: 4px 10px; font-size: 13px;" data-task-detail-toggle="${escapeHtml(detailKey)}">查看詳情 ▾</button>
         </div>
         <div class="task-detail-panel" id="detail-panel-${escapeHtml(detailKey)}" style="display: none; margin-top: 12px; padding: 12px; background: var(--panel-2); border-radius: 8px; border-left: 3px solid var(--accent, #8b5cf6);">
           <h4 style="margin-top: 0; margin-bottom: 8px; color: #fff; font-size: 14px;">工作完整詳情</h4>
@@ -3222,15 +3222,16 @@ function renderTasks() {
           ${renderTaskAuditHistory_(t.id)}
           ${(canCurrentUserCompleteTask_(t) || canCurrentUserReportTaskIssue_(t) || canCurrentUserRequestTaskInfo_(t)) ? `
             <div class="task-action-group" style="margin-top: 12px; display: flex; flex-direction: column; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 12px; gap: 8px;">
+              <div style="font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 4px;">📋 任務操作：</div>
               <div style="display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px;">
                 ${canCurrentUserRequestTaskInfo_(t) ? `
-                  <button type="button" class="primary-button task-waiting-toggle-button" data-task-waiting-toggle-btn="${escapeHtml(detailKey)}">等待資料</button>
+                  <button type="button" class="primary-button task-waiting-toggle-button" style="background: rgba(244,191,88,0.15) !important; color: #f4bf58 !important; border: 1px solid rgba(244,191,88,0.3) !important; box-shadow: none !important; font-size: 13px; padding: 6px 12px;" data-task-waiting-toggle-btn="${escapeHtml(detailKey)}">⏳ 等待資料</button>
                 ` : ""}
                 ${canCurrentUserReportTaskIssue_(t) ? `
-                  <button type="button" class="primary-button task-issue-toggle-button" data-task-issue-toggle-btn="${escapeHtml(detailKey)}">回報異常</button>
+                  <button type="button" class="primary-button task-issue-toggle-button" style="background: rgba(255,82,82,0.15) !important; color: #ff5252 !important; border: 1px solid rgba(255,82,82,0.3) !important; box-shadow: none !important; font-size: 13px; padding: 6px 12px;" data-task-issue-toggle-btn="${escapeHtml(detailKey)}">⚠️ 回報異常</button>
                 ` : ""}
                 ${canCurrentUserCompleteTask_(t) ? `
-                  <button type="button" class="primary-button task-complete-button" data-task-complete-btn="${escapeHtml(detailKey)}">完成工作</button>
+                  <button type="button" class="primary-button task-complete-button" style="background: rgba(84,226,176,0.15) !important; color: #54e2b0 !important; border: 1px solid rgba(84,226,176,0.3) !important; box-shadow: none !important; font-size: 13px; padding: 6px 12px;" data-task-complete-btn="${escapeHtml(detailKey)}">✅ 完成工作</button>
                 ` : ""}
               </div>
               ${pwaTaskIssueReasonOpen.has(t.id) ? `
@@ -3254,7 +3255,13 @@ function renderTasks() {
                 </div>
               ` : ""}
             </div>
-          ` : ""}
+          ` : `
+            ${(String(t.status || "").toLowerCase() === "finished" || String(t.status || "").toLowerCase() === "done" || String(t.status || "").toLowerCase() === "cancelled") ? `
+              <div style="margin-top: 12px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 12px; text-align: center; font-size: 12px; color: rgba(255,255,255,0.4); display: flex; align-items: center; justify-content: center; gap: 4px;">
+                🔒 此任務已封存，目前無可用操作
+              </div>
+            ` : ""}
+          `}
         </div>
       </article>
     `;
@@ -3429,18 +3436,29 @@ function renderTaskAuditHistory_(workId) {
     const detailText = log.details ? ` (${log.details})` : "";
     const timeText = formatLogDate(log.createdAt || log.timestamp);
 
+    let colorStyle = "";
+    if (log.action === "Finished" || log.action === "resolved" || log.toStatus === "Finished" || log.toStatus === "done") {
+      colorStyle = "color: #54e2b0;";
+    } else if (log.action === "Blocked" || log.toStatus === "Blocked" || log.toStatus === "blocked") {
+      colorStyle = "color: #ff5252;";
+    } else if (log.action === "Waiting" || log.toStatus === "Waiting" || log.toStatus === "delayed") {
+      colorStyle = "color: #f4bf58;";
+    }
+
     let statusTransition = "";
     if (fromLabel && toLabel) {
-      statusTransition = ` [${fromLabel} ➔ ${toLabel}]`;
+      statusTransition = ` <span style="color: rgba(255,255,255,0.3); margin-inline: 4px;">•</span> 狀態：<span style="color: #fff; font-weight: 500;">${escapeHtml(fromLabel)} ➔ ${escapeHtml(toLabel)}</span>`;
     }
 
     return `
       <li style="margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px dashed rgba(255,255,255,0.05);">
         <div style="display: flex; justify-content: space-between; color: rgba(255,255,255,0.4); font-size: 11px;">
-          <span>${escapeHtml(operatorLabel)}${escapeHtml(roleLabel)}</span>
-          <span>${escapeHtml(timeText)}</span>
+          <span style="color: #7cb1ff; font-weight: 500;">👤 ${escapeHtml(operatorLabel)}${escapeHtml(roleLabel)}</span>
+          <span>⏰ ${escapeHtml(timeText)}</span>
         </div>
-        <div style="margin-top: 2px; color: rgba(255,255,255,0.8); font-size: 12px;">${escapeHtml(actionLabel)}${escapeHtml(statusTransition)}${escapeHtml(detailText)}</div>
+        <div style="margin-top: 2px; color: rgba(255,255,255,0.85); font-size: 12px;">
+          <span style="font-weight: bold; ${colorStyle}">${escapeHtml(actionLabel)}</span>${statusTransition}${log.details ? ` <span style="color: rgba(255,255,255,0.5);">(${escapeHtml(log.details)})</span>` : ""}
+        </div>
       </li>
     `;
   }).join("");
