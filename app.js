@@ -3066,7 +3066,13 @@ function renderTasks() {
   `;
 
   if (!filtered.length) {
-    container.innerHTML = summaryHTML + `<div class="empty-state">目前沒有符合篩選條件的工作</div>`;
+    container.innerHTML = summaryHTML + `
+      <div class="task-empty-state" style="text-align: center; padding: 40px 20px; background: rgba(255,255,255,0.03); border-radius: 12px; border: 1px dashed rgba(255,255,255,0.1); margin-top: 16px;">
+        <div style="font-size: 32px; margin-bottom: 12px;">🔍</div>
+        <h4 style="margin: 0 0 8px 0; color: #fff; font-size: 16px; font-weight: 600;">查無符合條件的任務</h4>
+        <p style="margin: 0; color: rgba(255,255,255,0.5); font-size: 13px; line-height: 1.5;">可以調整篩選條件，或點擊「清除篩選」重設列表</p>
+      </div>
+    `;
     return;
   }
 
@@ -3162,26 +3168,37 @@ function renderTasks() {
             <span class="badge ${priorityClass}">${escapeHtml(priorityLabel)}</span>
           </div>
         </div>
-        <div class="meta">
-          類別：${escapeHtml(typeLabel)}<br />
-          到期：<strong>${escapeHtml(formatTaskDate_(t.dueDate))}</strong><br />
-          狀態：<strong>${escapeHtml(statusLabel)} (${escapeHtml(t.status || "無")})</strong><br />
-          指派對象：<strong>${escapeHtml(assigneeText)}</strong> ${t.assignedRole ? `(角色: ${escapeHtml(formatTaskRole_(t.assignedRole))})` : ""}<br />
-          ${t.customerName ? `客戶/店家：${escapeHtml(t.customerName)}<br />` : ""}
-          ${t.productName ? `商品/數量：${escapeHtml(t.productName)} x ${escapeHtml(t.quantity || 1)}<br />` : ""}
-          ${t.sourceUser ? `交辦人：${escapeHtml(t.sourceUser)} ${t.sourceRole ? `(${escapeHtml(formatTaskRole_(t.sourceRole))})` : ""}<br />` : (t.createdBy ? `交辦人：${escapeHtml(t.createdBy)}<br />` : "")}
-          ${t.parentWorkId ? `來源工作 ID：${escapeHtml(t.parentWorkId)}<br />` : ""}
-          ${t.updatedAt ? `最後更新：${escapeHtml(formatTaskDate_(t.updatedAt))} ${t.updatedBy ? `by ${escapeHtml(t.updatedBy)}` : ""}<br />` : ""}
-          ${t.description ? `<pre class="pre-text">說明：${escapeHtml(t.description)}</pre>` : ""}
-          ${t.note ? `<pre class="pre-text" style="border-left: 3px solid var(--gold); padding-left: 8px;">備註：${escapeHtml(t.note)}</pre>` : ""}
-          ${t.blockedReason ? `<div style="color: #ff5252; margin-top: 4px; font-weight: bold;">異常原因：${escapeHtml(t.blockedReason)}</div>` : ""}
+        <div class="meta" style="line-height: 1.6; color: rgba(255,255,255,0.75);">
+          <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 8px;">
+            <span style="font-size: 11px; padding: 3px 8px; border-radius: 6px; background: rgba(84,151,255,0.15); color: #7cb1ff; font-weight: 500; display: inline-flex; align-items: center; gap: 4px;">
+              📅 到期：${escapeHtml(formatTaskDate_(t.dueDate))}
+            </span>
+            <span style="font-size: 11px; padding: 3px 8px; border-radius: 6px; background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.85); font-weight: 500; display: inline-flex; align-items: center; gap: 4px;">
+              👤 指派：${escapeHtml(assigneeText)} ${t.assignedRole ? `(${escapeHtml(formatTaskRole_(t.assignedRole))})` : ""}
+            </span>
+            <span style="font-size: 11px; padding: 3px 8px; border-radius: 6px; background: rgba(139,92,246,0.15); color: #a78bfa; font-weight: 500;">
+              📂 類別：${escapeHtml(typeLabel)}
+            </span>
+          </div>
+          
+          <div style="font-size: 13px; display: flex; flex-direction: column; gap: 4px;">
+            ${t.customerName ? `<div><strong>客戶/店家：</strong><span style="color: #fff;">${escapeHtml(t.customerName)}</span></div>` : ""}
+            ${t.productName ? `<div><strong>商品/數量：</strong><span style="color: #fff;">${escapeHtml(t.productName)} x ${escapeHtml(t.quantity || 1)}</span></div>` : ""}
+            <div><strong>狀態：</strong>${escapeHtml(statusLabel)} (${escapeHtml(t.status || "無")})</div>
+            ${t.sourceUser ? `<div><strong>交辦人：</strong>${escapeHtml(t.sourceUser)} ${t.sourceRole ? `(${escapeHtml(formatTaskRole_(t.sourceRole))})` : ""}</div>` : (t.createdBy ? `<div><strong>交辦人：</strong>${escapeHtml(t.createdBy)}</div>` : "")}
+            ${t.parentWorkId ? `<div><strong>來源工作 ID：</strong>${escapeHtml(t.parentWorkId)}</div>` : ""}
+            ${t.updatedAt ? `<div><strong>最後更新：</strong>${escapeHtml(formatTaskDate_(t.updatedAt))} ${t.updatedBy ? `by ${escapeHtml(t.updatedBy)}` : ""}</div>` : ""}
+            ${t.description ? `<pre class="pre-text" style="margin-top: 6px; padding: 8px; background: rgba(0,0,0,0.15); border-radius: 6px; font-size: 12px; border: 1px solid rgba(255,255,255,0.03);">說明：${escapeHtml(t.description)}</pre>` : ""}
+            ${t.note ? `<pre class="pre-text" style="border-left: 3px solid var(--gold); padding-left: 8px; font-size: 12px; margin-top: 6px;">備註：${escapeHtml(t.note)}</pre>` : ""}
+            ${t.blockedReason ? `<div style="color: #ff5252; margin-top: 4px; font-weight: bold; font-size: 12px; padding: 6px 10px; background: rgba(255,82,82,0.1); border-radius: 6px; border: 1px solid rgba(255,82,82,0.15);">異常原因：${escapeHtml(t.blockedReason)}</div>` : ""}
+          </div>
         </div>
         <div style="margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 8px; display: flex; justify-content: flex-end;">
           <button type="button" class="secondary-button" style="padding: 4px 10px; font-size: 13px;" data-task-detail-toggle="${escapeHtml(detailKey)}">查看詳情</button>
         </div>
         <div class="task-detail-panel" id="detail-panel-${escapeHtml(detailKey)}" style="display: none; margin-top: 12px; padding: 12px; background: var(--panel-2); border-radius: 8px; border-left: 3px solid var(--accent, #8b5cf6);">
           <h4 style="margin-top: 0; margin-bottom: 8px; color: #fff; font-size: 14px;">工作完整詳情</h4>
-          <div class="task-detail-grid" style="display: grid; grid-template-columns: 1fr; gap: 6px; font-size: 13px; color: rgba(255,255,255,0.7);">
+          <div class="task-detail-grid" style="font-size: 13px; color: rgba(255,255,255,0.75);">
             <div><strong>任務 ID：</strong>${escapeHtml(t.id || "無")}</div>
             <div><strong>工作類型：</strong>${escapeHtml(typeLabel)} (${escapeHtml(t.type || "無")})</div>
             <div><strong>標題：</strong>${escapeHtml(t.title || "無")}</div>
@@ -3198,7 +3215,7 @@ function renderTasks() {
             ${t.startedAt ? `<div><strong>開始時間：</strong>${escapeHtml(formatTaskDate_(t.startedAt))}</div>` : ""}
             ${t.completedAt ? `<div><strong>完成時間：</strong>${escapeHtml(formatTaskDate_(t.completedAt))}</div>` : ""}
             ${t.updatedAt ? `<div><strong>最後更新：</strong>${escapeHtml(formatTaskDate_(t.updatedAt))} ${t.updatedBy ? `by ${escapeHtml(t.updatedBy)}` : ""}</div>` : ""}
-            ${t.blockedReason ? `<div style="color: #ff5252; font-weight: bold;"><strong>異常原因：</strong>${escapeHtml(t.blockedReason)}</div>` : ""}
+            ${t.blockedReason ? `<div style="color: #ff5252; font-weight: bold; grid-column: 1 / -1; padding: 6px 10px; background: rgba(255,82,82,0.1); border-radius: 6px; border: 1px solid rgba(255,82,82,0.15); margin-top: 4px;"><strong>異常原因：</strong>${escapeHtml(t.blockedReason)}</div>` : ""}
           </div>
           ${t.description ? `<div style="margin-top: 8px; font-size: 13px; color: rgba(255,255,255,0.85);"><strong style="display:block;margin-bottom:2px;">詳細說明：</strong><pre class="pre-text" style="margin:0; white-space: pre-wrap;">${escapeHtml(t.description)}</pre></div>` : ""}
           ${t.note ? `<div style="margin-top: 8px; font-size: 13px; color: rgba(255,255,255,0.85);"><strong style="display:block;margin-bottom:2px;">備註：</strong><pre class="pre-text" style="margin:0; border-left: 3px solid var(--gold); padding-left: 8px; white-space: pre-wrap;">${escapeHtml(t.note)}</pre></div>` : ""}

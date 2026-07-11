@@ -1662,6 +1662,15 @@ textarea {
 
 .task-detail-grid {
   line-height: 1.5;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+@media (min-width: 600px) {
+  .task-detail-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .task-history {
@@ -1895,6 +1904,18 @@ textarea {
 #sortTaskOrder:focus {
   outline: none;
   border-color: rgba(84,151,255,0.5) !important;
+}
+
+/* Mobile filter layout adjustments - Stage 8-B */
+@media (max-width: 580px) {
+  .task-filter-row {
+    flex-direction: column;
+    gap: 8px !important;
+  }
+  .task-filter-row select {
+    width: 100% !important;
+    min-width: 100% !important;
+  }
 }
 
 
