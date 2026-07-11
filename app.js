@@ -70,10 +70,12 @@ const viewNames = {
 
 document.addEventListener("click", (event) => {
   const shortcut = event.target.closest("[data-shortcut-view]");
-  if (shortcut) {
+  const viewButton = event.target.closest("[data-view]");
+  const nextView = shortcut?.dataset.shortcutView || viewButton?.dataset.view;
+  if (nextView) {
     event.preventDefault();
     event.stopPropagation();
-    setView(shortcut.dataset.shortcutView);
+    setView(nextView);
     return;
   }
 
@@ -186,9 +188,6 @@ document.addEventListener("click", (event) => {
     return;
   }
 
-  const viewButton = event.target.closest("[data-view]");
-  if (!viewButton) return;
-  setView(viewButton.dataset.view);
 });
 
 document.querySelector("#salesFilter").addEventListener("change", (event) => {
@@ -1175,7 +1174,15 @@ function render() {
   } else if (activeView === "complaints") {
     renderComplaints();
   } else if (activeView === "tasks") {
-    renderTasks();
+    try {
+      renderTasks();
+    } catch (error) {
+      console.error("renderTasks failed:", error);
+      const container = document.querySelector("#tasksList");
+      if (container) {
+        container.innerHTML = `<div class="empty-state">任務中心載入時發生錯誤，請重新整理或稍後再試。</div>`;
+      }
+    }
   } else if (activeView === "admin") {
     renderSalesOwnerAdmin();
     renderCloudStatus();
@@ -2086,6 +2093,8 @@ function setView(view) {
   }
   Object.entries(views).forEach(([name, element]) => element.classList.toggle("active", name === view));
   document.querySelectorAll("[data-view]").forEach((button) => button.classList.toggle("active", button.dataset.view === view));
+  state.activeView = view;
+  saveState();
   
   let title = viewNames[view];
   if (state.currentUser && state.currentUser.role === "retail") {
@@ -3394,7 +3403,7 @@ function renderTasks() {
     }
 
     const todayStr = getTodayDateString_();
-    const taskLocalDate = parseToLocalYYYYMMDD(t.dueDate);
+    const taskLocalDate = parseToLocalYYYYMMDD_(t.dueDate);
     const isFinishedOrCancelled = (t.status === "Finished" || t.status === "done" || t.status === "Cancelled" || t.status === "cancelled");
     const isFinished = (t.status === "Finished" || t.status === "done");
 
@@ -3579,7 +3588,7 @@ function compareTaskDateTimeDesc_(aValue, bValue) {
 
 function getTaskDueDateSortValue_(value) {
   if (!value) return null;
-  const parsed = parseToLocalYYYYMMDD(value);
+  const parsed = parseToLocalYYYYMMDD_(value);
   return parsed === "" ? null : parsed;
 }
 
@@ -4339,7 +4348,7 @@ function openEditTaskForm_(taskId) {
   document.querySelector("#editTaskProductName").value = task.productName || "";
   document.querySelector("#editTaskQuantity").value = task.quantity || "";
   document.querySelector("#editTaskPriority").value = task.priority || "normal";
-  document.querySelector("#editTaskDueDate").value = parseToLocalYYYYMMDD(task.dueDate || "");
+  document.querySelector("#editTaskDueDate").value = parseToLocalYYYYMMDD_(task.dueDate || "");
   document.querySelector("#editTaskAssignedRole").value = task.assignedRole || "";
   document.querySelector("#editTaskAssignedTo").value = task.assignedTo || "";
 
