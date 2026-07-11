@@ -2029,6 +2029,93 @@ textarea {
   color: #fff;
 }
 
+.task-next-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.task-next-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 9px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.task-next-badge.danger {
+  background: rgba(255, 82, 82, 0.14);
+  border-color: rgba(255, 82, 82, 0.28);
+  color: #ff8c88;
+}
+
+.task-next-badge.warning {
+  background: rgba(255, 184, 76, 0.14);
+  border-color: rgba(255, 184, 76, 0.28);
+  color: #ffc86e;
+}
+
+.task-next-badge.amber {
+  background: rgba(244, 191, 88, 0.16);
+  border-color: rgba(244, 191, 88, 0.3);
+  color: #f4bf58;
+}
+
+.task-next-badge.info {
+  background: rgba(88, 168, 255, 0.14);
+  border-color: rgba(88, 168, 255, 0.28);
+  color: #7cb1ff;
+}
+
+.task-next-badge.success {
+  background: rgba(84, 226, 176, 0.14);
+  border-color: rgba(84, 226, 176, 0.28);
+  color: #70e6bc;
+}
+
+.task-next-badge.muted {
+  background: rgba(148, 163, 184, 0.14);
+  border-color: rgba(148, 163, 184, 0.22);
+  color: #c2cedd;
+}
+
+.task-next-action-panel {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.task-next-action-panel strong {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.task-next-action-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.task-next-action-item {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.task-next-action-reason {
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 /* Task List Due Date Filter styles - Stage 7-2A */
 #filterTaskDueDate:focus {
   outline: none;

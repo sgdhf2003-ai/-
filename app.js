@@ -3222,6 +3222,113 @@ function isTaskWaitingLike_(task) {
   );
 }
 
+function getTaskNextActionBadges_(task) {
+  const badges = [];
+  const status = String(task?.status || "").trim().toLowerCase();
+  const priority = String(task?.priority || "").trim().toLowerCase();
+  const blockedReason = String(task?.blockedReason || "").trim();
+  const isFinished = isTaskFinishedOrCancelled_(task);
+
+  if (isFinished) {
+    badges.push({
+      type: "completed",
+      label: status === "cancelled" ? "已取消" : "已完成",
+      tone: status === "cancelled" ? "muted" : "success",
+      reason: status === "cancelled" ? "任務已取消，不需再追蹤時程。" : "任務已完成或結案，不需再顯示催辦提醒。"
+    });
+    return badges;
+  }
+
+  if (status === "blocked" || blockedReason) {
+    badges.push({
+      type: "blocked",
+      label: "異常需回報",
+      tone: "danger",
+      reason: "任務已有異常或阻塞標記，需先釐清狀況。"
+    });
+  }
+
+  const todayStr = getTodayDateString_();
+  const dueDate = parseToLocalYYYYMMDD_(task?.dueDate);
+  if (dueDate) {
+    if (dueDate < todayStr) {
+      badges.push({
+        type: "overdue",
+        label: "已逾期",
+        tone: "danger",
+        reason: "到期日已過，建議優先處理。"
+      });
+    } else if (dueDate === todayStr) {
+      badges.push({
+        type: "today",
+        label: "今天處理",
+        tone: "warning",
+        reason: "到期日就是今天，建議今天完成。"
+      });
+    } else {
+      const next7DaysDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      const next7Str = `${next7DaysDate.getFullYear()}-${String(next7DaysDate.getMonth() + 1).padStart(2, "0")}-${String(next7DaysDate.getDate()).padStart(2, "0")}`;
+      if (dueDate <= next7Str) {
+        badges.push({
+          type: "next7",
+          label: "近期處理",
+          tone: "info",
+          reason: "七天內到期，建議提前安排。"
+        });
+      }
+    }
+  }
+
+  if (isTaskWaitingLike_(task)) {
+    badges.push({
+      type: "waiting",
+      label: "等資料",
+      tone: "amber",
+      reason: "任務目前在等待資料或回覆。"
+    });
+  }
+
+  if (["urgent", "high", "高", "緊急"].includes(priority)) {
+    badges.push({
+      type: "priority",
+      label: "高優先",
+      tone: "warning",
+      reason: "優先級較高，建議提前處理。"
+    });
+  }
+
+  return badges;
+}
+
+function renderTaskNextActionBadges_(task, mode = "compact") {
+  const badges = getTaskNextActionBadges_(task);
+  if (!badges.length) return "";
+
+  if (mode === "detail") {
+    return `
+      <div class="task-next-action-panel">
+        <strong>下一步建議</strong>
+        <div class="task-next-action-list">
+          ${badges.map(({ label, tone, reason }) => `
+            <div class="task-next-action-item">
+              <span class="task-next-badge ${escapeHtml(tone)}">${escapeHtml(label)}</span>
+              <span class="task-next-action-reason">${escapeHtml(reason)}</span>
+            </div>
+          `).join("")}
+        </div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="task-next-badges compact">
+      ${badges.slice(0, 3).map(({ label, tone }) => `
+        <span class="task-next-badge ${escapeHtml(tone)}">${escapeHtml(label)}</span>
+      `).join("")}
+    </div>
+  `;
+}
+
 function renderTasks() {
   const container = document.querySelector("#tasksList");
   if (!container) return;
@@ -3479,6 +3586,8 @@ function renderTasks() {
   container.innerHTML = summaryHTML + sortedTasks.map(t => {
     const customerContextCardHTML = renderTaskCustomerContext_(t, "card");
     const customerContextDetailHTML = renderTaskCustomerContext_(t, "detail");
+    const nextActionCompactHTML = renderTaskNextActionBadges_(t, "compact");
+    const nextActionDetailHTML = renderTaskNextActionBadges_(t, "detail");
     const detailKey = encodeURIComponent(String(t.id || ""));
     const typeLabel = typeMap[t.type] || t.type || "無";
     const statusMeta = getTaskStatusMeta_(t.status);
@@ -3547,6 +3656,7 @@ function renderTasks() {
           
           <div style="font-size: 13px; display: flex; flex-direction: column; gap: 4px;">
             ${t.customerName ? `<div><strong>客戶/店家：</strong><span style="color: #fff;">${escapeHtml(t.customerName)}</span></div>` : ""}
+            ${nextActionCompactHTML}
             ${customerContextCardHTML}
             ${t.productName ? `<div><strong>商品/數量：</strong><span style="color: #fff;">${escapeHtml(t.productName)} x ${escapeHtml(t.quantity || 1)}</span></div>` : ""}
             <div><strong>狀態：</strong>${escapeHtml(statusLabel)} (${escapeHtml(t.status || "無")})</div>
@@ -3582,6 +3692,7 @@ function renderTasks() {
             ${t.updatedAt ? `<div><strong>最後更新：</strong>${escapeHtml(formatTaskDate_(t.updatedAt))} ${t.updatedBy ? `by ${escapeHtml(t.updatedBy)}` : ""}</div>` : ""}
             ${t.blockedReason ? `<div style="color: #ff5252; font-weight: bold; grid-column: 1 / -1; padding: 6px 10px; background: rgba(255,82,82,0.1); border-radius: 6px; border: 1px solid rgba(255,82,82,0.15); margin-top: 4px;"><strong>異常原因：</strong>${escapeHtml(t.blockedReason)}</div>` : ""}
           </div>
+          ${nextActionDetailHTML}
           ${customerContextDetailHTML}
           ${t.description ? `<div style="margin-top: 8px; font-size: 13px; color: rgba(255,255,255,0.85);"><strong style="display:block;margin-bottom:2px;">詳細說明：</strong><pre class="pre-text" style="margin:0; white-space: pre-wrap;">${escapeHtml(t.description)}</pre></div>` : ""}
           ${t.note ? `<div style="margin-top: 8px; font-size: 13px; color: rgba(255,255,255,0.85);"><strong style="display:block;margin-bottom:2px;">備註：</strong><pre class="pre-text" style="margin:0; border-left: 3px solid var(--gold); padding-left: 8px; white-space: pre-wrap;">${escapeHtml(t.note)}</pre></div>` : ""}
