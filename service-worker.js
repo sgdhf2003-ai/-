@@ -1,12 +1,12 @@
 
-const CACHE_NAME = "jingyang-manager-pwa-v53-default-api";
+const CACHE_NAME = "jingyang-manager-pwa-v54-task-dashboard-v12";
 const ASSETS = [
   "./",
   "./index.html",
-  "./styles.css?v=20260628-default-api-v11",
-  "./app.js?v=20260628-default-api-v11",
-  "./store-data.js?v=20260628-default-api-v11",
-  "./manifest.webmanifest?v=20260628-default-api-v11",
+  "./styles.css?v=20260711-task-dashboard-v12",
+  "./app.js?v=20260711-task-dashboard-v12",
+  "./store-data.js?v=20260711-task-dashboard-v12",
+  "./manifest.webmanifest?v=20260711-task-dashboard-v12",
   "./icons/icon.svg",
   "./icons/icon-192.png",
   "./icons/icon-512.png",

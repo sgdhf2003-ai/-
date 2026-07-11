@@ -2068,7 +2068,7 @@ function updatePhotoUploadRequirement() {
 
 
 function normalizeInitialView(view) {
-  const allowed = new Set(["home", "stores", "holds", "projects", "samples", "complaints", "calculator", "salesReport", "inventory", "admin"]);
+  const allowed = new Set(["home", "stores", "holds", "projects", "samples", "complaints", "calculator", "salesReport", "inventory", "admin", "tasks"]);
   const normalized = String(view || "").trim();
   return allowed.has(normalized) ? normalized : "";
 }
@@ -2907,7 +2907,7 @@ if (state.currentUser && initialView) {
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js?v=20260628-default-api-v11").catch(() => {});
+    navigator.serviceWorker.register("./service-worker.js?v=20260711-task-dashboard-v12").catch(() => {});
   });
   
   let refreshing = false;
