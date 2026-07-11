@@ -162,27 +162,18 @@ document.addEventListener("click", (event) => {
     event.preventDefault();
     event.stopPropagation();
     const targetStatus = summaryFilterBtn.dataset.taskSummaryFilter;
-    const statusSelect = document.querySelector("#filterTaskStatus");
-    if (statusSelect) {
-      if (targetStatus === "all") {
-        applyTaskQuickPreset_("all");
-      } else if (targetStatus === "Waiting") {
-        applyTaskQuickPreset_("waiting");
-      } else if (targetStatus === "Blocked") {
-        applyTaskQuickPreset_("blocked");
-      } else if (targetStatus === "dueToday") {
-        applyTaskQuickPreset_("today");
-      } else {
-        taskQuickPreset = "custom";
-        statusSelect.value = targetStatus;
-        
-        // Reset due date filter to avoid double-filtering
-        filterTaskDueDate = "all";
-        const dueDateSelect = document.querySelector("#filterTaskDueDate");
-        if (dueDateSelect) dueDateSelect.value = "all";
-        
-        renderTasks();
-      }
+    if (targetStatus === "all") {
+      applyTaskQuickPreset_("all");
+    } else if (targetStatus === "assistantActive") {
+      applyTaskQuickPreset_("assistantActive");
+    } else if (targetStatus === "Waiting") {
+      applyTaskQuickPreset_("waiting");
+    } else if (targetStatus === "Blocked") {
+      applyTaskQuickPreset_("blocked");
+    } else if (targetStatus === "dueToday") {
+      applyTaskQuickPreset_("today");
+    } else if (targetStatus === "Finished") {
+      applyTaskQuickPreset_("completed");
     }
     return;
   }
@@ -3000,7 +2991,15 @@ function applyTaskQuickPreset_(preset) {
   } else if (taskQuickPreset === "next7Days") {
     filterTaskDueDate = "next7Days";
     if (dueDateSelect) dueDateSelect.value = "next7Days";
-  } else if (!["mine", "blocked", "waiting"].includes(taskQuickPreset)) {
+  } else if (taskQuickPreset === "completed") {
+    if (statusSelect) statusSelect.value = "Finished";
+  } else if (taskQuickPreset === "assistantActive") {
+    if (statusSelect) statusSelect.value = "assistantActive";
+  } else if (taskQuickPreset === "waiting") {
+    if (statusSelect) statusSelect.value = "Waiting";
+  } else if (taskQuickPreset === "blocked") {
+    if (statusSelect) statusSelect.value = "Blocked";
+  } else if (!["mine", "blocked", "waiting", "completed", "assistantActive"].includes(taskQuickPreset)) {
     taskQuickPreset = "all";
   }
 
@@ -3013,6 +3012,62 @@ function updateTaskQuickPresetUI_() {
     btn.classList.toggle("active", isActive);
     btn.setAttribute("aria-pressed", isActive ? "true" : "false");
   });
+}
+
+function parseToLocalYYYYMMDD_(val) {
+  if (!val) return "";
+  if (val.includes("T")) {
+    try {
+      const d = new Date(val);
+      if (!isNaN(d.getTime())) {
+        const tzOffset = 8 * 60; // UTC+8
+        const localTime = new Date(d.getTime() + tzOffset * 60000);
+        const year = localTime.getUTCFullYear();
+        const month = String(localTime.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(localTime.getUTCDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+    } catch (e) {}
+  }
+  const match = val.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) {
+    return match[0];
+  }
+  return val.split("T")[0];
+}
+
+function isTaskMatchingPreset_(task, preset) {
+  if (!preset || preset === "all") return true;
+  if (preset === "mine") return isCurrentUsersTask_(task);
+  if (preset === "waiting") return isTaskWaitingLike_(task);
+  if (preset === "blocked") return isTaskBlockedLike_(task);
+  if (preset === "today") {
+    const todayStr = getTodayDateString_();
+    return parseToLocalYYYYMMDD_(task.dueDate) === todayStr;
+  }
+  if (preset === "overdue") {
+    const todayStr = getTodayDateString_();
+    const taskLocalDate = parseToLocalYYYYMMDD_(task.dueDate);
+    return taskLocalDate && taskLocalDate < todayStr && !isTaskFinishedOrCancelled_(task);
+  }
+  if (preset === "next7Days") {
+    const todayStr = getTodayDateString_();
+    const taskLocalDate = parseToLocalYYYYMMDD_(task.dueDate);
+    if (!taskLocalDate || taskLocalDate < todayStr) return false;
+    const next7DaysDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const next7Year = next7DaysDate.getFullYear();
+    const next7Month = String(next7DaysDate.getMonth() + 1).padStart(2, '0');
+    const next7Day = String(next7DaysDate.getDate()).padStart(2, '0');
+    const next7Str = `${next7Year}-${next7Month}-${next7Day}`;
+    return taskLocalDate <= next7Str && !isTaskFinishedOrCancelled_(task);
+  }
+  if (preset === "completed") {
+    return isTaskFinishedOrCancelled_(task);
+  }
+  if (preset === "assistantActive") {
+    return task.assignedRole === "assistant" && !isTaskFinishedOrCancelled_(task);
+  }
+  return true;
 }
 
 function isTaskFinishedOrCancelled_(task) {
@@ -3113,55 +3168,52 @@ function renderTasks() {
   const stats = getTaskSummaryStats_(visibleTasks);
 
   const filtered = visibleTasks.filter(task => {
-    if (taskQuickPreset === "mine" && !isCurrentUsersTask_(task)) return false;
-    if (taskQuickPreset === "blocked" && !isTaskBlockedLike_(task)) return false;
-    if (taskQuickPreset === "waiting" && !isTaskWaitingLike_(task)) return false;
+    // 1. Preset filter route
+    if (taskQuickPreset && taskQuickPreset !== "custom") {
+      if (!isTaskMatchingPreset_(task, taskQuickPreset)) return false;
 
-    // 2. Status Filter
+      // Combine with keyword search if any
+      if (taskSearchKeyword && taskSearchKeyword.trim() !== "") {
+        const q = taskSearchKeyword.trim().toLowerCase();
+        const matchFields = [
+          task.id,
+          task.title,
+          task.description,
+          task.customerName,
+          task.productName,
+          task.assignedTo,
+          task.assignedRole,
+          task.createdBy,
+          task.status,
+          task.blockedReason
+        ];
+        const isMatched = matchFields.some(field => {
+          if (!field) return false;
+          return String(field).toLowerCase().includes(q);
+        });
+        if (!isMatched) return false;
+      }
+      return true;
+    }
+
+    // 2. Custom/Manual filter route
     if (statusFilter === "assistantActive") {
       if (task.assignedRole !== "assistant") return false;
-      if (task.status === "Finished" || task.status === "done") return false;
-    } else if (statusFilter === "dueToday") {
-      const todayStr = getTodayDateString_();
-      const parseToLocalYYYYMMDD = (val) => {
-        if (!val) return "";
-        if (val.includes("T")) {
-          try {
-            const d = new Date(val);
-            if (!isNaN(d.getTime())) {
-              const tzOffset = 8 * 60; // UTC+8
-              const localTime = new Date(d.getTime() + tzOffset * 60000);
-              const year = localTime.getUTCFullYear();
-              const month = String(localTime.getUTCMonth() + 1).padStart(2, '0');
-              const day = String(localTime.getUTCDate()).padStart(2, '0');
-              return `${year}-${month}-${day}`;
-            }
-          } catch (e) {}
-        }
-        const match = val.match(/^(\d{4})-(\d{2})-(\d{2})/);
-        if (match) {
-          return match[0];
-        }
-        return val.split("T")[0];
-      };
-      if (parseToLocalYYYYMMDD(task.dueDate) !== todayStr) return false;
+      if (isTaskFinishedOrCancelled_(task)) return false;
     } else if (statusFilter === "Finished") {
       if (!isTaskFinishedOrCancelled_(task)) return false;
     } else if (statusFilter !== "all") {
       if (task.status !== statusFilter) return false;
     }
 
-    // 3. Role Filter
     if (roleFilter !== "all") {
       if (task.assignedRole !== roleFilter) return false;
     }
 
-    // 4. Assignee Filter
     if (assigneeFilter !== "all") {
       if (task.assignedTo !== assigneeFilter) return false;
     }
 
-    // 5. Keyword Filter
     if (taskSearchKeyword && taskSearchKeyword.trim() !== "") {
       const q = taskSearchKeyword.trim().toLowerCase();
       const matchFields = [
@@ -3183,17 +3235,17 @@ function renderTasks() {
       if (!isMatched) return false;
     }
 
-    // 6. Due Date Filter
-    if (filterTaskDueDate !== "all") {
+    const filterDueDateVal = document.querySelector("#filterTaskDueDate")?.value || "all";
+    if (filterDueDateVal !== "all") {
       const todayStr = getTodayDateString_();
-      const taskLocalDate = parseToLocalYYYYMMDD(task.dueDate);
+      const taskLocalDate = parseToLocalYYYYMMDD_(task.dueDate);
 
-      if (filterTaskDueDate === "dueToday") {
+      if (filterDueDateVal === "dueToday") {
         if (taskLocalDate !== todayStr) return false;
-      } else if (filterTaskDueDate === "overdue") {
+      } else if (filterDueDateVal === "overdue") {
         if (!taskLocalDate || taskLocalDate >= todayStr) return false;
         if (isTaskFinishedOrCancelled_(task)) return false;
-      } else if (filterTaskDueDate === "next7Days") {
+      } else if (filterDueDateVal === "next7Days") {
         if (!taskLocalDate || taskLocalDate < todayStr) return false;
         const next7DaysDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
         const next7Year = next7DaysDate.getFullYear();
@@ -3202,7 +3254,7 @@ function renderTasks() {
         const next7Str = `${next7Year}-${next7Month}-${next7Day}`;
         if (taskLocalDate > next7Str) return false;
         if (isTaskFinishedOrCancelled_(task)) return false;
-      } else if (filterTaskDueDate === "noDueDate") {
+      } else if (filterDueDateVal === "noDueDate") {
         if (taskLocalDate !== "") return false;
       }
     }
@@ -3210,11 +3262,13 @@ function renderTasks() {
     return true;
   });
 
-  const isAllActive = (statusFilter === "all" && taskQuickPreset === "all" && filterTaskDueDate === "all" && !taskSearchKeyword);
-  const isWaitingActive = (statusFilter === "Waiting" || taskQuickPreset === "waiting");
-  const isBlockedActive = (statusFilter === "Blocked" || taskQuickPreset === "blocked");
-  const isTodayActive = (statusFilter === "dueToday" || taskQuickPreset === "today" || filterTaskDueDate === "dueToday");
-  const isFinishedActive = (statusFilter === "Finished");
+  const filterDueDateVal = document.querySelector("#filterTaskDueDate")?.value || "all";
+  const isAllActive = (taskQuickPreset === "all" || (taskQuickPreset === "custom" && statusFilter === "all" && roleFilter === "all" && assigneeFilter === "all" && filterDueDateVal === "all" && !taskSearchKeyword));
+  const isAssistantActive = (taskQuickPreset === "assistantActive" || (taskQuickPreset === "custom" && statusFilter === "assistantActive"));
+  const isWaitingActive = (taskQuickPreset === "waiting" || (taskQuickPreset === "custom" && statusFilter === "Waiting"));
+  const isBlockedActive = (taskQuickPreset === "blocked" || (taskQuickPreset === "custom" && statusFilter === "Blocked"));
+  const isTodayActive = (taskQuickPreset === "today" || (taskQuickPreset === "custom" && filterDueDateVal === "dueToday"));
+  const isFinishedActive = (taskQuickPreset === "completed" || (taskQuickPreset === "custom" && statusFilter === "Finished"));
 
   const summaryHTML = `
     <div class="task-summary-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px;">
@@ -3222,7 +3276,7 @@ function renderTasks() {
         <div style="font-size: 11px; color: rgba(255,255,255,0.55);">全部任務</div>
         <div style="font-size: 20px; font-weight: bold; margin-top: 4px; color: #fff;">${stats.total}</div>
       </div>
-      <div class="task-summary-card ${statusFilter === 'assistantActive' ? 'active' : ''}" role="button" tabindex="0" data-task-summary-filter="assistantActive" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;" aria-pressed="${statusFilter === 'assistantActive' ? 'true' : 'false'}">
+      <div class="task-summary-card ${isAssistantActive ? 'active' : ''}" role="button" tabindex="0" data-task-summary-filter="assistantActive" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;" aria-pressed="${isAssistantActive ? 'true' : 'false'}">
         <div style="font-size: 11px; color: #ab68ff;">待處理</div>
         <div style="font-size: 20px; font-weight: bold; margin-top: 4px; color: #ab68ff;">${stats.assistantActive}</div>
       </div>
@@ -3698,60 +3752,13 @@ function getTaskSummaryStats_(tasks) {
     finished: 0
   };
 
-  const todayStr = getTodayDateString_();
-
-  const parseToLocalYYYYMMDD = (val) => {
-    if (!val) return "";
-    if (val.includes("T")) {
-      try {
-        const d = new Date(val);
-        if (!isNaN(d.getTime())) {
-          const tzOffset = 8 * 60; // UTC+8
-          const localTime = new Date(d.getTime() + tzOffset * 60000);
-          const year = localTime.getUTCFullYear();
-          const month = String(localTime.getUTCMonth() + 1).padStart(2, '0');
-          const day = String(localTime.getUTCDate()).padStart(2, '0');
-          return `${year}-${month}-${day}`;
-        }
-      } catch (e) {}
-    }
-    const match = val.match(/^(\d{4})-(\d{2})-(\d{2})/);
-    if (match) {
-      return match[0];
-    }
-    return val.split("T")[0];
-  };
-
   tasks.forEach(task => {
     stats.total++;
-
-    // assistantActive
-    if (task.assignedRole === "assistant" && task.status !== "Finished" && task.status !== "done") {
-      stats.assistantActive++;
-    }
-
-    // waiting
-    if (task.status === "Waiting") {
-      stats.waiting++;
-    }
-
-    // blocked
-    if (task.status === "Blocked" || task.status === "blocked") {
-      stats.blocked++;
-    }
-
-    // dueToday
-    if (task.dueDate) {
-      const taskLocalDate = parseToLocalYYYYMMDD(task.dueDate);
-      if (taskLocalDate === todayStr) {
-        stats.dueToday++;
-      }
-    }
-
-    // finished
-    if (task.status === "Finished" || task.status === "done") {
-      stats.finished++;
-    }
+    if (isTaskMatchingPreset_(task, "assistantActive")) stats.assistantActive++;
+    if (isTaskMatchingPreset_(task, "waiting")) stats.waiting++;
+    if (isTaskMatchingPreset_(task, "blocked")) stats.blocked++;
+    if (isTaskMatchingPreset_(task, "today")) stats.dueToday++;
+    if (isTaskMatchingPreset_(task, "completed")) stats.finished++;
   });
 
   return stats;
