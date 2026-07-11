@@ -1097,6 +1097,15 @@ function render() {
   const loginView = document.querySelector("#loginView");
   const userPill = document.querySelector("#userDisplayName");
   const logoutBtn = document.querySelector("#logoutButton");
+  
+  const btnOpenCreate = document.querySelector("#btnOpenCreateTask");
+  if (btnOpenCreate) {
+    if (state.currentUser && state.currentUser.role && state.currentUser.role !== "unknown") {
+      btnOpenCreate.style.display = "inline-flex";
+    } else {
+      btnOpenCreate.style.display = "none";
+    }
+  }
 
   const loginApiUrlInput = document.querySelector("#loginApiUrlInput");
   if (loginApiUrlInput && !loginApiUrlInput.value) {
@@ -3285,6 +3294,15 @@ function renderTasks() {
               </div>
             ` : ""}
           `}
+          ${canCurrentUserAppendTaskNote_(t) ? `
+            <div class="task-note-append-section" style="margin-top: 12px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 12px; display: flex; flex-direction: column; gap: 6px;">
+              <label style="font-size: 12px; color: rgba(255,255,255,0.5);">✍️ 追加任務備註：</label>
+              <div style="display: flex; gap: 8px; width: 100%;">
+                <input type="text" id="append-note-input-${escapeHtml(t.id)}" placeholder="輸入備註事項 (限 200 字)..." maxlength="200" style="flex: 1; min-height: 36px; padding: 6px 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 13px;" />
+                <button type="button" class="primary-button btn-append-task-note" data-task-id="${escapeHtml(t.id)}" style="min-height: 36px; height: 36px; padding: 0 16px; font-size: 13px; border-radius: 8px;">送出</button>
+              </div>
+            </div>
+          ` : ""}
         </div>
       </article>
     `;
@@ -4030,5 +4048,217 @@ async function requestTaskInfoFromPwa_(taskId, reason) {
     renderTasks();
   }
 }
+
+// Stage 9-C: Create Task & Append Note front-end implementations
+
+function canCurrentUserAppendTaskNote_(t) {
+  if (!state.currentUser || !state.currentUser.role) return false;
+  const role = state.currentUser.role;
+  if (role === "admin" || role === "boss") return true;
+
+  // Non-admins cannot append notes to Finished or Cancelled tasks
+  const s = String(t.status || "").toLowerCase();
+  if (s === "finished" || s === "done" || s === "cancelled") return false;
+
+  const username = state.currentUser.username || "";
+  const displayName = state.currentUser.displayName || "";
+  const salesOwner = state.currentUser.salesOwner || "";
+
+  const isAssigned = (
+    (t.assignedRole === "assistant" && role === "assistant") ||
+    t.assignedTo === username ||
+    t.assignedTo === displayName ||
+    t.assignedTo === salesOwner
+  );
+
+  const isCreated = (
+    t.createdBy === username ||
+    t.createdBy === displayName ||
+    t.createdBy === salesOwner
+  );
+
+  return isAssigned || isCreated;
+}
+
+function openCreateTaskForm_() {
+  const modal = document.querySelector("#createTaskModal");
+  const form = document.querySelector("#createTaskForm");
+  const errorDiv = document.querySelector("#createTaskError");
+  if (form) form.reset();
+  if (errorDiv) {
+    errorDiv.style.display = "none";
+    errorDiv.textContent = "";
+  }
+  if (modal) modal.classList.add("active");
+}
+
+function closeCreateTaskForm_() {
+  const modal = document.querySelector("#createTaskModal");
+  if (modal) modal.classList.remove("active");
+}
+
+async function submitCreateTaskFromPwa_(e) {
+  e.preventDefault();
+  const btn = document.querySelector("#btnSubmitCreateTask");
+  const errorDiv = document.querySelector("#createTaskError");
+  if (btn) btn.disabled = true;
+  if (errorDiv) {
+    errorDiv.style.display = "none";
+    errorDiv.textContent = "";
+  }
+
+  try {
+    const titleVal = document.querySelector("#createTaskTitle")?.value || "";
+    const typeVal = document.querySelector("#createTaskType")?.value || "";
+    const priorityVal = document.querySelector("#createTaskPriority")?.value || "";
+    const assignedRoleVal = document.querySelector("#createTaskAssignedRole")?.value || "";
+    const assignedToVal = document.querySelector("#createTaskAssignedTo")?.value || "";
+    const dueDateVal = document.querySelector("#createTaskDueDate")?.value || "";
+    const quantityVal = document.querySelector("#createTaskQuantity")?.value || "";
+    const customerNameVal = document.querySelector("#createTaskCustomerName")?.value || "";
+    const productNameVal = document.querySelector("#createTaskProductName")?.value || "";
+    const descriptionVal = document.querySelector("#createTaskDescription")?.value || "";
+
+    // Client validation
+    if (!titleVal.trim()) throw new Error("標題不可為空");
+    if (!assignedRoleVal && !assignedToVal.trim()) throw new Error("必須指定指派角色或指派人員");
+
+    const payload = {
+      action: "createTask",
+      userContext: {
+        role: state.currentUser?.role || "",
+        username: state.currentUser?.username || "",
+        displayName: state.currentUser?.displayName || "",
+        salesOwner: state.currentUser?.salesOwner || ""
+      },
+      task: {
+        type: typeVal,
+        title: titleVal.trim(),
+        description: descriptionVal.trim(),
+        customerName: customerNameVal.trim(),
+        productName: productNameVal.trim(),
+        quantity: quantityVal.trim(),
+        assignedRole: assignedRoleVal || "",
+        assignedTo: assignedToVal.trim(),
+        priority: priorityVal,
+        dueDate: dueDateVal || ""
+      }
+    };
+
+    const result = await sendCloudAction("createTask", payload);
+    if (result && result.ok) {
+      toast("任務建立成功！");
+      if (result.task) {
+        if (!state.tasks) state.tasks = [];
+        state.tasks.unshift(result.task);
+        
+        // Local audit representation
+        if (!state.auditLogs) state.auditLogs = [];
+        state.auditLogs.unshift({
+          id: "audit-pwa-" + Date.now(),
+          workId: result.task.id,
+          action: "pwa_create_task",
+          operator: state.currentUser?.displayName || state.currentUser?.username || "unknown",
+          operatorRole: state.currentUser?.role || "",
+          fromStatus: "",
+          toStatus: "Created",
+          details: "建立任務：" + result.task.title,
+          createdAt: new Date().toISOString()
+        });
+        
+        saveState();
+      }
+      closeCreateTaskForm_();
+      renderTasks();
+    } else {
+      throw new Error((result && result.message) || "建立失敗");
+    }
+  } catch (err) {
+    console.error(err);
+    if (errorDiv) {
+      errorDiv.textContent = err.message || "發生錯誤";
+      errorDiv.style.display = "block";
+    }
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function appendTaskNoteFromPwa_(taskId) {
+  const input = document.querySelector(`#append-note-input-${taskId}`);
+  const noteVal = input ? input.value : "";
+  if (!noteVal.trim()) {
+    toast("請輸入備註內容");
+    return;
+  }
+
+  const buttons = document.querySelectorAll(`.btn-append-task-note[data-task-id="${taskId}"]`);
+  buttons.forEach(btn => btn.disabled = true);
+
+  try {
+    const payload = {
+      action: "appendTaskNote",
+      userContext: {
+        role: state.currentUser?.role || "",
+        username: state.currentUser?.username || "",
+        displayName: state.currentUser?.displayName || "",
+        salesOwner: state.currentUser?.salesOwner || ""
+      },
+      id: taskId,
+      note: noteVal.trim()
+    };
+
+    const result = await sendCloudAction("appendTaskNote", payload);
+    if (result && result.ok) {
+      toast("備註新增成功");
+      
+      const taskIndex = state.tasks?.findIndex(t => t.id === taskId);
+      if (taskIndex !== undefined && taskIndex !== -1 && result.task) {
+        state.tasks[taskIndex] = result.task;
+        
+        if (!state.auditLogs) state.auditLogs = [];
+        state.auditLogs.unshift({
+          id: "audit-pwa-" + Date.now(),
+          workId: taskId,
+          action: "pwa_append_note",
+          operator: state.currentUser?.displayName || state.currentUser?.username || "unknown",
+          operatorRole: state.currentUser?.role || "",
+          fromStatus: result.task.status || "",
+          toStatus: result.task.status || "",
+          details: noteVal.trim(),
+          createdAt: new Date().toISOString()
+        });
+        
+        saveState();
+      }
+      
+      if (input) input.value = "";
+      renderTasks();
+    } else {
+      throw new Error((result && result.message) || "備註新增失敗");
+    }
+  } catch (err) {
+    console.error(err);
+    toast(err.message || "發生錯誤");
+  } finally {
+    buttons.forEach(btn => btn.disabled = false);
+  }
+}
+
+// Stage 9-C event bindings
+document.querySelector("#btnOpenCreateTask")?.addEventListener("click", openCreateTaskForm_);
+document.querySelector("#btnCancelCreateTask")?.addEventListener("click", closeCreateTaskForm_);
+document.querySelector("#btnCancelCreateTask2")?.addEventListener("click", closeCreateTaskForm_);
+document.querySelector("#createTaskForm")?.addEventListener("submit", submitCreateTaskFromPwa_);
+
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest(".btn-append-task-note");
+  if (btn) {
+    const taskId = btn.getAttribute("data-task-id");
+    if (taskId) {
+      appendTaskNoteFromPwa_(taskId);
+    }
+  }
+});
 
 

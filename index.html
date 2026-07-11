@@ -637,12 +637,15 @@
         </section>
 
         <section class="view" id="tasksView">
-          <div class="view-toolbar">
-            <button class="back-button" data-view="home">‹</button>
-            <div>
-              <p class="eyebrow">WORK CENTER</p>
-              <h1>工作任務</h1>
+          <div class="view-toolbar" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <button class="back-button" data-view="home">‹</button>
+              <div>
+                <p class="eyebrow">WORK CENTER</p>
+                <h1 style="margin: 0;">工作任務</h1>
+              </div>
             </div>
+            <button id="btnOpenCreateTask" class="primary-button" style="min-height: 36px; height: 36px; padding: 0 16px; font-size: 13px; border-radius: 18px; display: none;">＋ 新增任務</button>
           </div>
 
           <section class="panel">
@@ -774,6 +777,96 @@
         <button class="nav-item" data-view="samples">樣品</button>
         <button class="nav-item" data-view="complaints">客訴</button>
       </nav>
+    </div>
+
+    <div class="modal-overlay" id="createTaskModal">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h2>📝 新增工作任務</h2>
+          <button type="button" class="modal-close-btn" id="btnCancelCreateTask">&times;</button>
+        </div>
+        <div id="createTaskError" class="modal-error-msg"></div>
+        <form id="createTaskForm" autocomplete="off" style="display: flex; flex-direction: column; gap: 16px;">
+          <div class="modal-form-grid">
+            <div class="modal-form-field full-width">
+              <label for="createTaskTitle">工作簡述 (必填)</label>
+              <input type="text" id="createTaskTitle" placeholder="例如：補寄銷貨單給吉星、樣品送檢" required maxlength="100" />
+            </div>
+            
+            <div class="modal-form-field">
+              <label for="createTaskType">任務類別 (必填)</label>
+              <select id="createTaskType" required>
+                <option value="general">一般事項 (General)</option>
+                <option value="customer">客戶對接 (Customer)</option>
+                <option value="product">商品追蹤 (Product)</option>
+                <option value="delivery">出貨/送貨 (Delivery)</option>
+                <option value="inventory">庫存核對 (Inventory)</option>
+                <option value="reservation">保留追蹤 (Reservation)</option>
+                <option value="sample">樣品借還 (Sample)</option>
+                <option value="other">其他工作 (Other)</option>
+              </select>
+            </div>
+            
+            <div class="modal-form-field">
+              <label for="createTaskPriority">優先程度</label>
+              <select id="createTaskPriority" required>
+                <option value="normal" selected>普通 (Normal)</option>
+                <option value="low">低 (Low)</option>
+                <option value="high">高 (High)</option>
+                <option value="urgent">緊急 (Urgent)</option>
+              </select>
+            </div>
+            
+            <div class="modal-form-field">
+              <label for="createTaskAssignedRole">指派組別/角色 (二擇一)</label>
+              <select id="createTaskAssignedRole">
+                <option value="" selected>不指派角色</option>
+                <option value="assistant">助理群 (Assistant)</option>
+                <option value="sales">業務群 (Sales)</option>
+                <option value="retailSales">零售業務群</option>
+                <option value="showroomSales">門市業務群</option>
+                <option value="boss">主管群 (Boss)</option>
+                <option value="admin">管理群 (Admin)</option>
+              </select>
+            </div>
+            
+            <div class="modal-form-field">
+              <label for="createTaskAssignedTo">指派對象人名 (二擇一)</label>
+              <input type="text" id="createTaskAssignedTo" placeholder="例如：陳大同" maxlength="50" />
+            </div>
+            
+            <div class="modal-form-field">
+              <label for="createTaskDueDate">到期日期</label>
+              <input type="date" id="createTaskDueDate" />
+            </div>
+            
+            <div class="modal-form-field">
+              <label for="createTaskQuantity">數量 / 排定值</label>
+              <input type="text" id="createTaskQuantity" placeholder="例如：3 箱 / 50 米" maxlength="30" />
+            </div>
+            
+            <div class="modal-form-field">
+              <label for="createTaskCustomerName">關聯客戶店名</label>
+              <input type="text" id="createTaskCustomerName" placeholder="例如：吉星磁磚" maxlength="50" />
+            </div>
+            
+            <div class="modal-form-field">
+              <label for="createTaskProductName">關聯商品名稱</label>
+              <input type="text" id="createTaskProductName" placeholder="例如：白馬石英磚" maxlength="50" />
+            </div>
+            
+            <div class="modal-form-field full-width">
+              <label for="createTaskDescription">詳細說明</label>
+              <textarea id="createTaskDescription" placeholder="輸入備註或更詳細的交辦流程..." maxlength="500"></textarea>
+            </div>
+          </div>
+          
+          <div class="modal-footer">
+            <button type="button" class="secondary-button" id="btnCancelCreateTask2" style="min-height: 40px; border-radius: 20px; padding-inline: 20px;">取消</button>
+            <button type="submit" class="primary-button" id="btnSubmitCreateTask" style="min-height: 40px; border-radius: 20px; padding-inline: 24px;">建立任務</button>
+          </div>
+        </form>
+      </div>
     </div>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
