@@ -164,9 +164,25 @@ document.addEventListener("click", (event) => {
     const targetStatus = summaryFilterBtn.dataset.taskSummaryFilter;
     const statusSelect = document.querySelector("#filterTaskStatus");
     if (statusSelect) {
-      taskQuickPreset = "custom";
-      statusSelect.value = targetStatus;
-      renderTasks();
+      if (targetStatus === "all") {
+        applyTaskQuickPreset_("all");
+      } else if (targetStatus === "Waiting") {
+        applyTaskQuickPreset_("waiting");
+      } else if (targetStatus === "Blocked") {
+        applyTaskQuickPreset_("blocked");
+      } else if (targetStatus === "dueToday") {
+        applyTaskQuickPreset_("today");
+      } else {
+        taskQuickPreset = "custom";
+        statusSelect.value = targetStatus;
+        
+        // Reset due date filter to avoid double-filtering
+        filterTaskDueDate = "all";
+        const dueDateSelect = document.querySelector("#filterTaskDueDate");
+        if (dueDateSelect) dueDateSelect.value = "all";
+        
+        renderTasks();
+      }
     }
     return;
   }
@@ -3129,6 +3145,8 @@ function renderTasks() {
         return val.split("T")[0];
       };
       if (parseToLocalYYYYMMDD(task.dueDate) !== todayStr) return false;
+    } else if (statusFilter === "Finished") {
+      if (!isTaskFinishedOrCancelled_(task)) return false;
     } else if (statusFilter !== "all") {
       if (task.status !== statusFilter) return false;
     }
@@ -3192,29 +3210,35 @@ function renderTasks() {
     return true;
   });
 
+  const isAllActive = (statusFilter === "all" && taskQuickPreset === "all" && filterTaskDueDate === "all" && !taskSearchKeyword);
+  const isWaitingActive = (statusFilter === "Waiting" || taskQuickPreset === "waiting");
+  const isBlockedActive = (statusFilter === "Blocked" || taskQuickPreset === "blocked");
+  const isTodayActive = (statusFilter === "dueToday" || taskQuickPreset === "today" || filterTaskDueDate === "dueToday");
+  const isFinishedActive = (statusFilter === "Finished");
+
   const summaryHTML = `
     <div class="task-summary-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px;">
-      <div class="task-summary-card ${statusFilter === 'all' ? 'active' : ''}" data-task-summary-filter="all" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;">
+      <div class="task-summary-card ${isAllActive ? 'active' : ''}" data-task-summary-filter="all" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;" aria-pressed="${isAllActive ? 'true' : 'false'}">
         <div style="font-size: 11px; color: rgba(255,255,255,0.55);">全部任務</div>
         <div style="font-size: 20px; font-weight: bold; margin-top: 4px; color: #fff;">${stats.total}</div>
       </div>
-      <div class="task-summary-card ${statusFilter === 'assistantActive' ? 'active' : ''}" data-task-summary-filter="assistantActive" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;">
+      <div class="task-summary-card ${statusFilter === 'assistantActive' ? 'active' : ''}" data-task-summary-filter="assistantActive" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;" aria-pressed="${statusFilter === 'assistantActive' ? 'true' : 'false'}">
         <div style="font-size: 11px; color: #ab68ff;">待處理</div>
         <div style="font-size: 20px; font-weight: bold; margin-top: 4px; color: #ab68ff;">${stats.assistantActive}</div>
       </div>
-      <div class="task-summary-card ${statusFilter === 'Waiting' ? 'active' : ''}" data-task-summary-filter="Waiting" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;">
+      <div class="task-summary-card ${isWaitingActive ? 'active' : ''}" data-task-summary-filter="Waiting" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;" aria-pressed="${isWaitingActive ? 'true' : 'false'}">
         <div style="font-size: 11px; color: #f4bf58;">等資料</div>
         <div style="font-size: 20px; font-weight: bold; margin-top: 4px; color: #f4bf58;">${stats.waiting}</div>
       </div>
-      <div class="task-summary-card ${statusFilter === 'Blocked' ? 'active' : ''}" data-task-summary-filter="Blocked" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;">
+      <div class="task-summary-card ${isBlockedActive ? 'active' : ''}" data-task-summary-filter="Blocked" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;" aria-pressed="${isBlockedActive ? 'true' : 'false'}">
         <div style="font-size: 11px; color: #ff756f;">異常</div>
         <div style="font-size: 20px; font-weight: bold; margin-top: 4px; color: #ff756f;">${stats.blocked}</div>
       </div>
-      <div class="task-summary-card ${statusFilter === 'dueToday' ? 'active' : ''}" data-task-summary-filter="dueToday" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;">
+      <div class="task-summary-card ${isTodayActive ? 'active' : ''}" data-task-summary-filter="dueToday" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;" aria-pressed="${isTodayActive ? 'true' : 'false'}">
         <div style="font-size: 11px; color: #58a8ff;">今天到期</div>
         <div style="font-size: 20px; font-weight: bold; margin-top: 4px; color: #58a8ff;">${stats.dueToday}</div>
       </div>
-      <div class="task-summary-card ${statusFilter === 'Finished' ? 'active' : ''}" data-task-summary-filter="Finished" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;">
+      <div class="task-summary-card ${isFinishedActive ? 'active' : ''}" data-task-summary-filter="Finished" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;" aria-pressed="${isFinishedActive ? 'true' : 'false'}">
         <div style="font-size: 11px; color: #54e2b0;">已完成</div>
         <div style="font-size: 20px; font-weight: bold; margin-top: 4px; color: #54e2b0;">${stats.finished}</div>
       </div>

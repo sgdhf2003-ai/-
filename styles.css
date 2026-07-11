@@ -1737,6 +1737,16 @@ textarea {
   box-shadow: 0 0 10px rgba(84, 151, 255, 0.15);
 }
 
+.task-summary-card:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  transform: translateY(-1px);
+}
+
+.task-summary-card:active {
+  transform: translateY(1px);
+}
+
 /* Task Center Spacing & Text Selectability - Stage 4-3.1 */
 #tasksView {
   padding-bottom: calc(140px + env(safe-area-inset-bottom));
