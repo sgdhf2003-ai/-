@@ -1948,6 +1948,38 @@ textarea {
   background: rgba(255, 255, 255, 0.08) !important;
 }
 
+.task-quick-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+
+.task-quick-chip {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 17px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+.task-quick-chip:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.24);
+}
+
+.task-quick-chip.active {
+  background: rgba(84, 151, 255, 0.18);
+  border-color: rgba(84, 151, 255, 0.58);
+  color: #fff;
+}
+
 /* Task List Due Date Filter styles - Stage 7-2A */
 #filterTaskDueDate:focus {
   outline: none;
@@ -1969,6 +2001,15 @@ textarea {
   .task-filter-row select {
     width: 100% !important;
     min-width: 100% !important;
+  }
+  .task-quick-presets {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .task-quick-chip {
+    flex: 0 0 auto;
   }
 }
 
@@ -2147,5 +2188,4 @@ textarea:focus {
   gap: 12px;
   margin-top: 8px;
 }
-
 

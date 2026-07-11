@@ -38,6 +38,7 @@ const pwaTaskWaitingReasonOpen = new Set();
 let taskSearchKeyword = "";
 let filterTaskDueDate = "all";
 let sortTaskOrder = "default";
+let taskQuickPreset = "all";
 
 const views = {
   home: document.querySelector("#homeView"),
@@ -163,9 +164,18 @@ document.addEventListener("click", (event) => {
     const targetStatus = summaryFilterBtn.dataset.taskSummaryFilter;
     const statusSelect = document.querySelector("#filterTaskStatus");
     if (statusSelect) {
+      taskQuickPreset = "custom";
       statusSelect.value = targetStatus;
       renderTasks();
     }
+    return;
+  }
+
+  const taskQuickPresetBtn = event.target.closest("[data-task-quick-preset]");
+  if (taskQuickPresetBtn) {
+    event.preventDefault();
+    event.stopPropagation();
+    applyTaskQuickPreset_(taskQuickPresetBtn.dataset.taskQuickPreset || "all");
     return;
   }
 
@@ -2909,55 +2919,138 @@ if (state.currentUser) {
 }
 
 // Task Center MVP Helpers & Listeners
-document.querySelector("#filterTaskStatus")?.addEventListener("change", () => renderTasks());
-document.querySelector("#filterTaskRole")?.addEventListener("change", () => renderTasks());
-document.querySelector("#filterTaskAssignee")?.addEventListener("change", () => renderTasks());
+document.querySelector("#filterTaskStatus")?.addEventListener("change", () => {
+  taskQuickPreset = "custom";
+  renderTasks();
+});
+document.querySelector("#filterTaskRole")?.addEventListener("change", () => {
+  taskQuickPreset = "custom";
+  renderTasks();
+});
+document.querySelector("#filterTaskAssignee")?.addEventListener("change", () => {
+  taskQuickPreset = "custom";
+  renderTasks();
+});
 
 document.querySelector("#filterTaskDueDate")?.addEventListener("change", (e) => {
+  taskQuickPreset = "custom";
   filterTaskDueDate = e.target.value;
   renderTasks();
 });
 
 document.querySelector("#sortTaskOrder")?.addEventListener("change", (e) => {
+  taskQuickPreset = "custom";
   sortTaskOrder = e.target.value;
   renderTasks();
 });
 
 document.querySelector("#taskSearchKeyword")?.addEventListener("input", (e) => {
+  taskQuickPreset = "custom";
   taskSearchKeyword = e.target.value;
   renderTasks();
 });
 
 document.querySelector("#clearTaskFilters")?.addEventListener("click", () => {
+  applyTaskQuickPreset_("all");
+});
+
+function applyTaskQuickPreset_(preset) {
+  taskQuickPreset = preset || "all";
   taskSearchKeyword = "";
   filterTaskDueDate = "all";
   sortTaskOrder = "default";
+
   const searchInput = document.querySelector("#taskSearchKeyword");
   if (searchInput) searchInput.value = "";
 
   const statusSelect = document.querySelector("#filterTaskStatus");
-  if (statusSelect) {
-    statusSelect.value = (state.currentUser?.role === "assistant") ? "assistantActive" : "all";
-  }
-
   const roleSelect = document.querySelector("#filterTaskRole");
-  if (roleSelect) roleSelect.value = "all";
-
   const assigneeSelect = document.querySelector("#filterTaskAssignee");
-  if (assigneeSelect) assigneeSelect.value = "all";
-
   const dueDateSelect = document.querySelector("#filterTaskDueDate");
-  if (dueDateSelect) dueDateSelect.value = "all";
-
   const sortSelect = document.querySelector("#sortTaskOrder");
+
+  if (statusSelect) statusSelect.value = "all";
+  if (roleSelect) roleSelect.value = "all";
+  if (assigneeSelect) assigneeSelect.value = "all";
+  if (dueDateSelect) dueDateSelect.value = "all";
   if (sortSelect) sortSelect.value = "default";
 
+  if (taskQuickPreset === "today") {
+    filterTaskDueDate = "dueToday";
+    if (dueDateSelect) dueDateSelect.value = "dueToday";
+  } else if (taskQuickPreset === "overdue") {
+    filterTaskDueDate = "overdue";
+    if (dueDateSelect) dueDateSelect.value = "overdue";
+  } else if (taskQuickPreset === "next7Days") {
+    filterTaskDueDate = "next7Days";
+    if (dueDateSelect) dueDateSelect.value = "next7Days";
+  } else if (!["mine", "blocked", "waiting"].includes(taskQuickPreset)) {
+    taskQuickPreset = "all";
+  }
+
   renderTasks();
-});
+}
+
+function updateTaskQuickPresetUI_() {
+  document.querySelectorAll("[data-task-quick-preset]").forEach((btn) => {
+    const isActive = btn.dataset.taskQuickPreset === taskQuickPreset;
+    btn.classList.toggle("active", isActive);
+    btn.setAttribute("aria-pressed", isActive ? "true" : "false");
+  });
+}
+
+function isTaskFinishedOrCancelled_(task) {
+  const s = String(task?.status || "").toLowerCase();
+  return s === "finished" || s === "done" || s === "cancelled";
+}
+
+function isCurrentUsersTask_(task) {
+  if (!state.currentUser || !task) return false;
+  const selfValues = [
+    state.currentUser.username,
+    state.currentUser.displayName,
+    state.currentUser.salesOwner
+  ].map(v => String(v || "").trim()).filter(Boolean);
+  if (!selfValues.length) return false;
+  return (
+    selfValues.includes(String(task.assignedTo || "").trim()) ||
+    selfValues.includes(String(task.createdBy || "").trim())
+  );
+}
+
+function isTaskBlockedLike_(task) {
+  const status = String(task?.status || "").toLowerCase();
+  const workflow = String(task?.workflowStage || "").toLowerCase();
+  const reason = String(task?.blockedReason || "").toLowerCase();
+  return (
+    status === "blocked" ||
+    workflow.includes("blocked") ||
+    workflow.includes("異常") ||
+    reason.includes("異常")
+  );
+}
+
+function isTaskWaitingLike_(task) {
+  const status = String(task?.status || "").toLowerCase();
+  const workflow = String(task?.workflowStage || "").toLowerCase();
+  const reason = String(task?.blockedReason || "").toLowerCase();
+  return (
+    status === "waiting" ||
+    status === "delayed" ||
+    workflow.includes("waiting") ||
+    workflow.includes("missing") ||
+    workflow.includes("等資料") ||
+    workflow.includes("缺資料") ||
+    reason.includes("等資料") ||
+    reason.includes("缺")
+  );
+}
 
 function renderTasks() {
   const container = document.querySelector("#tasksList");
   if (!container) return;
+
+  updateTaskQuickPresetUI_();
 
   populateTaskAssignees();
 
@@ -3004,6 +3097,10 @@ function renderTasks() {
   const stats = getTaskSummaryStats_(visibleTasks);
 
   const filtered = visibleTasks.filter(task => {
+    if (taskQuickPreset === "mine" && !isCurrentUsersTask_(task)) return false;
+    if (taskQuickPreset === "blocked" && !isTaskBlockedLike_(task)) return false;
+    if (taskQuickPreset === "waiting" && !isTaskWaitingLike_(task)) return false;
+
     // 2. Status Filter
     if (statusFilter === "assistantActive") {
       if (task.assignedRole !== "assistant") return false;
@@ -3077,8 +3174,7 @@ function renderTasks() {
         if (taskLocalDate !== todayStr) return false;
       } else if (filterTaskDueDate === "overdue") {
         if (!taskLocalDate || taskLocalDate >= todayStr) return false;
-        const s = String(task.status || "").toLowerCase();
-        if (s === "finished" || s === "done" || s === "cancelled") return false;
+        if (isTaskFinishedOrCancelled_(task)) return false;
       } else if (filterTaskDueDate === "next7Days") {
         if (!taskLocalDate || taskLocalDate < todayStr) return false;
         const next7DaysDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
@@ -3087,6 +3183,7 @@ function renderTasks() {
         const next7Day = String(next7DaysDate.getDate()).padStart(2, '0');
         const next7Str = `${next7Year}-${next7Month}-${next7Day}`;
         if (taskLocalDate > next7Str) return false;
+        if (isTaskFinishedOrCancelled_(task)) return false;
       } else if (filterTaskDueDate === "noDueDate") {
         if (taskLocalDate !== "") return false;
       }

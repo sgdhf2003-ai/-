@@ -657,6 +657,16 @@
               <input type="text" id="taskSearchKeyword" placeholder="搜尋任務、客戶、商品、指派人、狀態..." autocomplete="off" style="flex: 1; min-width: 200px; min-height: 40px; border-radius: 8px; padding-inline: 12px; background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(255,255,255,0.1); font-size: 13px;" />
               <button type="button" id="clearTaskFilters" style="min-height: 40px; border-radius: 8px; padding-inline: 16px; background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.15); cursor: pointer; font-size: 13px; transition: all 0.2s;">清除篩選</button>
             </div>
+
+            <div class="task-quick-presets" aria-label="任務快速篩選">
+              <button type="button" class="task-quick-chip" data-task-quick-preset="mine">我的任務</button>
+              <button type="button" class="task-quick-chip" data-task-quick-preset="today">今天到期</button>
+              <button type="button" class="task-quick-chip" data-task-quick-preset="overdue">已逾期</button>
+              <button type="button" class="task-quick-chip" data-task-quick-preset="next7Days">未來 7 天</button>
+              <button type="button" class="task-quick-chip" data-task-quick-preset="blocked">異常</button>
+              <button type="button" class="task-quick-chip" data-task-quick-preset="waiting">等資料</button>
+              <button type="button" class="task-quick-chip active" data-task-quick-preset="all" aria-pressed="true">全部</button>
+            </div>
             
             <div class="task-filter-row" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; width: 100%;">
               <select id="filterTaskStatus" style="flex: 1; min-width: 120px; min-height: 40px; border-radius: 8px; padding-inline: 8px; background: rgba(84,151,255,0.1); color: #fff; border: 1px solid rgba(84,151,255,0.2);">
