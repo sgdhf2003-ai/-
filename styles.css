@@ -636,10 +636,24 @@ textarea {
   align-items: center;
   justify-content: center;
   font-weight: 900;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .primary-button {
   background: linear-gradient(135deg, #73a9ff, #6c84ff);
+}
+
+.primary-button:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(108, 132, 255, 0.35);
+}
+
+.primary-button:active {
+  transform: translateY(0px);
+  filter: brightness(0.95);
 }
 
 .secondary-button,
@@ -651,9 +665,39 @@ textarea {
   color: #9fc8ff;
 }
 
+.secondary-button:hover,
+.text-button:hover,
+.small-button:hover,
+.link-button:hover {
+  background: rgba(84, 151, 255, 0.22);
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(84, 151, 255, 0.15);
+}
+
+.secondary-button:active,
+.text-button:active,
+.small-button:active,
+.link-button:active {
+  transform: translateY(0px);
+  background: rgba(84, 151, 255, 0.15);
+}
+
 .danger-button {
   background: rgba(255, 117, 111, 0.14);
   color: #ff9892;
+}
+
+.danger-button:hover {
+  background: rgba(255, 117, 111, 0.25);
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 117, 111, 0.2);
+}
+
+.danger-button:active {
+  transform: translateY(0px);
+  background: rgba(255, 117, 111, 0.18);
 }
 
 .management-card {
@@ -805,14 +849,19 @@ textarea {
 
 
 .empty-state {
-  min-height: 110px;
-  display: grid;
-  place-items: center;
-  border: 1px dashed rgba(105, 160, 255, 0.26);
+  min-height: 140px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed rgba(105, 160, 255, 0.22);
   border-radius: 18px;
-  color: #9fb1ce;
+  color: rgba(255, 255, 255, 0.5);
   text-align: center;
-  padding: 18px;
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.02);
+  gap: 8px;
+  font-size: 13px;
 }
 
 .bottom-nav {
@@ -864,15 +913,20 @@ textarea {
   bottom: 96px;
   z-index: 2000;
   max-width: min(360px, calc(100vw - 36px));
-  padding: 13px 16px;
+  padding: 12px 18px;
   border-radius: 16px;
-  background: #071326;
+  background: rgba(7, 19, 38, 0.88);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(84, 151, 255, 0.25);
   color: white;
-  box-shadow: var(--shadow);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
   opacity: 0;
   transform: translateY(12px);
   pointer-events: none;
-  transition: 0.2s ease;
+  transition: opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1), transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .toast.show {
@@ -1927,6 +1981,48 @@ textarea {
 .task-card-finished:hover {
   opacity: 0.98 !important;
   filter: grayscale(0%) !important;
+}
+
+/* Premium Focus Highlights for form fields - Stage 8-E */
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: rgba(84, 151, 255, 0.6) !important;
+  box-shadow: 0 0 0 3px rgba(84, 151, 255, 0.25) !important;
+  background: rgba(4, 10, 22, 0.85) !important;
+  transition: all 0.2s ease;
+}
+
+/* Info Card & Hold Card hover glows - Stage 8-E */
+.info-card {
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease !important;
+}
+.info-card:hover {
+  border-color: rgba(105, 160, 255, 0.5) !important;
+  box-shadow: 0 6px 20px rgba(85, 167, 255, 0.15) !important;
+  transform: translateY(-2px);
+}
+
+.hold-card {
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease !important;
+}
+.hold-card:hover {
+  border-color: rgba(105, 160, 255, 0.5) !important;
+  box-shadow: 0 6px 20px rgba(85, 167, 255, 0.15) !important;
+  transform: translateY(-2px);
+}
+
+/* Domain Grid Mobile Viewport adjustment - Stage 8-E */
+@media (max-width: 480px) {
+  .domain-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+  .domain-card {
+    min-height: auto !important;
+    padding-bottom: 22px !important;
+  }
 }
 
 

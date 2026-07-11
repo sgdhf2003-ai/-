@@ -3569,7 +3569,7 @@ function getTaskStatusMeta_(status) {
   const norm = String(status || "").trim();
   if (norm === "Created" || norm === "open") {
     return {
-      label: "已建立",
+      label: "📝 已建立",
       code: norm,
       className: "task-status-created",
       tone: "created"
@@ -3577,7 +3577,7 @@ function getTaskStatusMeta_(status) {
   }
   if (norm === "Started" || norm === "inProgress") {
     return {
-      label: "執行中",
+      label: "⚡ 執行中",
       code: norm,
       className: "task-status-started",
       tone: "started"
@@ -3585,7 +3585,7 @@ function getTaskStatusMeta_(status) {
   }
   if (norm === "Waiting" || norm === "delayed") {
     return {
-      label: "等待補資料",
+      label: "⏳ 等待補資料",
       code: norm,
       className: "task-status-waiting",
       tone: "waiting"
@@ -3593,7 +3593,7 @@ function getTaskStatusMeta_(status) {
   }
   if (norm === "Blocked" || norm === "blocked") {
     return {
-      label: "異常需處理",
+      label: "⚠️ 異常需處理",
       code: norm,
       className: "task-status-blocked",
       tone: "blocked"
@@ -3601,7 +3601,7 @@ function getTaskStatusMeta_(status) {
   }
   if (norm === "Finished" || norm === "done") {
     return {
-      label: "已完成",
+      label: "✅ 已完成",
       code: norm,
       className: "task-status-finished",
       tone: "finished"
@@ -3609,7 +3609,7 @@ function getTaskStatusMeta_(status) {
   }
   if (norm === "Cancelled" || norm === "cancelled") {
     return {
-      label: "已取消",
+      label: "🚫 已取消",
       code: norm,
       className: "task-status-cancelled",
       tone: "cancelled"
