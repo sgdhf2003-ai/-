@@ -31,6 +31,7 @@ mergeImportedStores();
 let cloudConfig = loadCloudConfig();
 let appSettings = loadAppSettings();
 let editingStoreId = null;
+let editingTaskId = null;
 const pwaTaskStatusInFlight = new Set();
 const pwaTaskIssueReasonOpen = new Set();
 const pwaTaskWaitingReasonOpen = new Set();
@@ -129,6 +130,15 @@ document.addEventListener("click", (event) => {
     const taskId = decodeURIComponent(waitingSubmitBtn.dataset.taskWaitingSubmitBtn);
     const reason = waitingSubmitBtn.dataset.reason;
     requestTaskInfoFromPwa_(taskId, reason);
+    return;
+  }
+
+  const editTaskBtn = event.target.closest("[data-task-edit-btn]");
+  if (editTaskBtn) {
+    event.preventDefault();
+    event.stopPropagation();
+    const taskId = decodeURIComponent(editTaskBtn.dataset.taskEditBtn || "");
+    if (taskId) openEditTaskForm_(taskId);
     return;
   }
 
@@ -1898,6 +1908,46 @@ async function sendCloudWrite(action, payload = {}) {
   ]);
 }
 
+async function sendCloudWriteWithResponse_(payload = {}) {
+  const timeout = new Promise((_, reject) => {
+    window.setTimeout(() => reject(new Error("Google 後台回應逾時，無法確認任務是否更新。")), 20000);
+  });
+
+  let response;
+  try {
+    response = await Promise.race([
+      fetch(getCloudApiUrl(), {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload),
+      }),
+      timeout,
+    ]);
+  } catch (err) {
+    throw new Error(err.message || "無法讀取 Google 後台回應，請確認網路與 Apps Script Web App 權限設定。");
+  }
+
+  let text = "";
+  try {
+    text = await response.text();
+  } catch {
+    throw new Error("無法讀取 Google 後台回應，請確認 Apps Script Web App 允許此頁面讀取回應。");
+  }
+
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error("Google 後台回應不是 JSON，無法確認任務是否更新。");
+  }
+
+  if (!response.ok) {
+    throw new Error(data.message || data.error || "Google 後台處理失敗，無法確認任務是否更新。");
+  }
+
+  return data;
+}
+
 async function sendCloudRead() {
   const response = await fetch(getCloudApiUrl(), {
     method: "GET",
@@ -3252,10 +3302,13 @@ function renderTasks() {
           ${t.description ? `<div style="margin-top: 8px; font-size: 13px; color: rgba(255,255,255,0.85);"><strong style="display:block;margin-bottom:2px;">詳細說明：</strong><pre class="pre-text" style="margin:0; white-space: pre-wrap;">${escapeHtml(t.description)}</pre></div>` : ""}
           ${t.note ? `<div style="margin-top: 8px; font-size: 13px; color: rgba(255,255,255,0.85);"><strong style="display:block;margin-bottom:2px;">備註：</strong><pre class="pre-text" style="margin:0; border-left: 3px solid var(--gold); padding-left: 8px; white-space: pre-wrap;">${escapeHtml(t.note)}</pre></div>` : ""}
           ${renderTaskAuditHistory_(t.id)}
-          ${(canCurrentUserCompleteTask_(t) || canCurrentUserReportTaskIssue_(t) || canCurrentUserRequestTaskInfo_(t)) ? `
+          ${(canCurrentUserUpdateTask_(t) || canCurrentUserCompleteTask_(t) || canCurrentUserReportTaskIssue_(t) || canCurrentUserRequestTaskInfo_(t)) ? `
             <div class="task-action-group" style="margin-top: 12px; display: flex; flex-direction: column; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 12px; gap: 8px;">
               <div style="font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 4px;">📋 任務操作：</div>
               <div style="display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px;">
+                ${canCurrentUserUpdateTask_(t) ? `
+                  <button type="button" class="secondary-button" style="font-size: 13px; padding: 6px 12px;" data-task-edit-btn="${escapeHtml(detailKey)}">📝 編輯任務</button>
+                ` : ""}
                 ${canCurrentUserRequestTaskInfo_(t) ? `
                   <button type="button" class="primary-button task-waiting-toggle-button" style="background: rgba(244,191,88,0.15) !important; color: #f4bf58 !important; border: 1px solid rgba(244,191,88,0.3) !important; box-shadow: none !important; font-size: 13px; padding: 6px 12px;" data-task-waiting-toggle-btn="${escapeHtml(detailKey)}">⏳ 等待資料</button>
                 ` : ""}
@@ -3686,6 +3739,39 @@ function canCurrentUserCompleteTask_(task) {
   return false;
 }
 
+function canCurrentUserUpdateTask_(task) {
+  if (!state.currentUser || !state.currentUser.role || !task) return false;
+  const role = String(state.currentUser.role || "").trim();
+  const normalizedRole = role.toLowerCase();
+  const selfValues = [
+    state.currentUser.username,
+    state.currentUser.displayName,
+    state.currentUser.salesOwner
+  ].map(v => String(v || "").trim()).filter(Boolean);
+  const status = String(task.status || "").toLowerCase();
+  const isArchived = status === "finished" || status === "done" || status === "cancelled";
+  const assignedRole = String(task.assignedRole || "").trim();
+  const normalizedAssignedRole = assignedRole.toLowerCase();
+  const isAssignedToMe = Boolean(task.assignedTo) && selfValues.includes(String(task.assignedTo || "").trim());
+  const isCreatedByMe = Boolean(task.createdBy) && selfValues.includes(String(task.createdBy || "").trim());
+
+  if (normalizedRole === "admin" || normalizedRole === "boss" || normalizedRole === "manager") {
+    return true;
+  }
+
+  if (isArchived) return false;
+
+  if (normalizedRole === "assistant" || role === "助理") {
+    return isAssignedToMe || normalizedAssignedRole === "assistant" || assignedRole === "助理";
+  }
+
+  if (normalizedRole === "retailsales" || normalizedRole === "showroomsales" || normalizedRole === "sales" || role === "業務") {
+    return isAssignedToMe || isCreatedByMe || normalizedAssignedRole === "sales" || assignedRole === "業務";
+  }
+
+  return false;
+}
+
 function buildTaskUserContext_() {
   if (!state.currentUser) return null;
   return {
@@ -4097,6 +4183,131 @@ function closeCreateTaskForm_() {
   if (modal) modal.classList.remove("active");
 }
 
+function openEditTaskForm_(taskId) {
+  const task = (state.tasks || []).find(t => t.id === taskId);
+  if (!task) {
+    toast("找不到該任務");
+    return;
+  }
+  if (!canCurrentUserUpdateTask_(task)) {
+    toast("權限不足，無法編輯此任務");
+    return;
+  }
+
+  editingTaskId = taskId;
+
+  const modal = document.querySelector("#editTaskModal");
+  const form = document.querySelector("#editTaskForm");
+  const errorDiv = document.querySelector("#editTaskError");
+  if (form) form.reset();
+  if (errorDiv) {
+    errorDiv.style.display = "none";
+    errorDiv.textContent = "";
+  }
+
+  document.querySelector("#editTaskTitle").value = task.title || "";
+  document.querySelector("#editTaskDescription").value = task.description || "";
+  document.querySelector("#editTaskCustomerName").value = task.customerName || "";
+  document.querySelector("#editTaskProductName").value = task.productName || "";
+  document.querySelector("#editTaskQuantity").value = task.quantity || "";
+  document.querySelector("#editTaskPriority").value = task.priority || "normal";
+  document.querySelector("#editTaskDueDate").value = parseToLocalYYYYMMDD(task.dueDate || "");
+  document.querySelector("#editTaskAssignedRole").value = task.assignedRole || "";
+  document.querySelector("#editTaskAssignedTo").value = task.assignedTo || "";
+
+  if (modal) modal.classList.add("active");
+}
+
+function closeEditTaskForm_() {
+  editingTaskId = null;
+  const modal = document.querySelector("#editTaskModal");
+  if (modal) modal.classList.remove("active");
+}
+
+async function submitEditTaskFromPwa_(e) {
+  e.preventDefault();
+  const btn = document.querySelector("#btnSubmitEditTask");
+  const errorDiv = document.querySelector("#editTaskError");
+  const task = (state.tasks || []).find(t => t.id === editingTaskId);
+
+  if (!task) {
+    toast("找不到該任務");
+    return;
+  }
+
+  if (btn) btn.disabled = true;
+  if (errorDiv) {
+    errorDiv.style.display = "none";
+    errorDiv.textContent = "";
+  }
+
+  try {
+    if (!canCurrentUserUpdateTask_(task)) throw new Error("權限不足，無法編輯此任務");
+
+    const title = (document.querySelector("#editTaskTitle")?.value || "").trim();
+    const description = (document.querySelector("#editTaskDescription")?.value || "").trim();
+    const customerName = (document.querySelector("#editTaskCustomerName")?.value || "").trim();
+    const productName = (document.querySelector("#editTaskProductName")?.value || "").trim();
+    const quantity = (document.querySelector("#editTaskQuantity")?.value || "").trim();
+    const priority = document.querySelector("#editTaskPriority")?.value || "normal";
+    const dueDate = document.querySelector("#editTaskDueDate")?.value || "";
+    const assignedRole = document.querySelector("#editTaskAssignedRole")?.value || "";
+    const assignedTo = (document.querySelector("#editTaskAssignedTo")?.value || "").trim();
+
+    if (!title) throw new Error("標題不可為空");
+    if (!assignedRole && !assignedTo) throw new Error("必須指定指派角色或指派人員");
+
+    const userContext = buildTaskUserContext_();
+    const fields = {
+      title,
+      description,
+      customerName,
+      productName,
+      quantity,
+      priority,
+      dueDate,
+      assignedRole,
+      assignedTo
+    };
+
+    const response = await sendCloudWriteWithResponse_({
+      action: "updateTaskFields",
+      userContext,
+      id: task.id,
+      fields,
+      updatedAt: task.updatedAt || ""
+    });
+
+    if (!response || !response.ok) {
+      throw new Error((response && (response.message || response.error)) || "任務更新失敗");
+    }
+
+    await syncFromCloud(true);
+    const refreshedTask = (state.tasks || []).find(t => t.id === task.id);
+    const isUpdated = refreshedTask && Object.keys(fields).every((key) => {
+      const nextVal = fields[key] || "";
+      const refreshedVal = refreshedTask[key] || "";
+      return String(refreshedVal) === String(nextVal);
+    });
+
+    if (!isUpdated) {
+      throw new Error("任務更新未生效，請重新整理後再試。若剛剛有人修改同一筆任務，請重新開啟後再提交。");
+    }
+
+    closeEditTaskForm_();
+    renderTasks();
+    toast("任務更新成功");
+  } catch (err) {
+    console.error(err);
+    if (errorDiv) {
+      errorDiv.textContent = err.message || "更新任務時發生錯誤";
+      errorDiv.style.display = "block";
+    }
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
 async function submitCreateTaskFromPwa_(e) {
   e.preventDefault();
   const btn = document.querySelector("#btnSubmitCreateTask");
@@ -4250,6 +4461,9 @@ document.querySelector("#btnOpenCreateTask")?.addEventListener("click", openCrea
 document.querySelector("#btnCancelCreateTask")?.addEventListener("click", closeCreateTaskForm_);
 document.querySelector("#btnCancelCreateTask2")?.addEventListener("click", closeCreateTaskForm_);
 document.querySelector("#createTaskForm")?.addEventListener("submit", submitCreateTaskFromPwa_);
+document.querySelector("#btnCancelEditTask")?.addEventListener("click", closeEditTaskForm_);
+document.querySelector("#btnCancelEditTask2")?.addEventListener("click", closeEditTaskForm_);
+document.querySelector("#editTaskForm")?.addEventListener("submit", submitEditTaskFromPwa_);
 
 document.addEventListener("click", (e) => {
   const btn = e.target.closest(".btn-append-task-note");
@@ -4260,5 +4474,3 @@ document.addEventListener("click", (e) => {
     }
   }
 });
-
-

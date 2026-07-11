@@ -69,6 +69,7 @@ function doPost(e) {
     if (action === "createTask") return jsonOutput(createTask(data));
     if (action === "updateTaskStatus") return jsonOutput(updateTaskStatus(data));
     if (action === "appendTaskNote") return jsonOutput(appendTaskNote(data));
+    if (action === "updateTaskFields") return jsonOutput(updateTaskFields(data));
     throw new Error("Unknown action: " + action);
   } catch (error) {
     return jsonOutput({ ok: false, error: error.message || String(error) });
@@ -1968,6 +1969,218 @@ function appendTaskNote(data) {
   
   upsertObjects(SHEETS.tasks, HEADERS.tasks, [task]);
   return { ok: true, message: "備註已新增", task };
+}
+
+function updateTaskFields(data) {
+  const spreadsheet = ensureSpreadsheet();
+  ensureAllSheets(spreadsheet);
+  
+  const id = data.id;
+  const fields = data.fields;
+  const payloadUpdatedAt = data.updatedAt;
+  const userContext = data.userContext || null;
+  
+  if (!id) throw new Error("缺少任務 ID");
+  if (!fields || typeof fields !== "object") {
+    return { ok: false, message: "沒有可更新的欄位" };
+  }
+  
+  // 1. 權限與身分檢查
+  if (!userContext || !userContext.role) {
+    return { ok: false, message: "權限不足，無法編輯此任務" };
+  }
+  
+  // 2. 檢索任務
+  const tasks = readObjects(SHEETS.tasks, HEADERS.tasks);
+  const taskIndex = tasks.findIndex(t => t.id === id);
+  if (taskIndex === -1) throw new Error("找不到該任務");
+  const task = tasks[taskIndex];
+  
+  // 3. 樂觀鎖校驗
+  if (payloadUpdatedAt && String(task.updatedAt || "").trim() !== String(payloadUpdatedAt).trim()) {
+    return { ok: false, message: "版本衝突：此任務已被他人更新，請重整畫面再次重試", currentUpdatedAt: task.updatedAt };
+  }
+  
+  // 4. 禁止欄位與白名單校驗
+  const forbiddenFields = [
+    "id", "type", "status", "source", "createdBy", "createdAt", "updatedAt", "updatedBy",
+    "completedAt", "note", "workflowStage", "parentWorkId", "sourceRole", "sourceUser",
+    "blockedReason", "startedAt"
+  ];
+  const whitelist = [
+    "title", "description", "customerName", "productName", "quantity", "priority", "dueDate", "assignedRole", "assignedTo"
+  ];
+  
+  const inputKeys = Object.keys(fields);
+  if (inputKeys.length === 0) {
+    return { ok: false, message: "沒有可更新的欄位" };
+  }
+  
+  for (let i = 0; i < inputKeys.length; i++) {
+    const k = inputKeys[i];
+    if (forbiddenFields.indexOf(k) !== -1) {
+      return { ok: false, message: "包含禁止編輯的欄位：" + k };
+    }
+    if (whitelist.indexOf(k) === -1) {
+      return { ok: false, message: "包含不允許編輯的欄位：" + k };
+    }
+  }
+  
+  const updatePayload = {};
+  let hasValidField = false;
+  for (let i = 0; i < whitelist.length; i++) {
+    const k = whitelist[i];
+    if (fields[k] !== undefined) {
+      updatePayload[k] = fields[k];
+      hasValidField = true;
+    }
+  }
+  
+  if (!hasValidField) {
+    return { ok: false, message: "沒有可更新的欄位" };
+  }
+  
+  // 5. 欄位合法性驗證
+  if (updatePayload.title !== undefined) {
+    updatePayload.title = sanitizeTaskText_(updatePayload.title, 100);
+    if (!updatePayload.title) {
+      return { ok: false, message: "格式錯誤：標題為必填且不可為空" };
+    }
+  }
+  
+  if (updatePayload.description !== undefined) {
+    updatePayload.description = sanitizeTaskText_(updatePayload.description, 500);
+  }
+  
+  if (updatePayload.customerName !== undefined) {
+    updatePayload.customerName = sanitizeTaskText_(updatePayload.customerName, 50);
+  }
+  
+  if (updatePayload.productName !== undefined) {
+    updatePayload.productName = sanitizeTaskText_(updatePayload.productName, 50);
+  }
+  
+  if (updatePayload.quantity !== undefined) {
+    updatePayload.quantity = sanitizeTaskText_(updatePayload.quantity, 30);
+  }
+  
+  if (updatePayload.priority !== undefined) {
+    if (!isValidTaskPriority_(updatePayload.priority)) {
+      return { ok: false, message: "格式錯誤：優先權不合法" };
+    }
+  }
+  
+  if (updatePayload.dueDate !== undefined) {
+    const d = String(updatePayload.dueDate).trim();
+    if (d && !isValidDueDate_(d)) {
+      return { ok: false, message: "格式錯誤：到期日格式應為 YYYY-MM-DD" };
+    }
+    updatePayload.dueDate = d;
+  }
+  
+  if (updatePayload.assignedRole !== undefined) {
+    const r = String(updatePayload.assignedRole).trim();
+    if (r && !isValidAssignedRole_(r)) {
+      return { ok: false, message: "格式錯誤：指派角色不合法" };
+    }
+    updatePayload.assignedRole = r;
+  }
+  
+  if (updatePayload.assignedTo !== undefined) {
+    updatePayload.assignedTo = sanitizeTaskText_(updatePayload.assignedTo, 50);
+  }
+  
+  const finalRole = updatePayload.assignedRole !== undefined ? updatePayload.assignedRole : task.assignedRole;
+  const finalAssignee = updatePayload.assignedTo !== undefined ? updatePayload.assignedTo : task.assignedTo;
+  if (!finalRole && !finalAssignee) {
+    return { ok: false, message: "格式錯誤：必須指定指派角色或指派人員" };
+  }
+  
+  // 6. 角色權限校驗
+  if (!canUserEditTaskFields_(task, userContext, finalRole, finalAssignee)) {
+    return { ok: false, message: "權限不足，無法編輯此任務" };
+  }
+  
+  // 7. 應用更新並記錄 Audit Log
+  const changedFields = [];
+  const newVals = {};
+  
+  const finalKeys = Object.keys(updatePayload);
+  for (let i = 0; i < finalKeys.length; i++) {
+    const k = finalKeys[i];
+    const oldVal = task[k] || "";
+    const newVal = updatePayload[k] || "";
+    if (String(oldVal).trim() !== String(newVal).trim()) {
+      changedFields.push(k);
+      newVals[k] = newVal.slice(0, 30);
+      task[k] = newVal;
+    }
+  }
+  
+  if (changedFields.length === 0) {
+    return { ok: true, message: "欄位值未變更", task };
+  }
+  
+  const operatorName = getTaskOperatorName_(userContext);
+  task.updatedAt = new Date().toISOString();
+  task.updatedBy = operatorName;
+  
+  // 8. 寫入 Audit Log
+  appendAuditLog_({
+    workId: task.id,
+    action: "pwa_update_task",
+    operator: operatorName,
+    operatorRole: userContext.role || "",
+    fromStatus: task.status || "",
+    toStatus: task.status || "",
+    details: "編輯欄位: " + changedFields.join(", ") + " | 變更: " + JSON.stringify(newVals)
+  });
+  
+  upsertObjects(SHEETS.tasks, HEADERS.tasks, [task]);
+  return { ok: true, message: "任務已更新", task };
+}
+
+function canUserEditTaskFields_(task, userContext, targetRole, targetAssignee) {
+  if (!userContext || !userContext.role) return false;
+  const role = String(userContext.role).toLowerCase().trim();
+  const username = userContext.username || "";
+  const displayName = userContext.displayName || "";
+  const salesOwner = userContext.salesOwner || "";
+  
+  const isAdmin = (role === "admin" || role === "boss" || role === "manager" || userContext.role === "主管" || userContext.role === "管理員");
+  
+  const s = String(task.status || "").toLowerCase().trim();
+  const isArchived = (s === "finished" || s === "done" || s === "cancelled");
+  if (isArchived) {
+    return isAdmin;
+  }
+  
+  if (isAdmin) return true;
+  
+  if (role === "assistant" || userContext.role === "助理") {
+    return (
+      task.assignedRole === "assistant" ||
+      task.assignedRole === "助理" ||
+      task.assignedTo === username ||
+      task.assignedTo === displayName ||
+      task.assignedTo === salesOwner
+    );
+  }
+  
+  if (role === "sales" || role === "retailsales" || role === "showroomsales" || userContext.role === "業務") {
+    return (
+      task.assignedRole === "sales" ||
+      task.assignedRole === "業務" ||
+      task.assignedTo === username ||
+      task.assignedTo === displayName ||
+      task.assignedTo === salesOwner ||
+      task.createdBy === username ||
+      task.createdBy === displayName ||
+      task.createdBy === salesOwner
+    );
+  }
+  
+  return false;
 }
 
 function getTaskOperatorName_(userContext) {

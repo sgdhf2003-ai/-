@@ -869,6 +869,82 @@
       </div>
     </div>
 
+    <div class="modal-overlay" id="editTaskModal">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h2>📝 編輯任務</h2>
+          <button type="button" class="modal-close-btn" id="btnCancelEditTask">&times;</button>
+        </div>
+        <div id="editTaskError" class="modal-error-msg"></div>
+        <form id="editTaskForm" autocomplete="off" style="display: flex; flex-direction: column; gap: 16px;">
+          <div class="modal-form-grid">
+            <div class="modal-form-field full-width">
+              <label for="editTaskTitle">工作簡述 (必填)</label>
+              <input type="text" id="editTaskTitle" placeholder="例如：補寄銷貨單給吉星、樣品送檢" required maxlength="100" />
+            </div>
+
+            <div class="modal-form-field">
+              <label for="editTaskPriority">優先程度</label>
+              <select id="editTaskPriority" required>
+                <option value="low">低 (Low)</option>
+                <option value="normal" selected>普通 (Normal)</option>
+                <option value="high">高 (High)</option>
+                <option value="urgent">緊急 (Urgent)</option>
+              </select>
+            </div>
+
+            <div class="modal-form-field">
+              <label for="editTaskAssignedRole">指派組別/角色 (二擇一)</label>
+              <select id="editTaskAssignedRole">
+                <option value="" selected>不指派角色</option>
+                <option value="assistant">助理群 (Assistant)</option>
+                <option value="sales">業務群 (Sales)</option>
+                <option value="retailSales">零售業務群</option>
+                <option value="showroomSales">門市業務群</option>
+                <option value="boss">主管群 (Boss)</option>
+                <option value="admin">管理群 (Admin)</option>
+              </select>
+            </div>
+
+            <div class="modal-form-field">
+              <label for="editTaskAssignedTo">指派對象人名 (二擇一)</label>
+              <input type="text" id="editTaskAssignedTo" placeholder="例如：陳大同" maxlength="50" />
+            </div>
+
+            <div class="modal-form-field">
+              <label for="editTaskDueDate">到期日期</label>
+              <input type="date" id="editTaskDueDate" />
+            </div>
+
+            <div class="modal-form-field">
+              <label for="editTaskQuantity">數量 / 排定值</label>
+              <input type="text" id="editTaskQuantity" placeholder="例如：3 箱 / 50 米" maxlength="30" />
+            </div>
+
+            <div class="modal-form-field">
+              <label for="editTaskCustomerName">關聯客戶店名</label>
+              <input type="text" id="editTaskCustomerName" placeholder="例如：吉星磁磚" maxlength="50" />
+            </div>
+
+            <div class="modal-form-field">
+              <label for="editTaskProductName">關聯商品名稱</label>
+              <input type="text" id="editTaskProductName" placeholder="例如：白馬石英磚" maxlength="50" />
+            </div>
+
+            <div class="modal-form-field full-width">
+              <label for="editTaskDescription">詳細說明</label>
+              <textarea id="editTaskDescription" placeholder="輸入備註或更詳細的交辦流程..." maxlength="500"></textarea>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="secondary-button" id="btnCancelEditTask2" style="min-height: 40px; border-radius: 20px; padding-inline: 20px;">取消</button>
+            <button type="submit" class="primary-button" id="btnSubmitEditTask" style="min-height: 40px; border-radius: 20px; padding-inline: 24px;">儲存變更</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <script src="store-data.js?v=20260628-default-api-v11"></script>
     <script src="app.js?v=20260628-default-api-v11"></script>
