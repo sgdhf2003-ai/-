@@ -685,6 +685,13 @@
                 <option value="next7Days">未來 7 天</option>
                 <option value="noDueDate">無到期日</option>
               </select>
+
+              <select id="sortTaskOrder" style="flex: 1; min-width: 120px; min-height: 40px; border-radius: 8px; padding-inline: 8px; background: rgba(84,151,255,0.1); color: #fff; border: 1px solid rgba(84,151,255,0.2);">
+                <option value="default">預設順序</option>
+                <option value="updatedAtDesc">更新時間新到舊</option>
+                <option value="createdAtDesc">建立時間新到舊</option>
+                <option value="dueDateAsc">到期日近到遠</option>
+              </select>
             </div>
 
             <div class="list" id="tasksList"></div>

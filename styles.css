@@ -1891,4 +1891,10 @@ textarea {
   border-color: rgba(84,151,255,0.5) !important;
 }
 
+/* Task List Sort styles - Stage 7-2B */
+#sortTaskOrder:focus {
+  outline: none;
+  border-color: rgba(84,151,255,0.5) !important;
+}
+
 

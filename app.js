@@ -36,6 +36,7 @@ const pwaTaskIssueReasonOpen = new Set();
 const pwaTaskWaitingReasonOpen = new Set();
 let taskSearchKeyword = "";
 let filterTaskDueDate = "all";
+let sortTaskOrder = "default";
 
 const views = {
   home: document.querySelector("#homeView"),
@@ -2858,6 +2859,11 @@ document.querySelector("#filterTaskDueDate")?.addEventListener("change", (e) => 
   renderTasks();
 });
 
+document.querySelector("#sortTaskOrder")?.addEventListener("change", (e) => {
+  sortTaskOrder = e.target.value;
+  renderTasks();
+});
+
 document.querySelector("#taskSearchKeyword")?.addEventListener("input", (e) => {
   taskSearchKeyword = e.target.value;
   renderTasks();
@@ -2866,6 +2872,7 @@ document.querySelector("#taskSearchKeyword")?.addEventListener("input", (e) => {
 document.querySelector("#clearTaskFilters")?.addEventListener("click", () => {
   taskSearchKeyword = "";
   filterTaskDueDate = "all";
+  sortTaskOrder = "default";
   const searchInput = document.querySelector("#taskSearchKeyword");
   if (searchInput) searchInput.value = "";
 
@@ -2882,6 +2889,9 @@ document.querySelector("#clearTaskFilters")?.addEventListener("click", () => {
 
   const dueDateSelect = document.querySelector("#filterTaskDueDate");
   if (dueDateSelect) dueDateSelect.value = "all";
+
+  const sortSelect = document.querySelector("#sortTaskOrder");
+  if (sortSelect) sortSelect.value = "default";
 
   renderTasks();
 });
@@ -3120,7 +3130,8 @@ function renderTasks() {
     return roleMap[role] || role || "無";
   };
 
-  container.innerHTML = summaryHTML + filtered.map(t => {
+  const sortedTasks = applyTaskSort_(filtered, sortTaskOrder);
+  container.innerHTML = summaryHTML + sortedTasks.map(t => {
     const detailKey = encodeURIComponent(String(t.id || ""));
     const typeLabel = typeMap[t.type] || t.type || "無";
     const statusMeta = getTaskStatusMeta_(t.status);
@@ -3254,6 +3265,66 @@ function getTodayDateString_() {
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+function getTaskDateTimeSortValue_(value) {
+  if (!value) return null;
+  const parsed = Date.parse(value);
+  return isNaN(parsed) ? null : parsed;
+}
+
+function compareTaskDateTimeDesc_(aValue, bValue) {
+  const tA = getTaskDateTimeSortValue_(aValue);
+  const tB = getTaskDateTimeSortValue_(bValue);
+
+  if (tA === null && tB !== null) return 1;
+  if (tA !== null && tB === null) return -1;
+  if (tA === null && tB === null) return 0;
+
+  return tB - tA; // desc: newest first
+}
+
+function getTaskDueDateSortValue_(value) {
+  if (!value) return null;
+  const parsed = parseToLocalYYYYMMDD(value);
+  return parsed === "" ? null : parsed;
+}
+
+function compareTaskDueDateAsc_(aValue, bValue) {
+  const dA = getTaskDueDateSortValue_(aValue);
+  const dB = getTaskDueDateSortValue_(bValue);
+
+  if (dA === null && dB !== null) return 1;
+  if (dA !== null && dB === null) return -1;
+  if (dA === null && dB === null) return 0;
+
+  return dA.localeCompare(dB); // asc: closest first
+}
+
+function applyTaskSort_(tasks, sortKey) {
+  const decorated = [...tasks].map((task, index) => ({ task, index }));
+
+  if (sortKey === "default") {
+    return decorated.map(({ task }) => task);
+  }
+
+  decorated.sort((left, right) => {
+    const a = left.task;
+    const b = right.task;
+
+    let result = 0;
+    if (sortKey === "updatedAtDesc") {
+      result = compareTaskDateTimeDesc_(a.updatedAt, b.updatedAt);
+    } else if (sortKey === "createdAtDesc") {
+      result = compareTaskDateTimeDesc_(a.createdAt, b.createdAt);
+    } else if (sortKey === "dueDateAsc") {
+      result = compareTaskDueDateAsc_(a.dueDate, b.dueDate);
+    }
+
+    return result || (left.index - right.index);
+  });
+
+  return decorated.map(({ task }) => task);
 }
 
 function renderTaskAuditHistory_(workId) {
