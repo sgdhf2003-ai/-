@@ -2594,6 +2594,102 @@ function storePhoneLine(store) {
   return phones.length ? `電話：${phones.join(" / ")}` : "未填電話";
 }
 
+function normalizeCustomerLookupText_(value) {
+  return normalizeSearch(value).replace(/[｜|]/g, "");
+}
+
+function resolveTaskCustomerStore_(task) {
+  const query = normalizeCustomerLookupText_(task?.customerName);
+  const stores = state.stores || [];
+  if (!query || !stores.length) {
+    return { status: "none", store: null, message: "未連結店家資料" };
+  }
+
+  const exactMatches = stores.filter((store) => {
+    const candidates = [
+      storeOptionLabel(store),
+      store.customerCode,
+      store.name,
+      store.shortName,
+    ].filter(Boolean).map(normalizeCustomerLookupText_);
+    return candidates.some((candidate) => candidate === query);
+  });
+  if (exactMatches.length === 1) {
+    return { status: "matched", store: exactMatches[0], message: "" };
+  }
+  if (exactMatches.length > 1) {
+    return { status: "ambiguous", store: null, message: "可能有多筆店家，請用店家搜尋確認" };
+  }
+
+  const strongMatches = stores.filter((store) => {
+    const candidates = [
+      store.customerCode,
+      store.name,
+      store.shortName,
+    ].filter(Boolean).map(normalizeCustomerLookupText_);
+    return candidates.some((candidate) => {
+      if (!candidate) return false;
+      return candidate.startsWith(query) || query.startsWith(candidate) || candidate.includes(query);
+    });
+  });
+  if (strongMatches.length === 1) {
+    return { status: "matched", store: strongMatches[0], message: "" };
+  }
+  if (strongMatches.length > 1) {
+    return { status: "ambiguous", store: null, message: "可能有多筆店家，請用店家搜尋確認" };
+  }
+
+  return { status: "none", store: null, message: "未連結店家資料" };
+}
+
+function renderTaskCustomerContext_(task, mode = "card") {
+  if (!task?.customerName) return "";
+  const resolved = resolveTaskCustomerStore_(task);
+  if (resolved.status !== "matched") {
+    const message = resolved.message || "未連結店家資料";
+    return mode === "detail"
+      ? `<div class="task-customer-context muted"><strong>客戶資料：</strong>${escapeHtml(message)}</div>`
+      : `<div class="task-customer-context compact muted">${escapeHtml(message)}</div>`;
+  }
+
+  const store = resolved.store;
+  const phoneText = storePhoneLine(store);
+  const compactParts = [
+    phoneText !== "未填電話" ? phoneText : "",
+    store.region ? `區域：${store.region}` : "",
+  ].filter(Boolean);
+
+  if (mode !== "detail") {
+    if (!compactParts.length) return "";
+    return `<div class="task-customer-context compact">${compactParts.map(escapeHtml).join("｜")}</div>`;
+  }
+
+  const detailRows = [
+    ["客戶編號", store.customerCode],
+    ["店家名稱", store.name],
+    ["簡稱", store.shortName],
+    ["電話", phoneText !== "未填電話" ? phoneText.replace(/^電話：/, "") : ""],
+    ["地址", store.address],
+    ["聯絡人", store.contactName],
+    ["區域", store.region],
+    ["負責業務", store.salesOwner],
+    ["店家狀態", store.status],
+  ].filter(([, value]) => value);
+
+  if (!detailRows.length) {
+    return `<div class="task-customer-context muted"><strong>客戶資料：</strong>已連結店家，但目前沒有可顯示的聯絡資訊。</div>`;
+  }
+
+  return `
+    <div class="task-customer-context detail">
+      <strong>客戶資料</strong>
+      <div class="task-customer-context-grid">
+        ${detailRows.map(([label, value]) => `<span>${escapeHtml(label)}：${escapeHtml(value)}</span>`).join("")}
+      </div>
+    </div>
+  `;
+}
+
 function countByStore(collection, storeId) {
   return collection.filter((item) => item.storeId === storeId).length;
 }
@@ -3381,6 +3477,8 @@ function renderTasks() {
 
   const sortedTasks = applyTaskSort_(filtered, sortTaskOrder);
   container.innerHTML = summaryHTML + sortedTasks.map(t => {
+    const customerContextCardHTML = renderTaskCustomerContext_(t, "card");
+    const customerContextDetailHTML = renderTaskCustomerContext_(t, "detail");
     const detailKey = encodeURIComponent(String(t.id || ""));
     const typeLabel = typeMap[t.type] || t.type || "無";
     const statusMeta = getTaskStatusMeta_(t.status);
@@ -3449,6 +3547,7 @@ function renderTasks() {
           
           <div style="font-size: 13px; display: flex; flex-direction: column; gap: 4px;">
             ${t.customerName ? `<div><strong>客戶/店家：</strong><span style="color: #fff;">${escapeHtml(t.customerName)}</span></div>` : ""}
+            ${customerContextCardHTML}
             ${t.productName ? `<div><strong>商品/數量：</strong><span style="color: #fff;">${escapeHtml(t.productName)} x ${escapeHtml(t.quantity || 1)}</span></div>` : ""}
             <div><strong>狀態：</strong>${escapeHtml(statusLabel)} (${escapeHtml(t.status || "無")})</div>
             ${t.sourceUser ? `<div><strong>交辦人：</strong>${escapeHtml(t.sourceUser)} ${t.sourceRole ? `(${escapeHtml(formatTaskRole_(t.sourceRole))})` : ""}</div>` : (t.createdBy ? `<div><strong>交辦人：</strong>${escapeHtml(t.createdBy)}</div>` : "")}
@@ -3483,6 +3582,7 @@ function renderTasks() {
             ${t.updatedAt ? `<div><strong>最後更新：</strong>${escapeHtml(formatTaskDate_(t.updatedAt))} ${t.updatedBy ? `by ${escapeHtml(t.updatedBy)}` : ""}</div>` : ""}
             ${t.blockedReason ? `<div style="color: #ff5252; font-weight: bold; grid-column: 1 / -1; padding: 6px 10px; background: rgba(255,82,82,0.1); border-radius: 6px; border: 1px solid rgba(255,82,82,0.15); margin-top: 4px;"><strong>異常原因：</strong>${escapeHtml(t.blockedReason)}</div>` : ""}
           </div>
+          ${customerContextDetailHTML}
           ${t.description ? `<div style="margin-top: 8px; font-size: 13px; color: rgba(255,255,255,0.85);"><strong style="display:block;margin-bottom:2px;">詳細說明：</strong><pre class="pre-text" style="margin:0; white-space: pre-wrap;">${escapeHtml(t.description)}</pre></div>` : ""}
           ${t.note ? `<div style="margin-top: 8px; font-size: 13px; color: rgba(255,255,255,0.85);"><strong style="display:block;margin-bottom:2px;">備註：</strong><pre class="pre-text" style="margin:0; border-left: 3px solid var(--gold); padding-left: 8px; white-space: pre-wrap;">${escapeHtml(t.note)}</pre></div>` : ""}
           ${renderTaskAuditHistory_(t.id)}
