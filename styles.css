@@ -1918,4 +1918,15 @@ textarea {
   }
 }
 
+/* Weakened Completed Task Cards - Stage 8-D */
+.task-card-finished {
+  opacity: 0.65 !important;
+  filter: grayscale(20%) !important;
+  transition: opacity 0.2s ease, filter 0.2s ease !important;
+}
+.task-card-finished:hover {
+  opacity: 0.98 !important;
+  filter: grayscale(0%) !important;
+}
+
 

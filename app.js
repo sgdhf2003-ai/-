@@ -3039,15 +3039,15 @@ function renderTasks() {
   const summaryHTML = `
     <div class="task-summary-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px;">
       <div class="task-summary-card ${statusFilter === 'all' ? 'active' : ''}" data-task-summary-filter="all" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;">
-        <div style="font-size: 11px; color: rgba(255,255,255,0.55);">全部</div>
+        <div style="font-size: 11px; color: rgba(255,255,255,0.55);">全部任務</div>
         <div style="font-size: 20px; font-weight: bold; margin-top: 4px; color: #fff;">${stats.total}</div>
       </div>
       <div class="task-summary-card ${statusFilter === 'assistantActive' ? 'active' : ''}" data-task-summary-filter="assistantActive" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;">
-        <div style="font-size: 11px; color: #ab68ff;">助理待處理</div>
+        <div style="font-size: 11px; color: #ab68ff;">待處理</div>
         <div style="font-size: 20px; font-weight: bold; margin-top: 4px; color: #ab68ff;">${stats.assistantActive}</div>
       </div>
       <div class="task-summary-card ${statusFilter === 'Waiting' ? 'active' : ''}" data-task-summary-filter="Waiting" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;">
-        <div style="font-size: 11px; color: #f4bf58;">等待補資料</div>
+        <div style="font-size: 11px; color: #f4bf58;">等資料</div>
         <div style="font-size: 20px; font-weight: bold; margin-top: 4px; color: #f4bf58;">${stats.waiting}</div>
       </div>
       <div class="task-summary-card ${statusFilter === 'Blocked' ? 'active' : ''}" data-task-summary-filter="Blocked" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;">
@@ -3159,11 +3159,34 @@ function renderTasks() {
       assigneeText = "未指派";
     }
 
+    const todayStr = getTodayDateString_();
+    const taskLocalDate = parseToLocalYYYYMMDD(t.dueDate);
+    const isFinishedOrCancelled = (t.status === "Finished" || t.status === "done" || t.status === "Cancelled" || t.status === "cancelled");
+    const isFinished = (t.status === "Finished" || t.status === "done");
+
+    let dueAlertHTML = "";
+    if (!isFinishedOrCancelled) {
+      if (taskLocalDate === todayStr) {
+        dueAlertHTML = `
+          <span style="font-size: 11px; font-weight: bold; color: #ff9800; background: rgba(255,152,0,0.12); padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(255,152,0,0.25); display: inline-flex; align-items: center; gap: 4px;">
+            ⚠️ 今天到期
+          </span>
+        `;
+      } else if (taskLocalDate && taskLocalDate < todayStr) {
+        dueAlertHTML = `
+          <span style="font-size: 11px; font-weight: bold; color: #ff5252; background: rgba(255,82,82,0.12); padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(255,82,82,0.25); display: inline-flex; align-items: center; gap: 4px;">
+            🚨 已逾期
+          </span>
+        `;
+      }
+    }
+
     return `
-      <article class="info-card task-card ${statusMeta.className}">
+      <article class="info-card task-card ${statusMeta.className} ${isFinished ? 'task-card-finished' : ''}">
         <div class="card-header">
           <h2>${escapeHtml(t.title || "無標題")}</h2>
-          <div style="display: flex; gap: 6px; align-items: center;">
+          <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+            ${dueAlertHTML}
             <span class="task-status-badge ${statusMeta.className}">${escapeHtml(statusLabel)}</span>
             <span class="badge ${priorityClass}">${escapeHtml(priorityLabel)}</span>
           </div>
@@ -3570,7 +3593,7 @@ function getTaskStatusMeta_(status) {
   }
   if (norm === "Blocked" || norm === "blocked") {
     return {
-      label: "異常",
+      label: "異常需處理",
       code: norm,
       className: "task-status-blocked",
       tone: "blocked"
