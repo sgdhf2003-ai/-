@@ -1634,17 +1634,158 @@ function createTask(data) {
   const spreadsheet = ensureSpreadsheet();
   ensureAllSheets(spreadsheet);
   
-  const task = data.task || {};
-  if (!task.id) {
-    task.id = "task-" + new Date().getTime() + "-" + Math.floor(Math.random() * 1000);
+  const userContext = data.userContext || null;
+  if (!userContext || !userContext.role) {
+    return { ok: false, message: "權限不足" };
   }
-  task.createdAt = task.createdAt || new Date().toISOString();
-  task.updatedAt = new Date().toISOString();
-  task.status = task.status || "open";
-  task.priority = task.priority || "normal";
+  
+  const inputTask = data.task || {};
+  
+  // 1. Validate payload
+  const title = sanitizeTaskText_(inputTask.title, 100);
+  if (!title) {
+    return { ok: false, message: "標題為必填且不可為空" };
+  }
+  
+  const type = inputTask.type;
+  if (!type || !isValidTaskType_(type)) {
+    return { ok: false, message: "任務類別不合法" };
+  }
+  
+  const priority = inputTask.priority || "normal";
+  if (!isValidTaskPriority_(priority)) {
+    return { ok: false, message: "優先權不合法" };
+  }
+  
+  const assignedRole = inputTask.assignedRole ? sanitizeTaskText_(inputTask.assignedRole, 50) : "";
+  if (assignedRole && !isValidAssignedRole_(assignedRole)) {
+    return { ok: false, message: "指派角色不合法" };
+  }
+  
+  const assignedTo = inputTask.assignedTo ? sanitizeTaskText_(inputTask.assignedTo, 100) : "";
+  if (!assignedRole && !assignedTo) {
+    return { ok: false, message: "必須指定指派角色或指派人員" };
+  }
+  
+  const dueDate = inputTask.dueDate ? String(inputTask.dueDate).trim() : "";
+  if (dueDate && !isValidDueDate_(dueDate)) {
+    return { ok: false, message: "到期日格式應為 YYYY-MM-DD" };
+  }
+  
+  // 2. Validate permissions
+  if (!canUserCreateTask_(userContext, assignedRole, assignedTo)) {
+    return { ok: false, message: "無權指派給該對象或角色" };
+  }
+  
+  // 3. Assemble task
+  const taskId = "task-" + new Date().getTime() + "-" + Math.floor(Math.random() * 1000);
+  const operatorName = getTaskOperatorName_(userContext);
+  
+  const quantity = inputTask.quantity ? sanitizeTaskText_(inputTask.quantity, 50) : "";
+  const customerId = inputTask.customerId ? sanitizeTaskText_(inputTask.customerId, 50) : "";
+  const customerName = inputTask.customerName ? sanitizeTaskText_(inputTask.customerName, 100) : "";
+  const productName = inputTask.productName ? sanitizeTaskText_(inputTask.productName, 100) : "";
+  const description = inputTask.description ? sanitizeTaskText_(inputTask.description, 500) : "";
+  
+  const task = {
+    id: taskId,
+    type: type,
+    title: title,
+    description: description,
+    customerId: customerId,
+    customerName: customerName,
+    productName: productName,
+    quantity: quantity,
+    assignedTo: assignedTo,
+    assignedRole: assignedRole,
+    status: "Created",
+    priority: priority,
+    dueDate: dueDate,
+    source: "pwa",
+    createdBy: operatorName,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    completedAt: "",
+    note: "",
+    workflowStage: "",
+    parentWorkId: inputTask.parentWorkId ? sanitizeTaskText_(inputTask.parentWorkId, 50) : "",
+    sourceRole: userContext.role || "",
+    sourceUser: operatorName,
+    blockedReason: "",
+    startedAt: "",
+    updatedBy: operatorName
+  };
+  
+  // 4. Write Audit Log
+  appendAuditLog_({
+    workId: taskId,
+    action: "pwa_create_task",
+    operator: operatorName,
+    operatorRole: userContext.role || "",
+    fromStatus: "",
+    toStatus: "Created",
+    details: "建立任務：" + title
+  });
   
   upsertObjects(SHEETS.tasks, HEADERS.tasks, [task]);
   return { ok: true, message: "任務已建立", task };
+}
+
+function sanitizeTaskText_(text, maxLength) {
+  if (text === undefined || text === null) return "";
+  let s = String(text).trim();
+  if (s.startsWith("=") || s.startsWith("+") || s.startsWith("-") || s.startsWith("@")) {
+    s = "'" + s;
+  }
+  if (s.length > maxLength) {
+    s = s.substring(0, maxLength);
+  }
+  return s;
+}
+
+function isValidTaskType_(type) {
+  const allowed = ["general", "customer", "product", "delivery", "inventory", "reservation", "sample", "other"];
+  return allowed.indexOf(type) !== -1;
+}
+
+function isValidTaskPriority_(priority) {
+  const allowed = ["low", "normal", "high", "urgent"];
+  return allowed.indexOf(priority) !== -1;
+}
+
+function isValidAssignedRole_(role) {
+  const allowed = ["assistant", "sales", "retail", "showroom", "retailSales", "showroomSales", "boss", "admin"];
+  return allowed.indexOf(role) !== -1;
+}
+
+function isValidDueDate_(dueDate) {
+  if (!dueDate) return true;
+  return /^\d{4}-\d{2}-\d{2}$/.test(dueDate);
+}
+
+function canUserCreateTask_(userContext, targetRole, targetAssignee) {
+  if (!userContext || !userContext.role) return false;
+  const role = userContext.role;
+  const username = userContext.username || "";
+  const displayName = userContext.displayName || "";
+  const salesOwner = userContext.salesOwner || "";
+  
+  if (role === "admin" || role === "boss") {
+    return true;
+  }
+  if (role === "assistant") {
+    if (!targetRole) return true;
+    const isTargetSales = (targetRole === "sales" || targetRole === "retail" || targetRole === "showroom" || targetRole === "retailSales" || targetRole === "showroomSales" || targetRole === "assistant");
+    return isTargetSales;
+  }
+  if (role === "retailSales" || role === "showroomSales" || role === "sales") {
+    if (!targetRole) {
+      if (targetAssignee === username || targetAssignee === displayName || targetAssignee === salesOwner) return true;
+      return false;
+    }
+    return (targetRole === "assistant" || targetRole === role || targetRole === "sales");
+  }
+  return false;
 }
 
 function updateTaskStatus(data) {
@@ -1731,7 +1872,7 @@ function appendTaskNote(data) {
   ensureAllSheets(spreadsheet);
   
   const id = data.id;
-  const note = data.note;
+  const note = data.note ? String(data.note).trim() : "";
   const userContext = data.userContext || null;
   
   if (!id) throw new Error("缺少任務 ID");
@@ -1748,22 +1889,73 @@ function appendTaskNote(data) {
   
   const task = tasks[taskIndex];
   
-  if (!canUserUpdateTask_(task, userContext)) {
+  const role = userContext.role;
+  const username = userContext.username || "";
+  const displayName = userContext.displayName || "";
+  const salesOwner = userContext.salesOwner || "";
+  
+  // 2. Validate note permissions
+  let allowed = false;
+  if (role === "admin" || role === "boss") {
+    allowed = true;
+  } else {
+    // Normal users cannot append notes to Finished or Cancelled tasks
+    const s = String(task.status || "").toLowerCase();
+    if (s === "finished" || s === "done" || s === "cancelled") {
+      return { ok: false, message: "任務已封存，非主管無法新增備註" };
+    }
+    
+    if (role === "assistant") {
+      allowed = (
+        task.assignedRole === "assistant" ||
+        task.assignedTo === username ||
+        task.assignedTo === displayName ||
+        task.assignedTo === salesOwner ||
+        task.createdBy === username ||
+        task.createdBy === displayName ||
+        task.createdBy === salesOwner
+      );
+    } else if (role === "retailSales" || role === "showroomSales" || role === "sales") {
+      allowed = (
+        task.assignedTo === username ||
+        task.assignedTo === displayName ||
+        task.assignedTo === salesOwner ||
+        task.createdBy === username ||
+        task.createdBy === displayName ||
+        task.createdBy === salesOwner
+      );
+    }
+  }
+  
+  if (!allowed) {
     return { ok: false, message: "權限不足" };
   }
   
-  // 2. 備註追加
-  if (task.note) {
-    task.note += "\n" + note;
-  } else {
-    task.note = note;
-  }
-  task.updatedAt = new Date().toISOString();
-  
+  // 3. Append-only note sanitation
+  const sanitizedNote = sanitizeTaskText_(note, 200);
   const operatorName = getTaskOperatorName_(userContext);
+  
+  // Format: [YYYY-MM-DD HH:mm Operator(Role)] noteContent
+  const timestamp = new Date();
+  const year = timestamp.getFullYear();
+  const month = String(timestamp.getMonth() + 1).padStart(2, '0');
+  const day = String(timestamp.getDate()).padStart(2, '0');
+  const hour = String(timestamp.getHours()).padStart(2, '0');
+  const min = String(timestamp.getMinutes()).padStart(2, '0');
+  const prefix = "[" + year + "-" + month + "-" + day + " " + hour + ":" + min + " " + operatorName + "(" + (role === "sales" ? "業務" : (role === "assistant" ? "助理" : role)) + ")] ";
+  
+  const fullNoteText = prefix + sanitizedNote;
+  
+  if (task.note) {
+    task.note += "\n" + fullNoteText;
+  } else {
+    task.note = fullNoteText;
+  }
+  
+  task.updatedAt = new Date().toISOString();
   task.updatedBy = operatorName;
   
-  // 3. 寫入 Audit Log
+  // 4. Write Audit Log
   appendAuditLog_({
     workId: task.id,
     action: "pwa_append_note",
@@ -1771,7 +1963,7 @@ function appendTaskNote(data) {
     operatorRole: userContext.role || "",
     fromStatus: task.status || "",
     toStatus: task.status || "",
-    details: note
+    details: sanitizedNote
   });
   
   upsertObjects(SHEETS.tasks, HEADERS.tasks, [task]);
