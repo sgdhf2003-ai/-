@@ -35,6 +35,7 @@ const pwaTaskStatusInFlight = new Set();
 const pwaTaskIssueReasonOpen = new Set();
 const pwaTaskWaitingReasonOpen = new Set();
 let taskSearchKeyword = "";
+let filterTaskDueDate = "all";
 
 const views = {
   home: document.querySelector("#homeView"),
@@ -2852,6 +2853,11 @@ document.querySelector("#filterTaskStatus")?.addEventListener("change", () => re
 document.querySelector("#filterTaskRole")?.addEventListener("change", () => renderTasks());
 document.querySelector("#filterTaskAssignee")?.addEventListener("change", () => renderTasks());
 
+document.querySelector("#filterTaskDueDate")?.addEventListener("change", (e) => {
+  filterTaskDueDate = e.target.value;
+  renderTasks();
+});
+
 document.querySelector("#taskSearchKeyword")?.addEventListener("input", (e) => {
   taskSearchKeyword = e.target.value;
   renderTasks();
@@ -2859,6 +2865,7 @@ document.querySelector("#taskSearchKeyword")?.addEventListener("input", (e) => {
 
 document.querySelector("#clearTaskFilters")?.addEventListener("click", () => {
   taskSearchKeyword = "";
+  filterTaskDueDate = "all";
   const searchInput = document.querySelector("#taskSearchKeyword");
   if (searchInput) searchInput.value = "";
 
@@ -2872,6 +2879,9 @@ document.querySelector("#clearTaskFilters")?.addEventListener("click", () => {
 
   const assigneeSelect = document.querySelector("#filterTaskAssignee");
   if (assigneeSelect) assigneeSelect.value = "all";
+
+  const dueDateSelect = document.querySelector("#filterTaskDueDate");
+  if (dueDateSelect) dueDateSelect.value = "all";
 
   renderTasks();
 });
@@ -2987,6 +2997,30 @@ function renderTasks() {
         return String(field).toLowerCase().includes(q);
       });
       if (!isMatched) return false;
+    }
+
+    // 6. Due Date Filter
+    if (filterTaskDueDate !== "all") {
+      const todayStr = getTodayDateString_();
+      const taskLocalDate = parseToLocalYYYYMMDD(task.dueDate);
+
+      if (filterTaskDueDate === "dueToday") {
+        if (taskLocalDate !== todayStr) return false;
+      } else if (filterTaskDueDate === "overdue") {
+        if (!taskLocalDate || taskLocalDate >= todayStr) return false;
+        const s = String(task.status || "").toLowerCase();
+        if (s === "finished" || s === "done" || s === "cancelled") return false;
+      } else if (filterTaskDueDate === "next7Days") {
+        if (!taskLocalDate || taskLocalDate < todayStr) return false;
+        const next7DaysDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+        const next7Year = next7DaysDate.getFullYear();
+        const next7Month = String(next7DaysDate.getMonth() + 1).padStart(2, '0');
+        const next7Day = String(next7DaysDate.getDate()).padStart(2, '0');
+        const next7Str = `${next7Year}-${next7Month}-${next7Day}`;
+        if (taskLocalDate > next7Str) return false;
+      } else if (filterTaskDueDate === "noDueDate") {
+        if (taskLocalDate !== "") return false;
+      }
     }
 
     return true;
