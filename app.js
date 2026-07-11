@@ -3814,6 +3814,62 @@ function compareTaskDueDateAsc_(aValue, bValue) {
   return dA.localeCompare(dB); // asc: closest first
 }
 
+function getTaskPriorityWeight_(task) {
+  const priority = String(task?.priority || "").trim().toLowerCase();
+  if (priority === "urgent" || priority === "緊急") return 0;
+  if (priority === "high" || priority === "高") return 1;
+  if (priority === "normal") return 2;
+  if (priority === "low") return 3;
+  return 4;
+}
+
+function getTaskSmartSortRank_(task) {
+  const status = String(task?.status || "").trim().toLowerCase();
+  const blockedReason = String(task?.blockedReason || "").trim();
+  const isFinished = isTaskFinishedOrCancelled_(task) || status === "completed" || status === "已完成" || status === "已取消";
+  if (isFinished) return 7;
+
+  if (status === "blocked" || blockedReason) return 0;
+
+  const todayStr = getTodayDateString_();
+  const dueDate = parseToLocalYYYYMMDD_(task?.dueDate);
+  if (dueDate && dueDate < todayStr) return 1;
+  if (dueDate && dueDate === todayStr) return 2;
+
+  if (isTaskWaitingLike_(task)) return 3;
+  if (getTaskPriorityWeight_(task) <= 1) return 4;
+
+  if (dueDate) {
+    const next7DaysDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const next7Str = `${next7DaysDate.getFullYear()}-${String(next7DaysDate.getMonth() + 1).padStart(2, "0")}-${String(next7DaysDate.getDate()).padStart(2, "0")}`;
+    if (dueDate <= next7Str) return 5;
+  }
+
+  return 6;
+}
+
+function compareTaskSmartOrder_(a, b) {
+  const rankDiff = getTaskSmartSortRank_(a) - getTaskSmartSortRank_(b);
+  if (rankDiff !== 0) return rankDiff;
+
+  const dueDateDiff = compareTaskDueDateAsc_(a.dueDate, b.dueDate);
+  if (dueDateDiff !== 0) return dueDateDiff;
+
+  const priorityDiff = getTaskPriorityWeight_(a) - getTaskPriorityWeight_(b);
+  if (priorityDiff !== 0) return priorityDiff;
+
+  const updatedAtDiff = compareTaskDateTimeDesc_(a.updatedAt, b.updatedAt);
+  if (updatedAtDiff !== 0) return updatedAtDiff;
+
+  const createdAtDiff = compareTaskDateTimeDesc_(a.createdAt, b.createdAt);
+  if (createdAtDiff !== 0) return createdAtDiff;
+
+  const idDiff = String(a.id || "").localeCompare(String(b.id || ""));
+  if (idDiff !== 0) return idDiff;
+
+  return String(a.title || "").localeCompare(String(b.title || ""));
+}
+
 function applyTaskSort_(tasks, sortKey) {
   const decorated = [...tasks].map((task, index) => ({ task, index }));
 
@@ -3826,7 +3882,9 @@ function applyTaskSort_(tasks, sortKey) {
     const b = right.task;
 
     let result = 0;
-    if (sortKey === "updatedAtDesc") {
+    if (sortKey === "smart") {
+      result = compareTaskSmartOrder_(a, b);
+    } else if (sortKey === "updatedAtDesc") {
       result = compareTaskDateTimeDesc_(a.updatedAt, b.updatedAt);
     } else if (sortKey === "createdAtDesc") {
       result = compareTaskDateTimeDesc_(a.createdAt, b.createdAt);
