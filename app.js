@@ -39,6 +39,11 @@ let taskSearchKeyword = "";
 let filterTaskDueDate = "all";
 let sortTaskOrder = "default";
 let taskQuickPreset = "all";
+const taskPerfCache = {
+  storesSignature: "",
+  storeLookupIndex: null,
+  customerResolutionCache: new Map(),
+};
 
 const views = {
   home: document.querySelector("#homeView"),
@@ -2598,61 +2603,118 @@ function normalizeCustomerLookupText_(value) {
   return normalizeSearch(value).replace(/[｜|]/g, "");
 }
 
-function resolveTaskCustomerStore_(task) {
+function getStoresSignature_(stores = []) {
+  return stores.map((store) => [
+    store.id || "",
+    store.customerCode || "",
+    store.name || "",
+    store.shortName || "",
+  ].join("::")).join("||");
+}
+
+function buildStoreLookupIndex_(stores = []) {
+  const exact = new Map();
+  const strong = [];
+
+  stores.forEach((store) => {
+    const exactCandidates = [
+      storeOptionLabel(store),
+      store.customerCode,
+      store.name,
+      store.shortName,
+    ].filter(Boolean).map(normalizeCustomerLookupText_);
+
+    exactCandidates.forEach((candidate) => {
+      if (!candidate) return;
+      const list = exact.get(candidate) || [];
+      list.push(store);
+      exact.set(candidate, list);
+    });
+
+    const strongCandidates = [
+      store.customerCode,
+      store.name,
+      store.shortName,
+    ].filter(Boolean).map(normalizeCustomerLookupText_).filter(Boolean);
+
+    if (strongCandidates.length) {
+      strong.push({ store, candidates: strongCandidates });
+    }
+  });
+
+  return { exact, strong };
+}
+
+function getStoreLookupIndex_(stores = state.stores || []) {
+  const signature = getStoresSignature_(stores);
+  if (taskPerfCache.storesSignature !== signature) {
+    taskPerfCache.storesSignature = signature;
+    taskPerfCache.storeLookupIndex = buildStoreLookupIndex_(stores);
+    taskPerfCache.customerResolutionCache = new Map();
+  }
+  return taskPerfCache.storeLookupIndex || buildStoreLookupIndex_(stores);
+}
+
+function resolveTaskCustomerStore_(task, cache = null) {
   const query = normalizeCustomerLookupText_(task?.customerName);
   const stores = state.stores || [];
   if (!query || !stores.length) {
     return { status: "none", store: null, message: "未連結店家資料" };
   }
 
-  const exactMatches = stores.filter((store) => {
-    const candidates = [
-      storeOptionLabel(store),
-      store.customerCode,
-      store.name,
-      store.shortName,
-    ].filter(Boolean).map(normalizeCustomerLookupText_);
-    return candidates.some((candidate) => candidate === query);
-  });
-  if (exactMatches.length === 1) {
-    return { status: "matched", store: exactMatches[0], message: "" };
-  }
-  if (exactMatches.length > 1) {
-    return { status: "ambiguous", store: null, message: "可能有多筆店家，請用店家搜尋確認" };
+  const lookupIndex = getStoreLookupIndex_(stores);
+  const resolutionCache = cache?.customerResolutionCache || taskPerfCache.customerResolutionCache;
+  if (resolutionCache.has(query)) {
+    return resolutionCache.get(query);
   }
 
-  const strongMatches = stores.filter((store) => {
-    const candidates = [
-      store.customerCode,
-      store.name,
-      store.shortName,
-    ].filter(Boolean).map(normalizeCustomerLookupText_);
-    return candidates.some((candidate) => {
+  const exactMatches = lookupIndex.exact.get(query) || [];
+  if (exactMatches.length === 1) {
+    const resolved = { status: "matched", store: exactMatches[0], message: "" };
+    resolutionCache.set(query, resolved);
+    return resolved;
+  }
+  if (exactMatches.length > 1) {
+    const resolved = { status: "ambiguous", store: null, message: "可能有多筆店家，請用店家搜尋確認" };
+    resolutionCache.set(query, resolved);
+    return resolved;
+  }
+
+  const strongMatches = [];
+  lookupIndex.strong.forEach(({ store, candidates }) => {
+    const isMatched = candidates.some((candidate) => {
       if (!candidate) return false;
       return candidate.startsWith(query) || query.startsWith(candidate) || candidate.includes(query);
     });
+    if (isMatched) strongMatches.push(store);
   });
   if (strongMatches.length === 1) {
-    return { status: "matched", store: strongMatches[0], message: "" };
+    const resolved = { status: "matched", store: strongMatches[0], message: "" };
+    resolutionCache.set(query, resolved);
+    return resolved;
   }
   if (strongMatches.length > 1) {
-    return { status: "ambiguous", store: null, message: "可能有多筆店家，請用店家搜尋確認" };
+    const resolved = { status: "ambiguous", store: null, message: "可能有多筆店家，請用店家搜尋確認" };
+    resolutionCache.set(query, resolved);
+    return resolved;
   }
 
-  return { status: "none", store: null, message: "未連結店家資料" };
+  const resolved = { status: "none", store: null, message: "未連結店家資料" };
+  resolutionCache.set(query, resolved);
+  return resolved;
 }
 
-function renderTaskCustomerContext_(task, mode = "card") {
+function renderTaskCustomerContext_(task, mode = "card", resolved = null) {
   if (!task?.customerName) return "";
-  const resolved = resolveTaskCustomerStore_(task);
-  if (resolved.status !== "matched") {
-    const message = resolved.message || "未連結店家資料";
+  const customerStore = resolved || resolveTaskCustomerStore_(task);
+  if (customerStore.status !== "matched") {
+    const message = customerStore.message || "未連結店家資料";
     return mode === "detail"
       ? `<div class="task-customer-context muted"><strong>客戶資料：</strong>${escapeHtml(message)}</div>`
       : `<div class="task-customer-context compact muted">${escapeHtml(message)}</div>`;
   }
 
-  const store = resolved.store;
+  const store = customerStore.store;
   const phoneText = storePhoneLine(store);
   const compactParts = [
     phoneText !== "未填電話" ? phoneText : "",
@@ -3300,16 +3362,40 @@ function getTaskNextActionBadges_(task) {
   return badges;
 }
 
-function renderTaskNextActionBadges_(task, mode = "compact") {
-  const badges = getTaskNextActionBadges_(task);
-  if (!badges.length) return "";
+function getTaskNextActionBadgeCacheKey_(task) {
+  return [
+    task?.id || "",
+    task?.status || "",
+    task?.workflowStage || "",
+    task?.dueDate || "",
+    task?.priority || "",
+    task?.blockedReason || "",
+    task?.completedAt || "",
+    task?.updatedAt || "",
+  ].join("::");
+}
+
+function getTaskNextActionBadgesCached_(task, cache = null) {
+  const badgeCache = cache?.taskBadgeCache;
+  if (!badgeCache) return getTaskNextActionBadges_(task);
+  const key = getTaskNextActionBadgeCacheKey_(task);
+  if (!badgeCache.has(key)) {
+    badgeCache.set(key, getTaskNextActionBadges_(task));
+  }
+  return badgeCache.get(key) || [];
+}
+
+function renderTaskNextActionBadges_(task, mode = "compact", badges = null) {
+  const resolvedBadges = badges || getTaskNextActionBadges_(task);
+  const safeBadges = Array.isArray(resolvedBadges) ? resolvedBadges : [];
+  if (!safeBadges.length) return "";
 
   if (mode === "detail") {
     return `
       <div class="task-next-action-panel">
         <strong>下一步建議</strong>
         <div class="task-next-action-list">
-          ${badges.map(({ label, tone, reason }) => `
+          ${safeBadges.map(({ label, tone, reason }) => `
             <div class="task-next-action-item">
               <span class="task-next-badge ${escapeHtml(tone)}">${escapeHtml(label)}</span>
               <span class="task-next-action-reason">${escapeHtml(reason)}</span>
@@ -3322,7 +3408,7 @@ function renderTaskNextActionBadges_(task, mode = "compact") {
 
   return `
     <div class="task-next-badges compact">
-      ${badges.slice(0, 3).map(({ label, tone }) => `
+      ${safeBadges.slice(0, 3).map(({ label, tone }) => `
         <span class="task-next-badge ${escapeHtml(tone)}">${escapeHtml(label)}</span>
       `).join("")}
     </div>
@@ -3583,11 +3669,17 @@ function renderTasks() {
   };
 
   const sortedTasks = applyTaskSort_(filtered, sortTaskOrder);
+  const renderCache = {
+    customerResolutionCache: new Map(),
+    taskBadgeCache: new Map(),
+  };
   container.innerHTML = summaryHTML + sortedTasks.map(t => {
-    const customerContextCardHTML = renderTaskCustomerContext_(t, "card");
-    const customerContextDetailHTML = renderTaskCustomerContext_(t, "detail");
-    const nextActionCompactHTML = renderTaskNextActionBadges_(t, "compact");
-    const nextActionDetailHTML = renderTaskNextActionBadges_(t, "detail");
+    const customerResolution = resolveTaskCustomerStore_(t, renderCache);
+    const customerContextCardHTML = renderTaskCustomerContext_(t, "card", customerResolution);
+    const customerContextDetailHTML = renderTaskCustomerContext_(t, "detail", customerResolution);
+    const taskBadges = getTaskNextActionBadgesCached_(t, renderCache);
+    const nextActionCompactHTML = renderTaskNextActionBadges_(t, "compact", taskBadges);
+    const nextActionDetailHTML = renderTaskNextActionBadges_(t, "detail", taskBadges);
     const detailKey = encodeURIComponent(String(t.id || ""));
     const typeLabel = typeMap[t.type] || t.type || "無";
     const statusMeta = getTaskStatusMeta_(t.status);
@@ -3823,7 +3915,12 @@ function getTaskPriorityWeight_(task) {
   return 4;
 }
 
-function getTaskSmartSortRank_(task) {
+function getTaskNext7DateString_() {
+  const next7DaysDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  return `${next7DaysDate.getFullYear()}-${String(next7DaysDate.getMonth() + 1).padStart(2, "0")}-${String(next7DaysDate.getDate()).padStart(2, "0")}`;
+}
+
+function getTaskSmartSortRank_(task, context = null) {
   const status = String(task?.status || "").trim().toLowerCase();
   const blockedReason = String(task?.blockedReason || "").trim();
   const isFinished = isTaskFinishedOrCancelled_(task) || status === "completed" || status === "已完成" || status === "已取消";
@@ -3831,7 +3928,7 @@ function getTaskSmartSortRank_(task) {
 
   if (status === "blocked" || blockedReason) return 0;
 
-  const todayStr = getTodayDateString_();
+  const todayStr = context?.todayStr || getTodayDateString_();
   const dueDate = parseToLocalYYYYMMDD_(task?.dueDate);
   if (dueDate && dueDate < todayStr) return 1;
   if (dueDate && dueDate === todayStr) return 2;
@@ -3840,8 +3937,7 @@ function getTaskSmartSortRank_(task) {
   if (getTaskPriorityWeight_(task) <= 1) return 4;
 
   if (dueDate) {
-    const next7DaysDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-    const next7Str = `${next7DaysDate.getFullYear()}-${String(next7DaysDate.getMonth() + 1).padStart(2, "0")}-${String(next7DaysDate.getDate()).padStart(2, "0")}`;
+    const next7Str = context?.next7Str || getTaskNext7DateString_();
     if (dueDate <= next7Str) return 5;
   }
 
@@ -3849,25 +3945,61 @@ function getTaskSmartSortRank_(task) {
 }
 
 function compareTaskSmartOrder_(a, b) {
-  const rankDiff = getTaskSmartSortRank_(a) - getTaskSmartSortRank_(b);
+  const left = a?.smartSortMeta ? a.smartSortMeta : {
+    rank: getTaskSmartSortRank_(a),
+    dueDate: getTaskDueDateSortValue_(a?.dueDate),
+    priorityWeight: getTaskPriorityWeight_(a),
+    updatedAtTime: getTaskDateTimeSortValue_(a?.updatedAt),
+    createdAtTime: getTaskDateTimeSortValue_(a?.createdAt),
+    fallbackId: String(a?.id || ""),
+    fallbackTitle: String(a?.title || ""),
+    originalIndex: 0,
+  };
+  const right = b?.smartSortMeta ? b.smartSortMeta : {
+    rank: getTaskSmartSortRank_(b),
+    dueDate: getTaskDueDateSortValue_(b?.dueDate),
+    priorityWeight: getTaskPriorityWeight_(b),
+    updatedAtTime: getTaskDateTimeSortValue_(b?.updatedAt),
+    createdAtTime: getTaskDateTimeSortValue_(b?.createdAt),
+    fallbackId: String(b?.id || ""),
+    fallbackTitle: String(b?.title || ""),
+    originalIndex: 0,
+  };
+
+  const rankDiff = left.rank - right.rank;
   if (rankDiff !== 0) return rankDiff;
 
-  const dueDateDiff = compareTaskDueDateAsc_(a.dueDate, b.dueDate);
-  if (dueDateDiff !== 0) return dueDateDiff;
+  if (left.dueDate === null && right.dueDate !== null) return 1;
+  if (left.dueDate !== null && right.dueDate === null) return -1;
+  if (left.dueDate !== null && right.dueDate !== null) {
+    const dueDateDiff = left.dueDate.localeCompare(right.dueDate);
+    if (dueDateDiff !== 0) return dueDateDiff;
+  }
 
-  const priorityDiff = getTaskPriorityWeight_(a) - getTaskPriorityWeight_(b);
+  const priorityDiff = left.priorityWeight - right.priorityWeight;
   if (priorityDiff !== 0) return priorityDiff;
 
-  const updatedAtDiff = compareTaskDateTimeDesc_(a.updatedAt, b.updatedAt);
-  if (updatedAtDiff !== 0) return updatedAtDiff;
+  if (left.updatedAtTime === null && right.updatedAtTime !== null) return 1;
+  if (left.updatedAtTime !== null && right.updatedAtTime === null) return -1;
+  if (left.updatedAtTime !== null && right.updatedAtTime !== null) {
+    const updatedAtDiff = right.updatedAtTime - left.updatedAtTime;
+    if (updatedAtDiff !== 0) return updatedAtDiff;
+  }
 
-  const createdAtDiff = compareTaskDateTimeDesc_(a.createdAt, b.createdAt);
-  if (createdAtDiff !== 0) return createdAtDiff;
+  if (left.createdAtTime === null && right.createdAtTime !== null) return 1;
+  if (left.createdAtTime !== null && right.createdAtTime === null) return -1;
+  if (left.createdAtTime !== null && right.createdAtTime !== null) {
+    const createdAtDiff = right.createdAtTime - left.createdAtTime;
+    if (createdAtDiff !== 0) return createdAtDiff;
+  }
 
-  const idDiff = String(a.id || "").localeCompare(String(b.id || ""));
+  const idDiff = left.fallbackId.localeCompare(right.fallbackId);
   if (idDiff !== 0) return idDiff;
 
-  return String(a.title || "").localeCompare(String(b.title || ""));
+  const titleDiff = left.fallbackTitle.localeCompare(right.fallbackTitle);
+  if (titleDiff !== 0) return titleDiff;
+
+  return (left.originalIndex || 0) - (right.originalIndex || 0);
 }
 
 function applyTaskSort_(tasks, sortKey) {
@@ -3877,14 +4009,36 @@ function applyTaskSort_(tasks, sortKey) {
     return decorated.map(({ task }) => task);
   }
 
+  if (sortKey === "smart") {
+    const smartContext = {
+      todayStr: getTodayDateString_(),
+      next7Str: getTaskNext7DateString_(),
+    };
+    const smartDecorated = decorated.map(({ task, index }) => ({
+      task,
+      index,
+      smartSortMeta: {
+        rank: getTaskSmartSortRank_(task, smartContext),
+        dueDate: getTaskDueDateSortValue_(task?.dueDate),
+        priorityWeight: getTaskPriorityWeight_(task),
+        updatedAtTime: getTaskDateTimeSortValue_(task?.updatedAt),
+        createdAtTime: getTaskDateTimeSortValue_(task?.createdAt),
+        fallbackId: String(task?.id || ""),
+        fallbackTitle: String(task?.title || ""),
+        originalIndex: index,
+      },
+    }));
+
+    smartDecorated.sort((left, right) => compareTaskSmartOrder_(left, right));
+    return smartDecorated.map(({ task }) => task);
+  }
+
   decorated.sort((left, right) => {
     const a = left.task;
     const b = right.task;
 
     let result = 0;
-    if (sortKey === "smart") {
-      result = compareTaskSmartOrder_(a, b);
-    } else if (sortKey === "updatedAtDesc") {
+    if (sortKey === "updatedAtDesc") {
       result = compareTaskDateTimeDesc_(a.updatedAt, b.updatedAt);
     } else if (sortKey === "createdAtDesc") {
       result = compareTaskDateTimeDesc_(a.createdAt, b.createdAt);
