@@ -3804,38 +3804,38 @@ function renderTasks() {
 
   const summaryHTML = `
     ${focusHTML}
-    <div class="task-summary-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; margin-bottom: 16px;">
-      <div class="task-summary-card ${isAllActive ? 'active' : ''}" role="button" tabindex="0" data-task-summary-filter="all" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;" aria-pressed="${isAllActive ? 'true' : 'false'}">
-        <div style="font-size: 11px; color: rgba(255,255,255,0.55);">全部任務</div>
-        <div style="font-size: 20px; font-weight: bold; margin-top: 4px; color: #fff;">${stats.total}</div>
+    <div class="task-summary-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(88px, 1fr)); gap: 6px; margin-bottom: 12px;">
+      <div class="task-summary-card ${isAllActive ? 'active' : ''}" role="button" tabindex="0" data-task-summary-filter="all" style="background: rgba(255,255,255,0.05); padding: 8px 6px; border-radius: 7px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;" aria-pressed="${isAllActive ? 'true' : 'false'}">
+        <div style="font-size: 10px; color: rgba(255,255,255,0.55);">全部任務</div>
+        <div style="font-size: 18px; font-weight: bold; margin-top: 2px; color: #fff;">${stats.total}</div>
       </div>
-      <div class="task-summary-card ${isAssistantActive ? 'active' : ''}" role="button" tabindex="0" data-task-summary-filter="assistantActive" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;" aria-pressed="${isAssistantActive ? 'true' : 'false'}">
-        <div style="font-size: 11px; color: #ab68ff;">待處理</div>
-        <div style="font-size: 20px; font-weight: bold; margin-top: 4px; color: #ab68ff;">${stats.assistantActive}</div>
+      <div class="task-summary-card ${isAssistantActive ? 'active' : ''}" role="button" tabindex="0" data-task-summary-filter="assistantActive" style="background: rgba(255,255,255,0.05); padding: 8px 6px; border-radius: 7px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;" aria-pressed="${isAssistantActive ? 'true' : 'false'}">
+        <div style="font-size: 10px; color: #ab68ff;">待處理</div>
+        <div style="font-size: 18px; font-weight: bold; margin-top: 2px; color: #ab68ff;">${stats.assistantActive}</div>
       </div>
-      <div class="task-summary-card ${isWaitingActive ? 'active' : ''}" role="button" tabindex="0" data-task-summary-filter="Waiting" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;" aria-pressed="${isWaitingActive ? 'true' : 'false'}">
-        <div style="font-size: 11px; color: #f4bf58;">等資料</div>
-        <div style="font-size: 20px; font-weight: bold; margin-top: 4px; color: #f4bf58;">${stats.waiting}</div>
+      <div class="task-summary-card ${isWaitingActive ? 'active' : ''}" role="button" tabindex="0" data-task-summary-filter="Waiting" style="background: rgba(255,255,255,0.05); padding: 8px 6px; border-radius: 7px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;" aria-pressed="${isWaitingActive ? 'true' : 'false'}">
+        <div style="font-size: 10px; color: #f4bf58;">等資料</div>
+        <div style="font-size: 18px; font-weight: bold; margin-top: 2px; color: #f4bf58;">${stats.waiting}</div>
       </div>
-      <div class="task-summary-card ${isBlockedActive ? 'active' : ''}" role="button" tabindex="0" data-task-summary-filter="Blocked" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;" aria-pressed="${isBlockedActive ? 'true' : 'false'}">
-        <div style="font-size: 11px; color: #ff756f;">異常</div>
-        <div style="font-size: 20px; font-weight: bold; margin-top: 4px; color: #ff756f;">${stats.blocked}</div>
+      <div class="task-summary-card ${isBlockedActive ? 'active' : ''}" role="button" tabindex="0" data-task-summary-filter="Blocked" style="background: rgba(255,255,255,0.05); padding: 8px 6px; border-radius: 7px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;" aria-pressed="${isBlockedActive ? 'true' : 'false'}">
+        <div style="font-size: 10px; color: #ff756f;">異常</div>
+        <div style="font-size: 18px; font-weight: bold; margin-top: 2px; color: #ff756f;">${stats.blocked}</div>
       </div>
-      <div class="task-summary-card ${isOverdueActive ? 'active' : ''}" role="button" tabindex="0" data-task-summary-filter="overdue" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;" aria-pressed="${isOverdueActive ? 'true' : 'false'}">
-        <div style="font-size: 11px; color: #ff8a80;">已逾期</div>
-        <div style="font-size: 20px; font-weight: bold; margin-top: 4px; color: #ff8a80;">${stats.overdue}</div>
+      <div class="task-summary-card ${isOverdueActive ? 'active' : ''}" role="button" tabindex="0" data-task-summary-filter="overdue" style="background: rgba(255,255,255,0.05); padding: 8px 6px; border-radius: 7px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;" aria-pressed="${isOverdueActive ? 'true' : 'false'}">
+        <div style="font-size: 10px; color: #ff8a80;">已逾期</div>
+        <div style="font-size: 18px; font-weight: bold; margin-top: 2px; color: #ff8a80;">${stats.overdue}</div>
       </div>
-      <div class="task-summary-card ${isTodayActive ? 'active' : ''}" role="button" tabindex="0" data-task-summary-filter="dueToday" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;" aria-pressed="${isTodayActive ? 'true' : 'false'}">
-        <div style="font-size: 11px; color: #58a8ff;">今天到期</div>
-        <div style="font-size: 20px; font-weight: bold; margin-top: 4px; color: #58a8ff;">${stats.dueToday}</div>
+      <div class="task-summary-card ${isTodayActive ? 'active' : ''}" role="button" tabindex="0" data-task-summary-filter="dueToday" style="background: rgba(255,255,255,0.05); padding: 8px 6px; border-radius: 7px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;" aria-pressed="${isTodayActive ? 'true' : 'false'}">
+        <div style="font-size: 10px; color: #58a8ff;">今天到期</div>
+        <div style="font-size: 18px; font-weight: bold; margin-top: 2px; color: #58a8ff;">${stats.dueToday}</div>
       </div>
-      <div class="task-summary-card ${isHighPriorityActive ? 'active' : ''}" role="button" tabindex="0" data-task-summary-filter="highPriority" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;" aria-pressed="${isHighPriorityActive ? 'true' : 'false'}">
-        <div style="font-size: 11px; color: #ffcf5a;">高優先</div>
-        <div style="font-size: 20px; font-weight: bold; margin-top: 4px; color: #ffcf5a;">${stats.highPriority}</div>
+      <div class="task-summary-card ${isHighPriorityActive ? 'active' : ''}" role="button" tabindex="0" data-task-summary-filter="highPriority" style="background: rgba(255,255,255,0.05); padding: 8px 6px; border-radius: 7px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;" aria-pressed="${isHighPriorityActive ? 'true' : 'false'}">
+        <div style="font-size: 10px; color: #ffcf5a;">高優先</div>
+        <div style="font-size: 18px; font-weight: bold; margin-top: 2px; color: #ffcf5a;">${stats.highPriority}</div>
       </div>
-      <div class="task-summary-card ${isFinishedActive ? 'active' : ''}" role="button" tabindex="0" data-task-summary-filter="Finished" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;" aria-pressed="${isFinishedActive ? 'true' : 'false'}">
-        <div style="font-size: 11px; color: #54e2b0;">已完成</div>
-        <div style="font-size: 20px; font-weight: bold; margin-top: 4px; color: #54e2b0;">${stats.finished}</div>
+      <div class="task-summary-card ${isFinishedActive ? 'active' : ''}" role="button" tabindex="0" data-task-summary-filter="Finished" style="background: rgba(255,255,255,0.05); padding: 8px 6px; border-radius: 7px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;" aria-pressed="${isFinishedActive ? 'true' : 'false'}">
+        <div style="font-size: 10px; color: #54e2b0;">已完成</div>
+        <div style="font-size: 18px; font-weight: bold; margin-top: 2px; color: #54e2b0;">${stats.finished}</div>
       </div>
     </div>
   `;
@@ -4331,15 +4331,15 @@ function renderTaskDashboardFocus_(stats) {
     : ["目前沒有急迫任務，可以查看全部任務或未來 7 天。"];
 
   return `
-    <section class="task-dashboard-focus" aria-label="今日焦點" style="margin-bottom: 12px; padding: 12px; border-radius: 10px; background: rgba(84,151,255,0.08); border: 1px solid rgba(84,151,255,0.16);">
-      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; flex-wrap: wrap;">
+    <section class="task-dashboard-focus" aria-label="今日焦點" style="margin-bottom: 10px; padding: 10px; border-radius: 9px; background: rgba(84,151,255,0.08); border: 1px solid rgba(84,151,255,0.16);">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; flex-wrap: wrap;">
         <div>
-          <div style="font-size: 12px; color: #8bb8ff; font-weight: 700; margin-bottom: 6px;">今日焦點</div>
-          <ul style="margin: 0; padding-left: 18px; color: rgba(255,255,255,0.86); font-size: 13px; line-height: 1.6;">
+          <div style="font-size: 12px; color: #8bb8ff; font-weight: 700; margin-bottom: 4px;">今日焦點</div>
+          <ul style="margin: 0; padding-left: 16px; color: rgba(255,255,255,0.86); font-size: 12px; line-height: 1.45;">
             ${displayItems.map(item => `<li>${escapeHtml(item)}</li>`).join("")}
           </ul>
         </div>
-        <span style="font-size: 11px; color: rgba(255,255,255,0.48); white-space: nowrap;">依目前可見任務計算</span>
+        <span style="font-size: 10px; color: rgba(255,255,255,0.48); white-space: nowrap;">依目前可見任務計算</span>
       </div>
     </section>
   `;
