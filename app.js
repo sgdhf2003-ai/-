@@ -3509,6 +3509,13 @@ function renderTaskDetail_(task, renderCache = null) {
   const statusMeta = getTaskStatusMeta_(task.status);
   const statusLabel = statusMeta.label;
   const priorityLabel = TASK_PRIORITY_LABELS[task.priority] || task.priority || "無";
+  const isArchivedTask = isTaskFinishedOrCancelled_(task);
+  const canEditTask = !isArchivedTask && canCurrentUserUpdateTask_(task);
+  const canRequestInfo = !isArchivedTask && canCurrentUserRequestTaskInfo_(task);
+  const canReportIssue = !isArchivedTask && canCurrentUserReportTaskIssue_(task);
+  const canCompleteTask = !isArchivedTask && canCurrentUserCompleteTask_(task);
+  const canAppendNote = !isArchivedTask && canCurrentUserAppendTaskNote_(task);
+  const hasVisibleActionSections = canEditTask || canRequestInfo || canReportIssue || canCompleteTask || canAppendNote;
 
   let assigneeText = "";
   if (task.assignedTo) {
@@ -3547,60 +3554,79 @@ function renderTaskDetail_(task, renderCache = null) {
     ${task.description ? `<div style="margin-top: 8px; font-size: 13px; color: rgba(255,255,255,0.85);"><strong style="display:block;margin-bottom:2px;">詳細說明：</strong><pre class="pre-text" style="margin:0; white-space: pre-wrap;">${escapeHtml(task.description)}</pre></div>` : ""}
     ${task.note ? `<div style="margin-top: 8px; font-size: 13px; color: rgba(255,255,255,0.85);"><strong style="display:block;margin-bottom:2px;">備註：</strong><pre class="pre-text" style="margin:0; border-left: 3px solid var(--gold); padding-left: 8px; white-space: pre-wrap;">${escapeHtml(task.note)}</pre></div>` : ""}
     ${renderTaskAuditHistory_(task.id)}
-    ${(canCurrentUserUpdateTask_(task) || canCurrentUserCompleteTask_(task) || canCurrentUserReportTaskIssue_(task) || canCurrentUserRequestTaskInfo_(task)) ? `
-      <div class="task-action-group" style="margin-top: 12px; display: flex; flex-direction: column; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 12px; gap: 8px;">
-        <div style="font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 4px;">📋 任務操作：</div>
-        <div style="display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px;">
-          ${canCurrentUserUpdateTask_(task) ? `
-            <button type="button" class="secondary-button" style="font-size: 13px; padding: 6px 12px;" data-task-edit-btn="${escapeHtml(detailKey)}">📝 編輯任務</button>
-          ` : ""}
-          ${canCurrentUserRequestTaskInfo_(task) ? `
-            <button type="button" class="primary-button task-waiting-toggle-button" style="background: rgba(244,191,88,0.15) !important; color: #f4bf58 !important; border: 1px solid rgba(244,191,88,0.3) !important; box-shadow: none !important; font-size: 13px; padding: 6px 12px;" data-task-waiting-toggle-btn="${escapeHtml(detailKey)}">⏳ 等待資料</button>
-          ` : ""}
-          ${canCurrentUserReportTaskIssue_(task) ? `
-            <button type="button" class="primary-button task-issue-toggle-button" style="background: rgba(255,82,82,0.15) !important; color: #ff5252 !important; border: 1px solid rgba(255,82,82,0.3) !important; box-shadow: none !important; font-size: 13px; padding: 6px 12px;" data-task-issue-toggle-btn="${escapeHtml(detailKey)}">⚠️ 回報異常</button>
-          ` : ""}
-          ${canCurrentUserCompleteTask_(task) ? `
-            <button type="button" class="primary-button task-complete-button" style="background: rgba(84,226,176,0.15) !important; color: #54e2b0 !important; border: 1px solid rgba(84,226,176,0.3) !important; box-shadow: none !important; font-size: 13px; padding: 6px 12px;" data-task-complete-btn="${escapeHtml(detailKey)}">✅ 完成工作</button>
-          ` : ""}
-        </div>
-        ${pwaTaskIssueReasonOpen.has(task.id) ? `
-          <div class="task-issue-options-panel" style="margin-top: 4px; display: flex; flex-direction: column; gap: 6px; background: rgba(255,255,255,0.03); padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.06);">
-            <div style="font-size: 12px; color: rgba(255,255,255,0.6); margin-bottom: 2px;">選擇發生的問題類型（固定選項）：</div>
-            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
-              ${getPwaBlockedReasons_().map(reason => `
-                <button type="button" class="primary-button task-issue-option-btn" data-task-issue-submit-btn="${escapeHtml(detailKey)}" data-reason="${escapeHtml(reason)}">${escapeHtml(reason)}</button>
-              `).join("")}
+    ${hasVisibleActionSections ? `
+      <div class="task-action-group" style="margin-top: 12px; display: flex; flex-direction: column; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 12px; gap: 12px;">
+        <div style="font-size: 12px; color: rgba(255,255,255,0.5);">📋 任務操作區</div>
+        ${canEditTask ? `
+          <div style="display: flex; flex-direction: column; gap: 6px; padding: 10px; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);">
+            <div style="font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.82);">主要操作</div>
+            <div style="font-size: 12px; color: rgba(255,255,255,0.55);">調整任務內容，不會直接改變目前的任務狀態。</div>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+              <button type="button" class="secondary-button" style="font-size: 13px; padding: 6px 12px;" data-task-edit-btn="${escapeHtml(detailKey)}">📝 編輯任務</button>
             </div>
           </div>
         ` : ""}
-        ${pwaTaskWaitingReasonOpen.has(task.id) ? `
-          <div class="task-waiting-options-panel" style="margin-top: 4px; display: flex; flex-direction: column; gap: 6px; background: rgba(255,255,255,0.03); padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.06);">
-            <div style="font-size: 12px; color: rgba(255,255,255,0.6); margin-bottom: 2px;">選擇缺少的資料類型（固定選項）：</div>
-            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
-              ${getPwaWaitingReasons_().map(reason => `
-                <button type="button" class="primary-button task-waiting-option-btn" data-task-waiting-submit-btn="${escapeHtml(detailKey)}" data-reason="${escapeHtml(reason)}">${escapeHtml(reason)}</button>
-              `).join("")}
+        ${(canRequestInfo || canReportIssue) ? `
+          <div style="display: flex; flex-direction: column; gap: 8px; padding: 10px; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);">
+            <div style="font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.82);">狀態更新</div>
+            <div style="font-size: 12px; color: rgba(255,255,255,0.55);">等待資料用於標記暫時缺少資訊；回報異常用於標記卡住、資料有問題，或需要主管協助。</div>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+              ${canRequestInfo ? `
+                <button type="button" class="primary-button task-waiting-toggle-button" style="background: rgba(244,191,88,0.15) !important; color: #f4bf58 !important; border: 1px solid rgba(244,191,88,0.3) !important; box-shadow: none !important; font-size: 13px; padding: 6px 12px;" data-task-waiting-toggle-btn="${escapeHtml(detailKey)}">⏳ 等待資料</button>
+              ` : ""}
+              ${canReportIssue ? `
+                <button type="button" class="primary-button task-issue-toggle-button" style="background: rgba(255,82,82,0.15) !important; color: #ff5252 !important; border: 1px solid rgba(255,82,82,0.3) !important; box-shadow: none !important; font-size: 13px; padding: 6px 12px;" data-task-issue-toggle-btn="${escapeHtml(detailKey)}">⚠️ 回報異常</button>
+              ` : ""}
+            </div>
+            ${pwaTaskIssueReasonOpen.has(task.id) ? `
+              <div class="task-issue-options-panel" style="margin-top: 2px; display: flex; flex-direction: column; gap: 6px; background: rgba(255,255,255,0.03); padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.06);">
+                <div style="font-size: 12px; color: rgba(255,255,255,0.65); margin-bottom: 2px;">請選擇異常原因。送出後會更新狀態並留下紀錄。</div>
+                <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                  ${getPwaBlockedReasons_().map(reason => `
+                    <button type="button" class="primary-button task-issue-option-btn" data-task-issue-submit-btn="${escapeHtml(detailKey)}" data-reason="${escapeHtml(reason)}">${escapeHtml(reason)}</button>
+                  `).join("")}
+                </div>
+              </div>
+            ` : ""}
+            ${pwaTaskWaitingReasonOpen.has(task.id) ? `
+              <div class="task-waiting-options-panel" style="margin-top: 2px; display: flex; flex-direction: column; gap: 6px; background: rgba(255,255,255,0.03); padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.06);">
+                <div style="font-size: 12px; color: rgba(255,255,255,0.65); margin-bottom: 2px;">請選擇目前缺少的資料。送出後會標記為等待資料。</div>
+                <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                  ${getPwaWaitingReasons_().map(reason => `
+                    <button type="button" class="primary-button task-waiting-option-btn" data-task-waiting-submit-btn="${escapeHtml(detailKey)}" data-reason="${escapeHtml(reason)}">${escapeHtml(reason)}</button>
+                  `).join("")}
+                </div>
+              </div>
+            ` : ""}
+          </div>
+        ` : ""}
+        ${canAppendNote ? `
+          <div class="task-note-append-section" style="display: flex; flex-direction: column; gap: 6px; padding: 10px; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);">
+            <div style="font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.82);">備註</div>
+            <div style="font-size: 12px; color: rgba(255,255,255,0.55);">追加備註只會留下補充紀錄，不會改變任務狀態。</div>
+            <div style="display: flex; gap: 8px; width: 100%; flex-wrap: wrap;">
+              <input type="text" id="append-note-input-${escapeHtml(task.id)}" placeholder="輸入補充備註（限 200 字）..." maxlength="200" style="flex: 1; min-width: 220px; min-height: 36px; padding: 6px 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 13px;" />
+              <button type="button" class="primary-button btn-append-task-note" data-task-id="${escapeHtml(task.id)}" style="min-height: 36px; height: 36px; padding: 0 16px; font-size: 13px; border-radius: 8px;">送出備註</button>
+            </div>
+          </div>
+        ` : ""}
+        ${canCompleteTask ? `
+          <div style="display: flex; flex-direction: column; gap: 6px; padding: 10px; border-radius: 8px; background: rgba(84,226,176,0.06); border: 1px solid rgba(84,226,176,0.18);">
+            <div style="font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.82);">結案</div>
+            <div style="font-size: 12px; color: rgba(255,255,255,0.55);">完成後此任務會進入完成狀態，且不再顯示一般狀態操作。</div>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+              <button type="button" class="primary-button task-complete-button" style="background: rgba(84,226,176,0.15) !important; color: #54e2b0 !important; border: 1px solid rgba(84,226,176,0.3) !important; box-shadow: none !important; font-size: 13px; padding: 6px 12px;" data-task-complete-btn="${escapeHtml(detailKey)}">✅ 完成工作</button>
             </div>
           </div>
         ` : ""}
       </div>
     ` : `
-      ${(String(task.status || "").toLowerCase() === "finished" || String(task.status || "").toLowerCase() === "done" || String(task.status || "").toLowerCase() === "cancelled") ? `
+      ${isArchivedTask ? `
         <div style="margin-top: 12px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 12px; text-align: center; font-size: 12px; color: rgba(255,255,255,0.4); display: flex; align-items: center; justify-content: center; gap: 4px;">
           🔒 此任務已封存，目前無可用操作
         </div>
       ` : ""}
     `}
-    ${canCurrentUserAppendTaskNote_(task) ? `
-      <div class="task-note-append-section" style="margin-top: 12px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 12px; display: flex; flex-direction: column; gap: 6px;">
-        <label style="font-size: 12px; color: rgba(255,255,255,0.5);">✍️ 追加任務備註：</label>
-        <div style="display: flex; gap: 8px; width: 100%;">
-          <input type="text" id="append-note-input-${escapeHtml(task.id)}" placeholder="輸入備註事項 (限 200 字)..." maxlength="200" style="flex: 1; min-height: 36px; padding: 6px 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 13px;" />
-          <button type="button" class="primary-button btn-append-task-note" data-task-id="${escapeHtml(task.id)}" style="min-height: 36px; height: 36px; padding: 0 16px; font-size: 13px; border-radius: 8px;">送出</button>
-        </div>
-      </div>
-    ` : ""}
   `;
 }
 
@@ -4404,7 +4430,7 @@ async function completeTaskFromPwa_(taskId) {
     return;
   }
   
-  if (!confirm("確定要完成此工作任務嗎？")) {
+  if (!confirm("確定要將這筆任務標記為完成嗎？完成後將不再顯示一般狀態操作。")) {
     return;
   }
   
@@ -4522,7 +4548,7 @@ function getPwaBlockedReasons_() {
 async function reportTaskIssueFromPwa_(taskId, reason) {
   if (pwaTaskStatusInFlight.has(taskId)) return;
   if (!isValidPwaBlockedReason_(reason)) {
-    toast("異常原因不合法");
+    toast("請先選擇一個異常原因，再送出狀態更新");
     return;
   }
   
@@ -4537,7 +4563,7 @@ async function reportTaskIssueFromPwa_(taskId, reason) {
     return;
   }
   
-  if (!confirm(`確定要將此任務回報為異常（原因：${reason}）嗎？`)) {
+  if (!confirm(`確定要將這筆任務標記為異常嗎？\n原因：${reason}\n送出後會更新狀態並留下紀錄。`)) {
     return;
   }
   
@@ -4661,7 +4687,7 @@ function getPwaWaitingReasons_() {
 async function requestTaskInfoFromPwa_(taskId, reason) {
   if (pwaTaskStatusInFlight.has(taskId)) return;
   if (!isValidPwaWaitingReason_(reason)) {
-    toast("補資料原因不合法");
+    toast("請先選擇一個等待資料原因，再送出狀態更新");
     return;
   }
   
@@ -4676,7 +4702,7 @@ async function requestTaskInfoFromPwa_(taskId, reason) {
     return;
   }
   
-  if (!confirm(`確定要將此任務標記為等待資料（原因：${reason}）嗎？`)) {
+  if (!confirm(`確定要將這筆任務標記為等待資料嗎？\n原因：${reason}\n送出後會保留目前紀錄，並標示暫時無法推進。`)) {
     return;
   }
   
@@ -5006,7 +5032,8 @@ async function appendTaskNoteFromPwa_(taskId) {
   const input = document.querySelector(`#append-note-input-${taskId}`);
   const noteVal = input ? input.value : "";
   if (!noteVal.trim()) {
-    toast("請輸入備註內容");
+    if (input && typeof input.focus === "function") input.focus();
+    toast("請先輸入備註內容。送出後只會新增紀錄，不會改變任務狀態。");
     return;
   }
 
