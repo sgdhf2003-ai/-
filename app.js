@@ -3430,21 +3430,21 @@ function renderTaskNextActionBadges_(task, mode = "compact", badges = null) {
 }
 
 const TASK_TYPE_LABELS = {
-  delivery: "🚚 送貨 (delivery)",
-  reservation: "📦 保留 (reservation)",
-  processing: "🏭 加工 (processing)",
-  reminder: "☎ 回電 (reminder)",
-  visit: "👤 拜訪 (visit)",
-  quote: "📄 報價 (quote)",
-  complaint: "⚠ 客訴 (complaint)",
-  return: "🚛 收退貨 (return)",
-  sample: "🧱 送樣 (sample)",
-  orderInput: "📝 待打訂單 (orderInput)",
-  reservationConfirm: "📦 待確認保留 (reservationConfirm)",
-  processingArrange: "🏭 待安排加工 (processingArrange)",
-  deliveryArrange: "🚚 待安排送貨 (deliveryArrange)",
-  productReply: "💬 待回覆問貨 (productReply)",
-  other: "📝 其他 (other)"
+  delivery: "🚚 送貨",
+  reservation: "📦 保留",
+  processing: "🏭 加工",
+  reminder: "☎ 回電",
+  visit: "👤 拜訪",
+  quote: "📄 報價",
+  complaint: "⚠ 客訴",
+  return: "🚛 收退貨",
+  sample: "🧱 送樣",
+  orderInput: "📝 待打訂單",
+  reservationConfirm: "📦 待確認保留",
+  processingArrange: "🏭 待安排加工",
+  deliveryArrange: "🚚 待安排送貨",
+  productReply: "💬 待回覆問貨",
+  other: "📝 其他"
 };
 
 const TASK_PRIORITY_LABELS = {
@@ -3452,6 +3452,11 @@ const TASK_PRIORITY_LABELS = {
   high: "🟡 重要",
   urgent: "🔴 緊急"
 };
+
+function formatTaskType_(type) {
+  if (!type) return "無";
+  return TASK_TYPE_LABELS[type] || "未知類型";
+}
 
 function formatTaskDate_(value) {
   if (!value) return "無";
@@ -3505,7 +3510,7 @@ function renderTaskDetail_(task, renderCache = null) {
   const taskBadges = getTaskNextActionBadgesCached_(task, safeRenderCache);
   const nextActionDetailHTML = renderTaskNextActionBadges_(task, "detail", taskBadges);
   const detailKey = encodeURIComponent(String(task.id || ""));
-  const typeLabel = TASK_TYPE_LABELS[task.type] || task.type || "無";
+  const typeLabel = formatTaskType_(task.type);
   const statusMeta = getTaskStatusMeta_(task.status);
   const statusLabel = statusMeta.label;
   const priorityLabel = TASK_PRIORITY_LABELS[task.priority] || task.priority || "無";
@@ -3532,9 +3537,9 @@ function renderTaskDetail_(task, renderCache = null) {
     <h4 style="margin-top: 0; margin-bottom: 8px; color: #fff; font-size: 14px;">工作完整詳情</h4>
     <div class="task-detail-grid" style="font-size: 13px; color: rgba(255,255,255,0.75);">
       <div><strong>任務 ID：</strong>${escapeHtml(task.id || "無")}</div>
-      <div><strong>工作類型：</strong>${escapeHtml(typeLabel)} (${escapeHtml(task.type || "無")})</div>
+      <div><strong>工作類型：</strong>${escapeHtml(typeLabel)}</div>
       <div><strong>標題：</strong>${escapeHtml(task.title || "無")}</div>
-      <div><strong>狀態：</strong>${escapeHtml(statusLabel)} (${escapeHtml(task.status || "無")})</div>
+      <div><strong>狀態：</strong>${escapeHtml(statusLabel)}</div>
       <div><strong>優先權：</strong>${escapeHtml(priorityLabel)}</div>
       <div><strong>到期日：</strong>${escapeHtml(formatTaskDate_(task.dueDate))}</div>
       <div><strong>指派角色：</strong>${escapeHtml(formatTaskRole_(task.assignedRole))}</div>
@@ -3572,10 +3577,10 @@ function renderTaskDetail_(task, renderCache = null) {
             <div style="font-size: 12px; color: rgba(255,255,255,0.55);">等待資料用於標記暫時缺少資訊；回報異常用於標記卡住、資料有問題，或需要主管協助。</div>
             <div style="display: flex; flex-wrap: wrap; gap: 8px;">
               ${canRequestInfo ? `
-                <button type="button" class="primary-button task-waiting-toggle-button" style="background: rgba(244,191,88,0.15) !important; color: #f4bf58 !important; border: 1px solid rgba(244,191,88,0.3) !important; box-shadow: none !important; font-size: 13px; padding: 6px 12px;" data-task-waiting-toggle-btn="${escapeHtml(detailKey)}">⏳ 等待資料</button>
+                <button type="button" class="primary-button task-waiting-toggle-button" style="background: rgba(244,191,88,0.15) !important; color: #f4bf58 !important; border: 1px solid rgba(244,191,88,0.3) !important; box-shadow: none !important; font-size: 13px; padding: 6px 12px;" data-task-waiting-toggle-btn="${escapeHtml(detailKey)}">⏳ 標記為等待資料</button>
               ` : ""}
               ${canReportIssue ? `
-                <button type="button" class="primary-button task-issue-toggle-button" style="background: rgba(255,82,82,0.15) !important; color: #ff5252 !important; border: 1px solid rgba(255,82,82,0.3) !important; box-shadow: none !important; font-size: 13px; padding: 6px 12px;" data-task-issue-toggle-btn="${escapeHtml(detailKey)}">⚠️ 回報異常</button>
+                <button type="button" class="primary-button task-issue-toggle-button" style="background: rgba(255,82,82,0.15) !important; color: #ff5252 !important; border: 1px solid rgba(255,82,82,0.3) !important; box-shadow: none !important; font-size: 13px; padding: 6px 12px;" data-task-issue-toggle-btn="${escapeHtml(detailKey)}">⚠️ 標記為異常</button>
               ` : ""}
             </div>
             ${pwaTaskIssueReasonOpen.has(task.id) ? `
@@ -3615,7 +3620,7 @@ function renderTaskDetail_(task, renderCache = null) {
             <div style="font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.82);">結案</div>
             <div style="font-size: 12px; color: rgba(255,255,255,0.55);">完成後此任務會進入完成狀態，且不再顯示一般狀態操作。</div>
             <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-              <button type="button" class="primary-button task-complete-button" style="background: rgba(84,226,176,0.15) !important; color: #54e2b0 !important; border: 1px solid rgba(84,226,176,0.3) !important; box-shadow: none !important; font-size: 13px; padding: 6px 12px;" data-task-complete-btn="${escapeHtml(detailKey)}">✅ 完成工作</button>
+              <button type="button" class="primary-button task-complete-button" style="background: rgba(84,226,176,0.15) !important; color: #54e2b0 !important; border: 1px solid rgba(84,226,176,0.3) !important; box-shadow: none !important; font-size: 13px; padding: 6px 12px;" data-task-complete-btn="${escapeHtml(detailKey)}">✅ 標記為完成</button>
             </div>
           </div>
         ` : ""}
@@ -3623,7 +3628,7 @@ function renderTaskDetail_(task, renderCache = null) {
     ` : `
       ${isArchivedTask ? `
         <div style="margin-top: 12px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 12px; text-align: center; font-size: 12px; color: rgba(255,255,255,0.4); display: flex; align-items: center; justify-content: center; gap: 4px;">
-          🔒 此任務已封存，目前無可用操作
+          🔒 此任務已完成或封存，目前沒有可用操作。
         </div>
       ` : ""}
     `}
@@ -3834,7 +3839,7 @@ function renderTasks() {
     const taskBadges = getTaskNextActionBadgesCached_(t, renderCache);
     const nextActionCompactHTML = renderTaskNextActionBadges_(t, "compact", taskBadges);
     const detailKey = encodeURIComponent(String(t.id || ""));
-    const typeLabel = TASK_TYPE_LABELS[t.type] || t.type || "無";
+    const typeLabel = formatTaskType_(t.type);
     const statusMeta = getTaskStatusMeta_(t.status);
     const statusLabel = statusMeta.label;
     const priorityLabel = TASK_PRIORITY_LABELS[t.priority] || t.priority || "無";
@@ -3904,7 +3909,7 @@ function renderTasks() {
             ${nextActionCompactHTML}
             ${customerContextCardHTML}
             ${t.productName ? `<div><strong>商品/數量：</strong><span style="color: #fff;">${escapeHtml(t.productName)} x ${escapeHtml(t.quantity || 1)}</span></div>` : ""}
-            <div><strong>狀態：</strong>${escapeHtml(statusLabel)} (${escapeHtml(t.status || "無")})</div>
+            <div><strong>狀態：</strong>${escapeHtml(statusLabel)}</div>
             ${t.sourceUser ? `<div><strong>交辦人：</strong>${escapeHtml(t.sourceUser)} ${t.sourceRole ? `(${escapeHtml(formatTaskRole_(t.sourceRole))})` : ""}</div>` : (t.createdBy ? `<div><strong>交辦人：</strong>${escapeHtml(t.createdBy)}</div>` : "")}
             ${t.parentWorkId ? `<div><strong>來源工作 ID：</strong>${escapeHtml(t.parentWorkId)}</div>` : ""}
             ${t.updatedAt ? `<div><strong>最後更新：</strong>${escapeHtml(formatTaskDate_(t.updatedAt))} ${t.updatedBy ? `by ${escapeHtml(t.updatedBy)}` : ""}</div>` : ""}
@@ -4320,7 +4325,7 @@ function getTaskStatusMeta_(status) {
     };
   }
   return {
-    label: norm || "無",
+    label: norm ? "未知狀態" : "無",
     code: norm,
     className: "task-status-unknown",
     tone: "unknown"
@@ -4483,7 +4488,7 @@ async function completeTaskFromPwa_(taskId) {
     toast(err.message || "完成任務時發生錯誤");
     if (btn) {
       btn.disabled = false;
-      btn.textContent = "完成工作";
+      btn.textContent = "標記為完成";
     }
   } finally {
     pwaTaskStatusInFlight.delete(taskId);
