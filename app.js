@@ -193,6 +193,10 @@ document.addEventListener("click", (event) => {
       applyTaskQuickPreset_("blocked");
     } else if (targetStatus === "dueToday") {
       applyTaskQuickPreset_("today");
+    } else if (targetStatus === "overdue") {
+      applyTaskQuickPreset_("overdue");
+    } else if (targetStatus === "highPriority") {
+      applyTaskQuickPreset_("highPriority");
     } else if (targetStatus === "Finished") {
       applyTaskQuickPreset_("completed");
     }
@@ -3180,7 +3184,7 @@ function applyTaskQuickPreset_(preset) {
     if (statusSelect) statusSelect.value = "Waiting";
   } else if (taskQuickPreset === "blocked") {
     if (statusSelect) statusSelect.value = "Blocked";
-  } else if (!["mine", "blocked", "waiting", "completed", "assistantActive"].includes(taskQuickPreset)) {
+  } else if (!["mine", "blocked", "waiting", "completed", "assistantActive", "highPriority"].includes(taskQuickPreset)) {
     taskQuickPreset = "all";
   }
 
@@ -3248,6 +3252,9 @@ function isTaskMatchingPreset_(task, preset) {
   if (preset === "assistantActive") {
     return task.assignedRole === "assistant" && !isTaskFinishedOrCancelled_(task);
   }
+  if (preset === "highPriority") {
+    return isTaskHighPriority_(task) && !isTaskFinishedOrCancelled_(task);
+  }
   return true;
 }
 
@@ -3298,10 +3305,14 @@ function isTaskWaitingLike_(task) {
   );
 }
 
+function isTaskHighPriority_(task) {
+  const priority = String(task?.priority || "").trim().toLowerCase();
+  return ["urgent", "high", "高", "緊急"].includes(priority);
+}
+
 function getTaskNextActionBadges_(task) {
   const badges = [];
   const status = String(task?.status || "").trim().toLowerCase();
-  const priority = String(task?.priority || "").trim().toLowerCase();
   const blockedReason = String(task?.blockedReason || "").trim();
   const isFinished = isTaskFinishedOrCancelled_(task);
 
@@ -3364,7 +3375,7 @@ function getTaskNextActionBadges_(task) {
     });
   }
 
-  if (["urgent", "high", "高", "緊急"].includes(priority)) {
+  if (isTaskHighPriority_(task)) {
     badges.push({
       type: "priority",
       label: "高優先",
@@ -3786,10 +3797,14 @@ function renderTasks() {
   const isWaitingActive = (taskQuickPreset === "waiting" || (taskQuickPreset === "custom" && statusFilter === "Waiting"));
   const isBlockedActive = (taskQuickPreset === "blocked" || (taskQuickPreset === "custom" && statusFilter === "Blocked"));
   const isTodayActive = (taskQuickPreset === "today" || (taskQuickPreset === "custom" && filterDueDateVal === "dueToday"));
+  const isOverdueActive = (taskQuickPreset === "overdue" || (taskQuickPreset === "custom" && filterDueDateVal === "overdue"));
+  const isHighPriorityActive = taskQuickPreset === "highPriority";
   const isFinishedActive = (taskQuickPreset === "completed" || (taskQuickPreset === "custom" && statusFilter === "Finished"));
+  const focusHTML = renderTaskDashboardFocus_(stats);
 
   const summaryHTML = `
-    <div class="task-summary-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px;">
+    ${focusHTML}
+    <div class="task-summary-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; margin-bottom: 16px;">
       <div class="task-summary-card ${isAllActive ? 'active' : ''}" role="button" tabindex="0" data-task-summary-filter="all" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;" aria-pressed="${isAllActive ? 'true' : 'false'}">
         <div style="font-size: 11px; color: rgba(255,255,255,0.55);">全部任務</div>
         <div style="font-size: 20px; font-weight: bold; margin-top: 4px; color: #fff;">${stats.total}</div>
@@ -3806,9 +3821,17 @@ function renderTasks() {
         <div style="font-size: 11px; color: #ff756f;">異常</div>
         <div style="font-size: 20px; font-weight: bold; margin-top: 4px; color: #ff756f;">${stats.blocked}</div>
       </div>
+      <div class="task-summary-card ${isOverdueActive ? 'active' : ''}" role="button" tabindex="0" data-task-summary-filter="overdue" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;" aria-pressed="${isOverdueActive ? 'true' : 'false'}">
+        <div style="font-size: 11px; color: #ff8a80;">已逾期</div>
+        <div style="font-size: 20px; font-weight: bold; margin-top: 4px; color: #ff8a80;">${stats.overdue}</div>
+      </div>
       <div class="task-summary-card ${isTodayActive ? 'active' : ''}" role="button" tabindex="0" data-task-summary-filter="dueToday" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;" aria-pressed="${isTodayActive ? 'true' : 'false'}">
         <div style="font-size: 11px; color: #58a8ff;">今天到期</div>
         <div style="font-size: 20px; font-weight: bold; margin-top: 4px; color: #58a8ff;">${stats.dueToday}</div>
+      </div>
+      <div class="task-summary-card ${isHighPriorityActive ? 'active' : ''}" role="button" tabindex="0" data-task-summary-filter="highPriority" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;" aria-pressed="${isHighPriorityActive ? 'true' : 'false'}">
+        <div style="font-size: 11px; color: #ffcf5a;">高優先</div>
+        <div style="font-size: 20px; font-weight: bold; margin-top: 4px; color: #ffcf5a;">${stats.highPriority}</div>
       </div>
       <div class="task-summary-card ${isFinishedActive ? 'active' : ''}" role="button" tabindex="0" data-task-summary-filter="Finished" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;" aria-pressed="${isFinishedActive ? 'true' : 'false'}">
         <div style="font-size: 11px; color: #54e2b0;">已完成</div>
@@ -4258,20 +4281,68 @@ function getTaskSummaryStats_(tasks) {
     assistantActive: 0,
     waiting: 0,
     blocked: 0,
+    overdue: 0,
     dueToday: 0,
+    dueTodayActive: 0,
+    highPriority: 0,
     finished: 0
   };
 
   tasks.forEach(task => {
+    const isActive = !isTaskFinishedOrCancelled_(task);
+    const isDueToday = isTaskMatchingPreset_(task, "today");
     stats.total++;
     if (isTaskMatchingPreset_(task, "assistantActive")) stats.assistantActive++;
     if (isTaskMatchingPreset_(task, "waiting")) stats.waiting++;
     if (isTaskMatchingPreset_(task, "blocked")) stats.blocked++;
-    if (isTaskMatchingPreset_(task, "today")) stats.dueToday++;
+    if (isTaskMatchingPreset_(task, "overdue")) stats.overdue++;
+    if (isDueToday && isActive) stats.dueToday++;
+    if (isDueToday && isActive) stats.dueTodayActive++;
+    if (isTaskMatchingPreset_(task, "highPriority")) stats.highPriority++;
     if (isTaskMatchingPreset_(task, "completed")) stats.finished++;
   });
 
   return stats;
+}
+
+function renderTaskDashboardFocus_(stats) {
+  const focusItems = [];
+
+  if (stats.overdue > 0) {
+    focusItems.push(`優先處理 ${stats.overdue} 件逾期任務。`);
+  } else if (stats.dueTodayActive > 0) {
+    focusItems.push(`今天有 ${stats.dueTodayActive} 件任務需要處理。`);
+  }
+
+  if (stats.blocked > 0) {
+    focusItems.push(`有 ${stats.blocked} 件異常任務需要確認。`);
+  }
+
+  if (stats.waiting > 0) {
+    focusItems.push(`有 ${stats.waiting} 件任務正在等待資料。`);
+  }
+
+  if (stats.highPriority > 0) {
+    focusItems.push(`有 ${stats.highPriority} 件高優先任務需要留意。`);
+  }
+
+  const displayItems = focusItems.length
+    ? focusItems.slice(0, 4)
+    : ["目前沒有急迫任務，可以查看全部任務或未來 7 天。"];
+
+  return `
+    <section class="task-dashboard-focus" aria-label="今日焦點" style="margin-bottom: 12px; padding: 12px; border-radius: 10px; background: rgba(84,151,255,0.08); border: 1px solid rgba(84,151,255,0.16);">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; flex-wrap: wrap;">
+        <div>
+          <div style="font-size: 12px; color: #8bb8ff; font-weight: 700; margin-bottom: 6px;">今日焦點</div>
+          <ul style="margin: 0; padding-left: 18px; color: rgba(255,255,255,0.86); font-size: 13px; line-height: 1.6;">
+            ${displayItems.map(item => `<li>${escapeHtml(item)}</li>`).join("")}
+          </ul>
+        </div>
+        <span style="font-size: 11px; color: rgba(255,255,255,0.48); white-space: nowrap;">依目前可見任務計算</span>
+      </div>
+    </section>
+  `;
 }
 
 function getTaskStatusMeta_(status) {
