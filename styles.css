@@ -2369,9 +2369,19 @@ textarea:focus {
 }
 
 /* Recent Activity Feed Styles */
-.activity-feed {
+.activity-feed,
+.activity-feed * {
   box-sizing: border-box;
+}
+
+.activity-feed,
+.activity-feed-list,
+.activity-feed-item,
+.activity-feed-title,
+.activity-feed-summary,
+.activity-feed-meta {
   max-width: 100%;
+  min-width: 0;
 }
 
 .activity-feed-toggle {
@@ -2402,7 +2412,6 @@ textarea:focus {
 
 .activity-feed-item {
   box-sizing: border-box;
-  max-width: 100%;
   overflow-wrap: anywhere;
   word-break: break-word;
 }
@@ -2418,20 +2427,19 @@ textarea:focus {
 
 .activity-feed-meta {
   flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .activity-feed-title {
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .activity-feed-summary {
-  max-width: 60%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 @media (max-width: 640px) {
@@ -2448,6 +2456,10 @@ textarea:focus {
   }
   .activity-feed {
     padding: 10px !important;
+  }
+  .activity-feed-title,
+  .activity-feed-summary {
+    line-height: 1.35;
   }
   
   .task-summary-grid {
