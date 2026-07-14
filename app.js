@@ -246,7 +246,7 @@ document.addEventListener("click", (event) => {
     return;
   }
 
-  const copyDailyBriefBtn = event.target.closest('[data-action="copy-daily-brief"]');
+  const copyDailyBriefBtn = event.target.closest('[data-task-action="copy-daily-brief"]');
   if (copyDailyBriefBtn) {
     event.preventDefault();
     event.stopPropagation();
@@ -5535,7 +5535,7 @@ function renderDailyWorkBrief_(stats, activities) {
         <h3 class="daily-brief-title" style="margin: 0; font-size: 13px; font-weight: bold; color: #7cb1ff; display: flex; align-items: center; gap: 6px;">
           📋 今日工作摘要
         </h3>
-        <button type="button" class="daily-brief-copy-btn" data-action="copy-daily-brief" style="background: #2563eb; color: #fff; border: none; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; transition: background 0.2s; display: inline-flex; align-items: center; gap: 4px;">
+        <button type="button" class="daily-brief-copy-btn" data-task-action="copy-daily-brief" style="background: #2563eb; color: #fff; border: none; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; transition: background 0.2s; display: inline-flex; align-items: center; gap: 4px;">
           🔗 複製今日摘要
         </button>
       </div>
