@@ -246,6 +246,14 @@ document.addEventListener("click", (event) => {
     return;
   }
 
+  const copyDailyBriefBtn = event.target.closest('[data-action="copy-daily-brief"]');
+  if (copyDailyBriefBtn) {
+    event.preventDefault();
+    event.stopPropagation();
+    copyDailyBriefToClipboard_();
+    return;
+  }
+
 });
 
 document.querySelector("#salesFilter").addEventListener("change", (event) => {
@@ -3838,10 +3846,12 @@ function renderTasks() {
   const focusHTML = renderTaskDashboardFocus_(stats);
   const activities = getRecentTaskActivities_(visibleTasks);
   const recentActivityFeedHTML = renderRecentActivityFeed_(activities);
+  const dailyWorkBriefHTML = renderDailyWorkBrief_(stats, activities);
 
   const summaryHTML = `
     ${focusHTML}
     ${recentActivityFeedHTML}
+    ${dailyWorkBriefHTML}
     <div class="task-summary-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(88px, 1fr)); gap: 6px; margin-bottom: 12px;">
       <div class="task-summary-card ${isAllActive ? 'active' : ''}" role="button" tabindex="0" data-task-summary-filter="all" style="background: rgba(255,255,255,0.05); padding: 8px 6px; border-radius: 7px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;" aria-pressed="${isAllActive ? 'true' : 'false'}">
         <div style="font-size: 10px; color: rgba(255,255,255,0.55);">全部任務</div>
@@ -5431,4 +5441,209 @@ function renderRecentActivityFeed_(activities) {
       ${listHTML}
     </section>
   `;
+}
+
+function getDailyBriefRecommendations_(stats) {
+  const recs = [];
+  if (stats.overdue > 0) {
+    recs.push(`優先處理 ${stats.overdue} 件已逾期任務，請先更新狀態或安排下一步。`);
+  }
+  if (stats.blocked > 0) {
+    recs.push(`有 ${stats.blocked} 件異常任務，建議先確認卡住原因。`);
+  }
+  if (stats.waiting > 0) {
+    recs.push(`有 ${stats.waiting} 件等資料任務，建議追蹤客戶或內部回覆。`);
+  }
+  if (stats.dueToday > 0) {
+    recs.push(`今日有 ${stats.dueToday} 件任務到期，請安排完成順序。`);
+  }
+  if (recs.length === 0) {
+    recs.push("今日任務狀態穩定，可持續追蹤最新動態。");
+  }
+  return recs;
+}
+
+function generateDailyBriefText_(stats, activities) {
+  const recommendations = getDailyBriefRecommendations_(stats);
+  const now = new Date();
+  const timeStr = `${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  
+  let briefText = `【今日工作摘要】\n`;
+  if (!stats || stats.total === 0) {
+    briefText += `目前沒有任務資料。\n`;
+  } else {
+    briefText += `今日到期：${stats.dueToday} 件\n`;
+    briefText += `已逾期：${stats.overdue} 件\n`;
+    briefText += `異常：${stats.blocked} 件\n`;
+    briefText += `等資料：${stats.waiting} 件\n`;
+    briefText += `高優先：${stats.highPriority} 件\n`;
+    briefText += `今日完成：${stats.finished} 件\n`;
+  }
+  
+  briefText += `\n【優先處理】\n`;
+  recommendations.forEach((rec, idx) => {
+    briefText += `${idx + 1}. ${rec}\n`;
+  });
+  
+  briefText += `\n【最近動態】\n`;
+  const top3 = (activities || []).slice(0, 3);
+  if (top3.length === 0) {
+    briefText += `- 無最近動態\n`;
+  } else {
+    top3.forEach(act => {
+      const timeLabel = formatActivityTime_(act.timestamp);
+      const roleStr = act.role ? `(${act.role})` : "";
+      briefText += `- [${timeLabel}] [${act.actor || ""}${roleStr}] ${act.summary || ""} ${act.taskTitle ? `(${act.taskTitle})` : ""}\n`;
+    });
+  }
+  
+  briefText += `\n同步時間：${timeStr}`;
+  return briefText;
+}
+
+function renderDailyWorkBrief_(stats, activities) {
+  if (!stats || stats.total === 0) {
+    return `
+      <section class="daily-brief-card" style="margin-bottom: 12px; background: rgba(6, 26, 54, 0.45); border: 1px solid rgba(84, 151, 255, 0.16); border-radius: 8px; padding: 12px; max-width: 100%; min-width: 0; box-sizing: border-box;">
+        <div class="daily-brief-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+          <h3 class="daily-brief-title" style="margin: 0; font-size: 13px; font-weight: bold; color: #7cb1ff; display: flex; align-items: center; gap: 6px;">
+            📋 今日工作摘要
+          </h3>
+        </div>
+        <div style="font-size: 12px; color: rgba(255,255,255,0.5); text-align: center; padding: 10px 0;">目前沒有任務資料可產生摘要</div>
+      </section>
+    `;
+  }
+
+  const recs = getDailyBriefRecommendations_(stats);
+  const top3 = (activities || []).slice(0, 3);
+
+  const recsHTML = recs.map(rec => `<li>${escapeHtml(rec)}</li>`).join("");
+  let activitiesHTML = top3.map(act => {
+    const timeStr = formatActivityTime_(act.timestamp);
+    const roleStr = act.role ? `(${act.role})` : "";
+    return `<li>[${timeStr}] <strong>${escapeHtml(act.actor)}${escapeHtml(roleStr)}</strong> ${escapeHtml(act.summary)}</li>`;
+  }).join("");
+
+  if (top3.length === 0) {
+    activitiesHTML = `<li>無最近動態</li>`;
+  }
+
+  return `
+    <section class="daily-brief-card" style="margin-bottom: 12px; background: rgba(6, 26, 54, 0.45); border: 1px solid rgba(84, 151, 255, 0.16); border-radius: 8px; padding: 12px; max-width: 100%; min-width: 0; box-sizing: border-box;">
+      <div class="daily-brief-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+        <h3 class="daily-brief-title" style="margin: 0; font-size: 13px; font-weight: bold; color: #7cb1ff; display: flex; align-items: center; gap: 6px;">
+          📋 今日工作摘要
+        </h3>
+        <button class="daily-brief-copy-btn" data-action="copy-daily-brief" style="background: #2563eb; color: #fff; border: none; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; transition: background 0.2s; display: inline-flex; align-items: center; gap: 4px;">
+          🔗 複製今日摘要
+        </button>
+      </div>
+
+      <div class="daily-brief-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 12px;">
+        <div class="daily-brief-metric" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; padding: 6px; text-align: center;">
+          <div style="font-size: 10px; color: rgba(255,255,255,0.55);">今天到期</div>
+          <div style="font-size: 14px; font-weight: bold; color: #58a8ff; margin-top: 2px;">${stats.dueToday}</div>
+        </div>
+        <div class="daily-brief-metric" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; padding: 6px; text-align: center;">
+          <div style="font-size: 10px; color: rgba(255,255,255,0.55);">已逾期</div>
+          <div style="font-size: 14px; font-weight: bold; color: #ff8a80; margin-top: 2px;">${stats.overdue}</div>
+        </div>
+        <div class="daily-brief-metric" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; padding: 6px; text-align: center;">
+          <div style="font-size: 10px; color: rgba(255,255,255,0.55);">異常</div>
+          <div style="font-size: 14px; font-weight: bold; color: #ff756f; margin-top: 2px;">${stats.blocked}</div>
+        </div>
+        <div class="daily-brief-metric" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; padding: 6px; text-align: center;">
+          <div style="font-size: 10px; color: rgba(255,255,255,0.55);">等資料</div>
+          <div style="font-size: 14px; font-weight: bold; color: #f4bf58; margin-top: 2px;">${stats.waiting}</div>
+        </div>
+        <div class="daily-brief-metric" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; padding: 6px; text-align: center;">
+          <div style="font-size: 10px; color: rgba(255,255,255,0.55);">高優先</div>
+          <div style="font-size: 14px; font-weight: bold; color: #ffcf5a; margin-top: 2px;">${stats.highPriority}</div>
+        </div>
+        <div class="daily-brief-metric" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; padding: 6px; text-align: center;">
+          <div style="font-size: 10px; color: rgba(255,255,255,0.55);">今日完成</div>
+          <div style="font-size: 14px; font-weight: bold; color: #54e2b0; margin-top: 2px;">${stats.finished}</div>
+        </div>
+      </div>
+
+      <div class="daily-brief-section" style="margin-bottom: 8px; text-align: left;">
+        <h4 style="margin: 0 0 4px 0; font-size: 11px; color: rgba(255,255,255,0.5); font-weight: normal;">🚨 優先處理建議</h4>
+        <ul class="daily-brief-list" style="margin: 0; padding-left: 16px; font-size: 12px; color: rgba(255,255,255,0.85); line-height: 1.5; display: flex; flex-direction: column; gap: 2px;">
+          ${recsHTML}
+        </ul>
+      </div>
+
+      <div class="daily-brief-section" style="text-align: left;">
+        <h4 style="margin: 0 0 4px 0; font-size: 11px; color: rgba(255,255,255,0.5); font-weight: normal;">📢 最近動態摘要</h4>
+        <ul class="daily-brief-list" style="margin: 0; padding-left: 16px; font-size: 12px; color: rgba(255,255,255,0.85); line-height: 1.5; display: flex; flex-direction: column; gap: 2px;">
+          ${activitiesHTML}
+        </ul>
+      </div>
+    </section>
+  `;
+}
+
+function copyDailyBriefToClipboard_() {
+  const userRole = state.currentUser ? state.currentUser.role : null;
+  const username = state.currentUser ? state.currentUser.username : "";
+  const displayName = state.currentUser ? state.currentUser.displayName : "";
+  const salesOwner = state.currentUser ? state.currentUser.salesOwner : "";
+
+  if (!userRole) return;
+
+  const tasks = state.tasks || [];
+  const visibleTasks = tasks.filter(task => {
+    if (userRole === "retail" || userRole === "showroom" || userRole === "retailSales" || userRole === "showroomSales" || userRole === "sales") {
+      const isAssignedToMe = (task.assignedTo && (task.assignedTo === username || task.assignedTo === displayName || task.assignedTo === salesOwner));
+      const isCreatedByMe = (task.createdBy && (task.createdBy === username || task.createdBy === displayName));
+      return isAssignedToMe || isCreatedByMe;
+    } else if (userRole === "assistant") {
+      const isAssignedToMe = (task.assignedTo && (task.assignedTo === username || task.assignedTo === displayName || task.assignedTo === salesOwner));
+      return task.assignedRole === "assistant" || isAssignedToMe;
+    } else if (userRole === "admin" || userRole === "boss") {
+      return true;
+    }
+    return false;
+  });
+
+  const stats = getTaskSummaryStats_(visibleTasks);
+  const activities = getRecentTaskActivities_(visibleTasks);
+  const text = generateDailyBriefText_(stats, activities);
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text)
+      .then(() => {
+        toast("已複製今日摘要到剪貼簿 📋");
+      })
+      .catch(err => {
+        console.error("Clipboard copy failed:", err);
+        fallbackCopyText_(text);
+      });
+  } else {
+    fallbackCopyText_(text);
+  }
+}
+
+function fallbackCopyText_(text) {
+  try {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.top = "0";
+    textArea.style.left = "0";
+    textArea.style.position = "fixed";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    const successful = document.execCommand("copy");
+    document.body.removeChild(textArea);
+    if (successful) {
+      toast("已複製今日摘要到剪貼簿 📋");
+    } else {
+      toast("複製失敗，請手動選取文字");
+    }
+  } catch (err) {
+    console.error("Fallback copy failed:", err);
+    toast("複製失敗，請手動選取文字");
+  }
 }

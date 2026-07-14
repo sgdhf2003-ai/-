@@ -2489,3 +2489,59 @@ textarea:focus {
     max-width: 100% !important;
   }
 }
+
+/* Daily Work Brief Styles */
+.daily-brief-card {
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.daily-brief-header {
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.daily-brief-title {
+  color: #7cb1ff;
+  font-weight: bold;
+}
+
+.daily-brief-copy-btn:hover {
+  background: #1d4ed8 !important;
+}
+
+.daily-brief-copy-btn:active {
+  transform: scale(0.98);
+}
+
+.daily-brief-grid {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+.daily-brief-metric {
+  box-sizing: border-box;
+}
+
+.daily-brief-section {
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.daily-brief-list {
+  box-sizing: border-box;
+  list-style-type: disc;
+  margin: 0;
+  padding-left: 16px;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.daily-brief-list li {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
