@@ -2385,6 +2385,10 @@ textarea:focus {
 .activity-feed-list {
   scrollbar-width: thin;
   scrollbar-color: rgba(255,255,255,0.15) transparent;
+  max-height: 220px !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .activity-feed-list::-webkit-scrollbar {
@@ -2428,6 +2432,15 @@ textarea:focus {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .activity-feed-list {
+    max-height: 160px !important;
+  }
+  .activity-feed-item {
+    padding: 4px 6px !important;
+  }
 }
 
 @media (max-width: 480px) {
