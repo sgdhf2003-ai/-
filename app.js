@@ -5443,32 +5443,119 @@ function renderRecentActivityFeed_(activities) {
   `;
 }
 
-function getDailyBriefRecommendations_(stats) {
-  const recs = [];
-  if (stats.overdue > 0) {
-    recs.push(`優先處理 ${stats.overdue} 件已逾期任務，請先更新狀態或安排下一步。`);
+function getDailyBriefTitleByRole_(role) {
+  const r = String(role || "").trim();
+  if (r === "retailSales" || r === "retail" || r === "sales") {
+    return "今日工作摘要 · 零售業務版";
   }
-  if (stats.blocked > 0) {
-    recs.push(`有 ${stats.blocked} 件異常任務，建議先確認卡住原因。`);
+  if (r === "showroomSales" || r === "showroom") {
+    return "今日工作摘要 · 門市業務版";
   }
-  if (stats.waiting > 0) {
-    recs.push(`有 ${stats.waiting} 件等資料任務，建議追蹤客戶或內部回覆。`);
+  if (r === "assistant") {
+    return "今日工作摘要 · 助理版";
   }
-  if (stats.dueToday > 0) {
-    recs.push(`今日有 ${stats.dueToday} 件任務到期，請安排完成順序。`);
+  if (r === "admin" || r === "boss" || r === "manager") {
+    return "今日工作摘要 · 主管版";
   }
-  if (recs.length === 0) {
-    recs.push("今日任務狀態穩定，可持續追蹤最新動態。");
-  }
-  return recs;
+  return "今日工作摘要";
 }
 
-function generateDailyBriefText_(stats, activities) {
-  const recommendations = getDailyBriefRecommendations_(stats);
+function getDailyBriefRecommendations_(stats, role) {
+  const recs = [];
+  const r = String(role || "").trim();
+
+  if (r === "retailSales" || r === "retail" || r === "sales") {
+    if (stats.overdue > 0) {
+      recs.push(`有 ${stats.overdue} 件任務已逾期，請先更新客戶/送貨/退貨處理進度。`);
+    }
+    if (stats.blocked > 0) {
+      recs.push(`有 ${stats.blocked} 件異常任務，優先確認客訴、缺料或送貨卡點。`);
+    }
+    if (stats.waiting > 0) {
+      recs.push(`有 ${stats.waiting} 件等資料任務，建議追蹤客戶回覆或內部確認。`);
+    }
+    if (stats.dueToday > 0 && recs.length < 3) {
+      recs.push(`今日有 ${stats.dueToday} 件任務到期，請先排定送貨、樣品或收退貨順序。`);
+    }
+  } else if (r === "showroomSales" || r === "showroom") {
+    if (stats.overdue > 0) {
+      recs.push(`有 ${stats.overdue} 件任務已逾期，請先更新客戶追蹤、報價或加工進度。`);
+    }
+    if (stats.blocked > 0) {
+      recs.push(`有 ${stats.blocked} 件異常任務，建議先確認加工、報價或帶看卡點。`);
+    }
+    if (stats.waiting > 0) {
+      recs.push(`有 ${stats.waiting} 件等資料任務，請追蹤客戶、設計師或報價回覆。`);
+    }
+    if (stats.dueToday > 0 && recs.length < 3) {
+      recs.push(`今日有 ${stats.dueToday} 件任務到期，請先安排客戶追蹤、報價與門市接待順序。`);
+    }
+  } else if (r === "assistant") {
+    if (stats.overdue > 0) {
+      recs.push(`有 ${stats.overdue} 件任務已逾期，請先協助催辦、補資料或回報主管。`);
+    }
+    if (stats.blocked > 0) {
+      recs.push(`有 ${stats.blocked} 件異常任務，建議先整理卡點並回報主管。`);
+    }
+    if (stats.waiting > 0) {
+      recs.push(`有 ${stats.waiting} 件等資料任務，請優先追蹤訂單、保留、加工或送貨資料。`);
+    }
+    if (stats.dueToday > 0 && recs.length < 3) {
+      recs.push(`今日有 ${stats.dueToday} 件任務到期，請先安排行政處理、送貨與加工追蹤。`);
+    }
+  } else if (r === "admin" || r === "boss" || r === "manager") {
+    if (stats.overdue > 0) {
+      recs.push(`全體有 ${stats.overdue} 件任務已逾期，建議先檢查責任人與延誤原因。`);
+    }
+    if (stats.blocked > 0) {
+      recs.push(`全體有 ${stats.blocked} 件異常任務，請優先確認是否需要主管介入。`);
+    }
+    if (stats.waiting > 0) {
+      recs.push(`全體有 ${stats.waiting} 件等資料任務，建議追蹤卡在哪個人或哪個流程。`);
+    }
+    if (stats.dueToday > 0 && recs.length < 3) {
+      recs.push(`今日全體有 ${stats.dueToday} 件任務到期，請確認高優先與重要客戶是否有人處理。`);
+    }
+  } else {
+    if (stats.overdue > 0) {
+      recs.push(`優先處理 ${stats.overdue} 件已逾期任務，請先更新狀態或安排下一步。`);
+    }
+    if (stats.blocked > 0) {
+      recs.push(`有 ${stats.blocked} 件異常任務，建議先確認卡住原因。`);
+    }
+    if (stats.waiting > 0) {
+      recs.push(`有 ${stats.waiting} 件等資料任務，建議追蹤客戶或內部回覆。`);
+    }
+    if (stats.dueToday > 0 && recs.length < 3) {
+      recs.push(`今日有 ${stats.dueToday} 件任務到期，請安排完成順序。`);
+    }
+  }
+
+  const finalRecs = recs.slice(0, 3);
+
+  if (finalRecs.length === 0) {
+    if (r === "retailSales" || r === "retail" || r === "sales") {
+      finalRecs.push("今日任務狀態穩定，請做好客戶追蹤並確認客訴處理進度。");
+    } else if (r === "showroomSales" || r === "showroom") {
+      finalRecs.push("今日任務狀態穩定，請做好展場帶看預約與加工單排程追蹤。");
+    } else if (r === "assistant") {
+      finalRecs.push("今日行政任務狀態良好，可協助核對保留款或整理今日出貨單。");
+    } else if (r === "admin" || r === "boss" || r === "manager") {
+      finalRecs.push("今日全體任務進度正常，請持續關注近期大宗案場報備與售後狀況。");
+    } else {
+      finalRecs.push("今日任務狀態穩定，可持續追蹤最新動態。");
+    }
+  }
+  return finalRecs;
+}
+
+function generateDailyBriefText_(stats, activities, role) {
+  const recommendations = getDailyBriefRecommendations_(stats, role);
   const now = new Date();
   const timeStr = `${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const briefTitle = getDailyBriefTitleByRole_(role);
   
-  let briefText = `【今日工作摘要】\n`;
+  let briefText = `【${briefTitle}】\n`;
   if (!stats || stats.total === 0) {
     briefText += `目前沒有任務資料。\n`;
   } else {
@@ -5502,12 +5589,15 @@ function generateDailyBriefText_(stats, activities) {
 }
 
 function renderDailyWorkBrief_(stats, activities) {
+  const role = state.currentUser ? state.currentUser.role : null;
+  const briefTitle = getDailyBriefTitleByRole_(role);
+
   if (!stats || stats.total === 0) {
     return `
       <section class="daily-brief-card" style="margin-bottom: 12px; background: rgba(6, 26, 54, 0.45); border: 1px solid rgba(84, 151, 255, 0.16); border-radius: 8px; padding: 12px; max-width: 100%; min-width: 0; box-sizing: border-box;">
         <div class="daily-brief-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
           <h3 class="daily-brief-title" style="margin: 0; font-size: 13px; font-weight: bold; color: #7cb1ff; display: flex; align-items: center; gap: 6px;">
-            📋 今日工作摘要
+            📋 ${escapeHtml(briefTitle)}
           </h3>
         </div>
         <div style="font-size: 12px; color: rgba(255,255,255,0.5); text-align: center; padding: 10px 0;">目前沒有任務資料可產生摘要</div>
@@ -5515,7 +5605,7 @@ function renderDailyWorkBrief_(stats, activities) {
     `;
   }
 
-  const recs = getDailyBriefRecommendations_(stats);
+  const recs = getDailyBriefRecommendations_(stats, role);
   const top3 = (activities || []).slice(0, 3);
 
   const recsHTML = recs.map(rec => `<li>${escapeHtml(rec)}</li>`).join("");
@@ -5533,7 +5623,7 @@ function renderDailyWorkBrief_(stats, activities) {
     <section class="daily-brief-card" style="margin-bottom: 12px; background: rgba(6, 26, 54, 0.45); border: 1px solid rgba(84, 151, 255, 0.16); border-radius: 8px; padding: 12px; max-width: 100%; min-width: 0; box-sizing: border-box;">
       <div class="daily-brief-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
         <h3 class="daily-brief-title" style="margin: 0; font-size: 13px; font-weight: bold; color: #7cb1ff; display: flex; align-items: center; gap: 6px;">
-          📋 今日工作摘要
+          📋 ${escapeHtml(briefTitle)}
         </h3>
         <button type="button" class="daily-brief-copy-btn" data-task-action="copy-daily-brief" style="background: #2563eb; color: #fff; border: none; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; transition: background 0.2s; display: inline-flex; align-items: center; gap: 4px;">
           🔗 複製今日摘要
@@ -5608,7 +5698,7 @@ function copyDailyBriefToClipboard_() {
 
     const stats = getTaskSummaryStats_(visibleTasks);
     const activities = getRecentTaskActivities_(visibleTasks);
-    const text = generateDailyBriefText_(stats, activities);
+    const text = generateDailyBriefText_(stats, activities, userRole);
 
     const onSuccess = () => toast("已複製今日摘要到剪貼簿 📋");
     const onFailure = () => toast("複製失敗，請手動選取摘要文字");
