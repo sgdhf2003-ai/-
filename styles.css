@@ -2367,3 +2367,74 @@ textarea:focus {
   gap: 12px;
   margin-top: 8px;
 }
+
+/* Recent Activity Feed Styles */
+.activity-feed {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+.activity-feed-toggle {
+  transition: opacity 0.2s ease;
+}
+
+.activity-feed-toggle:hover {
+  opacity: 0.85;
+}
+
+.activity-feed-list {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.15) transparent;
+}
+
+.activity-feed-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.activity-feed-list::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.15);
+  border-radius: 2px;
+}
+
+.activity-feed-item {
+  box-sizing: border-box;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.activity-feed-item:hover {
+  background: rgba(255,255,255,0.06) !important;
+}
+
+.activity-badge {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.activity-feed-meta {
+  flex-shrink: 0;
+}
+
+.activity-feed-title {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.activity-feed-summary {
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .activity-feed-item {
+    font-size: 11px !important;
+  }
+  .activity-feed-title {
+    max-width: 100% !important;
+  }
+}

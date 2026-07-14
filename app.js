@@ -211,6 +211,41 @@ document.addEventListener("click", (event) => {
     return;
   }
 
+  const feedToggle = event.target.closest(".activity-feed-toggle");
+  if (feedToggle) {
+    event.preventDefault();
+    event.stopPropagation();
+    state.activityFeedExpanded = !(state.activityFeedExpanded || false);
+    saveState();
+    renderTasks();
+    return;
+  }
+
+  const activityItem = event.target.closest("[data-activity-task-id]");
+  if (activityItem) {
+    event.preventDefault();
+    event.stopPropagation();
+    const taskId = decodeURIComponent(activityItem.dataset.activityTaskId);
+    if (taskId) {
+      taskQuickPreset = "all";
+      taskSearchKeyword = taskId;
+      const searchInput = document.querySelector("#taskSearchKeyword");
+      if (searchInput) searchInput.value = taskId;
+
+      const statusSelect = document.querySelector("#filterTaskStatus");
+      if (statusSelect) statusSelect.value = "all";
+      const roleSelect = document.querySelector("#filterTaskRole");
+      if (roleSelect) roleSelect.value = "all";
+      const assigneeSelect = document.querySelector("#filterTaskAssignee");
+      if (assigneeSelect) assigneeSelect.value = "all";
+      const dueDateSelect = document.querySelector("#filterTaskDueDate");
+      if (dueDateSelect) dueDateSelect.value = "all";
+
+      renderTasks();
+    }
+    return;
+  }
+
 });
 
 document.querySelector("#salesFilter").addEventListener("change", (event) => {
@@ -3801,9 +3836,12 @@ function renderTasks() {
   const isHighPriorityActive = taskQuickPreset === "highPriority";
   const isFinishedActive = (taskQuickPreset === "completed" || (taskQuickPreset === "custom" && statusFilter === "Finished"));
   const focusHTML = renderTaskDashboardFocus_(stats);
+  const activities = getRecentTaskActivities_(visibleTasks);
+  const recentActivityFeedHTML = renderRecentActivityFeed_(activities);
 
   const summaryHTML = `
     ${focusHTML}
+    ${recentActivityFeedHTML}
     <div class="task-summary-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(88px, 1fr)); gap: 6px; margin-bottom: 12px;">
       <div class="task-summary-card ${isAllActive ? 'active' : ''}" role="button" tabindex="0" data-task-summary-filter="all" style="background: rgba(255,255,255,0.05); padding: 8px 6px; border-radius: 7px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;" aria-pressed="${isAllActive ? 'true' : 'false'}">
         <div style="font-size: 10px; color: rgba(255,255,255,0.55);">全部任務</div>
@@ -5184,3 +5222,213 @@ document.addEventListener("click", (e) => {
     }
   }
 });
+
+function getRecentTaskActivities_(tasks) {
+  const activities = [];
+  
+  function parseTimestampToMs_(ts) {
+    if (!ts) return 0;
+    try {
+      let iso = String(ts).trim();
+      if (!iso.includes("T") && iso.includes(" ")) {
+        iso = iso.replace(" ", "T");
+      }
+      if (iso.length === 16) {
+        iso += ":00";
+      }
+      const d = new Date(iso);
+      const ms = d.getTime();
+      return isNaN(ms) ? 0 : ms;
+    } catch {
+      return 0;
+    }
+  }
+
+  (tasks || []).forEach(task => {
+    const createdMs = parseTimestampToMs_(task.createdAt);
+    const completedMs = parseTimestampToMs_(task.completedAt);
+    const updatedMs = parseTimestampToMs_(task.updatedAt);
+    
+    // 1. Create activity
+    if (createdMs > 0) {
+      activities.push({
+        taskId: task.id,
+        taskTitle: task.title,
+        type: "create",
+        label: "建立",
+        actor: task.createdBy || "系統",
+        role: task.sourceRole || "",
+        timestamp: createdMs,
+        summary: "建立了任務",
+        detail: task.title
+      });
+    }
+    // 2. Completed activity
+    if (completedMs > 0 && (task.status === "Finished" || task.status === "done")) {
+      activities.push({
+        taskId: task.id,
+        taskTitle: task.title,
+        type: "completed",
+        label: "完成",
+        actor: task.updatedBy || "系統",
+        role: "",
+        timestamp: completedMs,
+        summary: "完成了任務",
+        detail: task.title
+      });
+    }
+    // 3. Waiting activity
+    if (task.status === "Waiting" && updatedMs > 0 && Math.abs(updatedMs - completedMs) > 1000) {
+      activities.push({
+        taskId: task.id,
+        taskTitle: task.title,
+        type: "waiting",
+        label: "等資料",
+        actor: task.updatedBy || "系統",
+        role: "",
+        timestamp: updatedMs,
+        summary: "標記任務為等待補資料",
+        detail: task.blockedReason ? `原因: ${task.blockedReason}` : ""
+      });
+    }
+    // 4. Blocked activity
+    if (task.status === "Blocked" && updatedMs > 0 && Math.abs(updatedMs - completedMs) > 1000) {
+      activities.push({
+        taskId: task.id,
+        taskTitle: task.title,
+        type: "blocked",
+        label: "異常",
+        actor: task.updatedBy || "系統",
+        role: "",
+        timestamp: updatedMs,
+        summary: "標記任務為異常",
+        detail: task.blockedReason ? `原因: ${task.blockedReason}` : ""
+      });
+    }
+    // 5. General update
+    if (updatedMs > 0 && Math.abs(updatedMs - createdMs) > 5000 && Math.abs(updatedMs - completedMs) > 5000 && task.status !== "Blocked" && task.status !== "Waiting") {
+      activities.push({
+        taskId: task.id,
+        taskTitle: task.title,
+        type: "general",
+        label: "更新",
+        actor: task.updatedBy || "系統",
+        role: "",
+        timestamp: updatedMs,
+        summary: "更新了任務",
+        detail: ""
+      });
+    }
+
+    // 6. Notes extraction
+    if (task.note) {
+      const lines = task.note.split("\n").map(l => l.trim()).filter(Boolean);
+      lines.forEach(line => {
+        const match = line.match(/^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}) ([^(]+)\(([^)]+)\)\] (.*)$/);
+        if (match) {
+          const timestampStr = match[1];
+          const actor = match[2].trim();
+          const role = match[3].trim();
+          const content = match[4].trim();
+          const noteMs = parseTimestampToMs_(timestampStr);
+          if (noteMs > 0) {
+            activities.push({
+              taskId: task.id,
+              taskTitle: task.title,
+              type: "note",
+              label: "備註",
+              actor: actor,
+              role: role,
+              timestamp: noteMs,
+              summary: content.length > 60 ? content.slice(0, 60) + "..." : content,
+              detail: content
+            });
+          }
+        }
+      });
+    }
+  });
+
+  activities.sort((a, b) => b.timestamp - a.timestamp);
+  return activities.slice(0, 10);
+}
+
+function formatActivityTime_(timestampMs) {
+  const d = new Date(timestampMs);
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const date = String(d.getDate()).padStart(2, '0');
+  const h = String(d.getHours()).padStart(2, '0');
+  const min = String(d.getMinutes()).padStart(2, '0');
+  return `${m}/${date} ${h}:${min}`;
+}
+
+function renderRecentActivityFeed_(activities) {
+  const isExpanded = state.activityFeedExpanded || false;
+  
+  if (!activities || activities.length === 0) {
+    return `
+      <section class="activity-feed" style="margin-bottom: 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 10px;">
+        <div style="font-size: 13px; color: rgba(255,255,255,0.5); text-align: center;">目前還沒有近期任務動態</div>
+      </section>
+    `;
+  }
+  
+  const latest = activities[0];
+  const latestTime = formatActivityTime_(latest.timestamp);
+  const latestActor = latest.actor;
+  const latestRole = latest.role ? `(${latest.role})` : "";
+  const latestText = `${latestActor}${latestRole} ${latest.summary}`;
+  
+  let listHTML = "";
+  if (isExpanded) {
+    listHTML = `
+      <div class="activity-feed-list" style="margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 8px; display: flex; flex-direction: column; gap: 8px; max-height: 250px; overflow-y: auto;">
+        ${activities.map(act => {
+          const timeStr = formatActivityTime_(act.timestamp);
+          const actorRole = act.role ? `(${act.role})` : "";
+          
+          let badgeStyle = "background: rgba(255,255,255,0.1); color: #fff;";
+          if (act.type === "create") badgeStyle = "background: rgba(59,130,246,0.15); color: #3b82f6;";
+          else if (act.type === "completed") badgeStyle = "background: rgba(16,185,129,0.15); color: #10b981;";
+          else if (act.type === "note") badgeStyle = "background: rgba(244,191,88,0.15); color: #f4bf58;";
+          else if (act.type === "blocked") badgeStyle = "background: rgba(239,68,68,0.15); color: #ef4444;";
+          else if (act.type === "waiting") badgeStyle = "background: rgba(245,158,11,0.15); color: #f59e0b;";
+
+          return `
+            <div class="activity-feed-item" data-activity-task-id="${escapeHtml(act.taskId)}" style="display: flex; flex-direction: column; gap: 4px; padding: 6px 8px; border-radius: 6px; background: rgba(255,255,255,0.02); cursor: pointer; transition: background 0.2s;" role="button">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                  <span class="activity-badge" style="font-size: 10px; font-weight: bold; padding: 1px 6px; border-radius: 4px; ${badgeStyle}">${escapeHtml(act.label)}</span>
+                  <strong style="font-size: 12px; color: #fff;">${escapeHtml(act.actor)}&nbsp;${escapeHtml(actorRole)}</strong>
+                  <span style="font-size: 12px; color: rgba(255,255,255,0.85);">${escapeHtml(act.summary)}</span>
+                </div>
+                <span class="activity-feed-meta" style="font-size: 11px; color: rgba(255,255,255,0.4); white-space: nowrap;">${escapeHtml(timeStr)}</span>
+              </div>
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11px;">
+                <span class="activity-feed-title" style="color: #7cb1ff; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">📌 ${escapeHtml(act.taskTitle)}</span>
+                ${act.type === "note" && act.detail ? `<span class="activity-feed-summary" style="color: rgba(255,255,255,0.5); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60%;">${escapeHtml(act.summary)}</span>` : ""}
+              </div>
+            </div>
+          `;
+        }).join("")}
+      </div>
+    `;
+  }
+
+  return `
+    <section class="activity-feed" style="margin-bottom: 12px; background: rgba(6, 26, 54, 0.45); border: 1px solid rgba(84, 151, 255, 0.16); border-radius: 8px; padding: 10px;">
+      <div class="activity-feed-toggle" style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none;">
+        <div style="display: flex; align-items: center; gap: 8px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; flex: 1; font-size: 12px;">
+          <span style="font-size: 14px;">📢</span>
+          <span style="font-weight: bold; color: #7cb1ff;">最近動態:</span>
+          <span style="color: rgba(255,255,255,0.85); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">${escapeHtml(latestText)}</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: rgba(255,255,255,0.6); white-space: nowrap; margin-left: 8px;">
+          <span>${escapeHtml(latestTime)}</span>
+          <span style="font-size: 10px;">${isExpanded ? "▲ 收合" : "▼ 展開"}</span>
+        </div>
+      </div>
+      ${listHTML}
+    </section>
+  `;
+}
