@@ -5535,7 +5535,7 @@ function renderDailyWorkBrief_(stats, activities) {
         <h3 class="daily-brief-title" style="margin: 0; font-size: 13px; font-weight: bold; color: #7cb1ff; display: flex; align-items: center; gap: 6px;">
           📋 今日工作摘要
         </h3>
-        <button class="daily-brief-copy-btn" data-action="copy-daily-brief" style="background: #2563eb; color: #fff; border: none; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; transition: background 0.2s; display: inline-flex; align-items: center; gap: 4px;">
+        <button type="button" class="daily-brief-copy-btn" data-action="copy-daily-brief" style="background: #2563eb; color: #fff; border: none; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; transition: background 0.2s; display: inline-flex; align-items: center; gap: 4px;">
           🔗 複製今日摘要
         </button>
       </div>
@@ -5585,65 +5585,90 @@ function renderDailyWorkBrief_(stats, activities) {
 }
 
 function copyDailyBriefToClipboard_() {
-  const userRole = state.currentUser ? state.currentUser.role : null;
-  const username = state.currentUser ? state.currentUser.username : "";
-  const displayName = state.currentUser ? state.currentUser.displayName : "";
-  const salesOwner = state.currentUser ? state.currentUser.salesOwner : "";
+  try {
+    const userRole = state.currentUser ? state.currentUser.role : "未知角色";
+    const username = state.currentUser ? state.currentUser.username : "";
+    const displayName = state.currentUser ? state.currentUser.displayName : "";
+    const salesOwner = state.currentUser ? state.currentUser.salesOwner : "";
 
-  if (!userRole) return;
+    const tasks = Array.isArray(state.tasks) ? state.tasks : [];
+    const visibleTasks = tasks.filter(task => {
+      if (userRole === "retail" || userRole === "showroom" || userRole === "retailSales" || userRole === "showroomSales" || userRole === "sales") {
+        const isAssignedToMe = (task.assignedTo && (task.assignedTo === username || task.assignedTo === displayName || task.assignedTo === salesOwner));
+        const isCreatedByMe = (task.createdBy && (task.createdBy === username || task.createdBy === displayName));
+        return isAssignedToMe || isCreatedByMe;
+      } else if (userRole === "assistant") {
+        const isAssignedToMe = (task.assignedTo && (task.assignedTo === username || task.assignedTo === displayName || task.assignedTo === salesOwner));
+        return task.assignedRole === "assistant" || isAssignedToMe;
+      } else if (userRole === "admin" || userRole === "boss") {
+        return true;
+      }
+      return false;
+    });
 
-  const tasks = state.tasks || [];
-  const visibleTasks = tasks.filter(task => {
-    if (userRole === "retail" || userRole === "showroom" || userRole === "retailSales" || userRole === "showroomSales" || userRole === "sales") {
-      const isAssignedToMe = (task.assignedTo && (task.assignedTo === username || task.assignedTo === displayName || task.assignedTo === salesOwner));
-      const isCreatedByMe = (task.createdBy && (task.createdBy === username || task.createdBy === displayName));
-      return isAssignedToMe || isCreatedByMe;
-    } else if (userRole === "assistant") {
-      const isAssignedToMe = (task.assignedTo && (task.assignedTo === username || task.assignedTo === displayName || task.assignedTo === salesOwner));
-      return task.assignedRole === "assistant" || isAssignedToMe;
-    } else if (userRole === "admin" || userRole === "boss") {
-      return true;
+    const stats = getTaskSummaryStats_(visibleTasks);
+    const activities = getRecentTaskActivities_(visibleTasks);
+    const text = generateDailyBriefText_(stats, activities);
+
+    const onSuccess = () => toast("已複製今日摘要到剪貼簿 📋");
+    const onFailure = () => toast("複製失敗，請手動選取摘要文字");
+
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+      try {
+        const result = navigator.clipboard.writeText(text);
+        if (result && typeof result.then === "function") {
+          result.then(onSuccess).catch((err) => {
+            console.warn("[DailyBrief] async copy failed, using fallback", err);
+            try {
+              if (fallbackCopyText_(text)) onSuccess();
+              else onFailure();
+            } catch (fallbackError) {
+              console.error("[DailyBrief] fallback exception", fallbackError);
+              onFailure();
+            }
+          });
+          return;
+        }
+        onSuccess();
+        return;
+      } catch (clipboardError) {
+        console.warn("[DailyBrief] sync copy failed, using fallback", clipboardError);
+        if (fallbackCopyText_(text)) onSuccess();
+        else onFailure();
+        return;
+      }
     }
-    return false;
-  });
 
-  const stats = getTaskSummaryStats_(visibleTasks);
-  const activities = getRecentTaskActivities_(visibleTasks);
-  const text = generateDailyBriefText_(stats, activities);
-
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(text)
-      .then(() => {
-        toast("已複製今日摘要到剪貼簿 📋");
-      })
-      .catch(err => {
-        console.error("Clipboard copy failed:", err);
-        fallbackCopyText_(text);
-      });
-  } else {
-    fallbackCopyText_(text);
+    if (fallbackCopyText_(text)) onSuccess();
+    else onFailure();
+  } catch (error) {
+    console.warn("[DailyBrief] copy workflow failed", error);
+    toast("產生摘要失敗，請稍後再試");
   }
 }
 
 function fallbackCopyText_(text) {
+  const textArea = document.createElement("textarea");
+  textArea.value = text;
+  textArea.readOnly = true;
+  textArea.setAttribute("readonly", "");
+  textArea.style.position = "fixed";
+  textArea.style.top = "0";
+  textArea.style.left = "-9999px";
+  textArea.style.width = "1px";
+  textArea.style.height = "1px";
+  textArea.style.opacity = "0";
+  document.body.appendChild(textArea);
+
   try {
-    const textArea = document.createElement("textarea");
-    textArea.value = text;
-    textArea.style.top = "0";
-    textArea.style.left = "0";
-    textArea.style.position = "fixed";
-    document.body.appendChild(textArea);
     textArea.focus();
     textArea.select();
-    const successful = document.execCommand("copy");
+    textArea.setSelectionRange(0, text.length);
+    return document.execCommand("copy");
+  } catch (error) {
+    console.warn("[DailyBrief] fallback execCommand failed", error);
+    return false;
+  } finally {
     document.body.removeChild(textArea);
-    if (successful) {
-      toast("已複製今日摘要到剪貼簿 📋");
-    } else {
-      toast("複製失敗，請手動選取文字");
-    }
-  } catch (err) {
-    console.error("Fallback copy failed:", err);
-    toast("複製失敗，請手動選取文字");
   }
 }
