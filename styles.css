@@ -82,7 +82,7 @@ textarea:focus-visible {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin: -18px -14px 20px;
+  margin: 0 0 20px;
   padding: max(18px, env(safe-area-inset-top)) 14px 16px;
   background: rgba(6, 16, 32, 0.92);
   border-bottom: 1px solid rgba(88, 137, 220, 0.18);
