@@ -40,6 +40,13 @@ body {
   -webkit-text-size-adjust: 100%;
 }
 
+/* Global overflow guard for mobile */
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+
 button,
 input,
 select,
@@ -884,6 +891,42 @@ textarea {
   box-shadow: 0 16px 45px rgba(0, 0, 0, 0.36);
   backdrop-filter: blur(18px);
 }
+
+/* Mobile layout adjustments */
+@media (max-width: 640px) {
+  .app-shell {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .topbar, .topbar-actions, .topbar input, .topbar select, .topbar button {
+    max-width: 100%;
+    min-width: 0;
+    width: 100% !important;
+    box-sizing: border-box;
+  }
+  .domain-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 12px;
+  }
+  .domain-card, .team-badge, .quick-row {
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+  .quick-row {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .bottom-nav {
+    left: 0;
+    transform: none;
+    width: calc(100% - 18px);
+    max-width: 100%;
+  }
+}
+
 
 .nav-item,
 .nav-pill {
