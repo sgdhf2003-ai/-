@@ -2612,3 +2612,159 @@ function getAllowedTaskStatusReasons_(status) {
   }
   return null;
 }
+
+/**
+ * LINE Reminder Link-only Dry-run functions
+ */
+
+function buildLineReminderLinkDryRunReport_(options) {
+  options = options || {};
+  const mode = options.mode || "dry-run";
+  if (mode !== "dry-run") {
+    throw new Error("Invalid mode: buildLineReminderLinkDryRunReport_ only supports 'dry-run' mode.");
+  }
+
+  const context = getLineReminderDryRunContext_(options);
+  const candidates = getLineReminderCandidates_();
+  
+  const candidateUserCount = candidates.length;
+  let eligibleUserCount = 0;
+  let skippedUserCount = 0;
+  
+  const processedCandidates = [];
+  const lineUserIdsSeen = {};
+
+  for (let i = 0; i < candidates.length; i++) {
+    const candidate = candidates[i];
+    const eligibility = isLineReminderCandidateEligible_(candidate, context, lineUserIdsSeen);
+    
+    let preview = "";
+    if (eligibility.eligible) {
+      eligibleUserCount++;
+      preview = buildLineReminderMessagePreview_(candidate, context);
+      if (candidate.lineUserId) {
+        lineUserIdsSeen[candidate.lineUserId] = true;
+      }
+    } else {
+      skippedUserCount++;
+    }
+
+    processedCandidates.push({
+      userId: candidate.userId,
+      name: candidate.name,
+      role: candidate.role,
+      status: candidate.status,
+      hasLineUserId: !!candidate.lineUserId,
+      optIn: "not_configured",
+      quietHoursBlocked: false,
+      frequencyBlocked: false,
+      duplicateBlocked: eligibility.reason === "Skip: Duplicate LINE User ID",
+      finalEligible: eligibility.eligible,
+      reason: eligibility.eligible ? "OK" : eligibility.reason,
+      messagePreview: preview
+    });
+  }
+
+  return {
+    ok: true,
+    mode: "dry-run",
+    runId: context.runId,
+    runAt: context.runAt,
+    notificationType: context.notificationType,
+    targetRole: options.targetRole || "all",
+    workCenterUrl: context.workCenterUrl,
+    candidateUserCount: candidateUserCount,
+    eligibleUserCount: eligibleUserCount,
+    skippedUserCount: skippedUserCount,
+    candidates: processedCandidates,
+    lineApiCalled: false,
+    messagesSent: 0,
+    warnings: ["opt_in_not_configured_defaulting_to_true_for_simulation"],
+    errors: []
+  };
+}
+
+function getLineReminderCandidates_() {
+  const rawUsers = readObjects(SHEETS.users, HEADERS.users);
+  return rawUsers.map(function(u) {
+    return {
+      userId: u.id || "",
+      name: u.displayName || u.username || "",
+      role: u.role || "",
+      status: u.status || "",
+      lineUserId: u.lineUserId || ""
+    };
+  });
+}
+
+function isLineReminderCandidateEligible_(candidate, context, lineUserIdsSeen) {
+  if (candidate.status !== "啟用") {
+    return { eligible: false, reason: "Skip: Status is not 啟用" };
+  }
+
+  if (!candidate.lineUserId || candidate.lineUserId.trim() === "") {
+    return { eligible: false, reason: "Skip: Missing LINE User ID" };
+  }
+
+  if (lineUserIdsSeen[candidate.lineUserId]) {
+    return { eligible: false, reason: "Skip: Duplicate LINE User ID" };
+  }
+
+  const role = candidate.role ? candidate.role.trim() : "";
+  const allowedRoles = [
+    "admin", "boss", "manager", "assistant", "助理",
+    "retailSales", "retail", "sales", "showroomSales", "showroom"
+  ];
+  if (allowedRoles.indexOf(role) === -1) {
+    return { eligible: false, reason: "Skip: Role not allowed (" + role + ")" };
+  }
+
+  return { eligible: true, reason: "OK" };
+}
+
+function buildLineReminderMessagePreview_(candidate, context) {
+  const url = context.workCenterUrl;
+  const role = candidate.role ? candidate.role.trim() : "";
+
+  if (role === "assistant" || role === "助理") {
+    return "早安，請開啟工作中心查看助理待處理摘要與等資料事項：\n" + url;
+  }
+
+  if (role === "boss" || role === "admin" || role === "manager") {
+    return "早安，請開啟工作中心查看主管每日總覽與團隊追蹤風險：\n" + url;
+  }
+
+  return "早安，請開啟今日工作中心查看今日摘要與待處理事項：\n" + url;
+}
+
+function getLineReminderWorkCenterUrl_() {
+  const defaultUrl = "https://brown-phi.vercel.app";
+  const productionUrl = PropertiesService.getScriptProperties().getProperty("PWA_PRODUCTION_URL") || defaultUrl;
+  
+  let baseUrl = productionUrl.trim();
+  if (baseUrl.endsWith("/")) {
+    baseUrl = baseUrl.slice(0, -1);
+  }
+  return baseUrl + "/?view=tasks";
+}
+
+function getLineReminderDryRunContext_(options) {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = ("0" + (now.getMonth() + 1)).slice(-2);
+  const date = ("0" + now.getDate()).slice(-2);
+  const hour = ("0" + now.getHours()).slice(-2);
+  const min = ("0" + now.getMinutes()).slice(-2);
+  const sec = ("0" + now.getSeconds()).slice(-2);
+  const runId = "dryrun-" + year + month + date + "-" + hour + min + sec;
+  
+  const runAt = Utilities.formatDate(now, "GMT+8", "yyyy-MM-dd HH:mm:ss");
+
+  return {
+    runId: runId,
+    runAt: runAt,
+    notificationType: "linkReminder",
+    workCenterUrl: getLineReminderWorkCenterUrl_()
+  };
+}
+
