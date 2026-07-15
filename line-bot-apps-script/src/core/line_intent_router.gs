@@ -85,7 +85,7 @@ function isInventoryLikeText(text) {
 
 function isStaffCommand(text) {
   var value = normalizeLineText(text);
-  return /^(選單|menu|工作選單|員工選單|今日|今日工作|工作|今天工作|新增工作|新增|建立工作|交辦|記一件事|待處理|助理|助理工作|加工送貨|今日總覽|主管總覽|老闆總覽|異常提醒|業務進度|今日門市)$/.test(value);
+  return /^(選單|menu|工作選單|員工選單|今日|今日工作|工作|今天工作|新增工作|新增|建立工作|交辦|記一件事|待處理|助理|助理工作|加工送貨|今日總覽|主管總覽|老闆總覽|異常提醒|業務進度|今日門市|今日摘要|工作中心)$/.test(value);
 }
 
 function isCustomerCommand(text) {
@@ -133,9 +133,9 @@ function detectLineIntent(text, userContext) {
   if (/^(選單|menu|工作選單|員工選單)$/.test(normalizedText)) {
     result.intent = "staff_menu";
     result.confidence = 1;
-  } else if (/^(今日|今日工作|工作|今天工作|今日門市)$/.test(normalizedText)) {
+  } else if (/^(今日|今日工作|工作|今天工作|今日門市|今日摘要|工作中心)$/.test(normalizedText)) {
     result.intent = "work_today";
-    result.confidence = normalizedText === "今日門市" ? 0.9 : 1;
+    result.confidence = (normalizedText === "今日門市" || normalizedText === "今日摘要" || normalizedText === "工作中心") ? 0.9 : 1;
   } else if (/^(新增工作|新增|建立工作|交辦|記一件事)$/.test(normalizedText)) {
     result.intent = "work_create";
     result.confidence = 1;
@@ -171,7 +171,7 @@ function buildCustomerLineFallback() {
 function buildStaffLineFallback() {
   return "我可以協助你：\n" +
     "1. 查庫存：直接輸入型號，例如 EQ-1721\n" +
-    "2. 今日工作：輸入「今日工作」\n" +
+    "2. 今日工作：輸入「今日摘要」或「今日工作」\n" +
     "3. 新增工作：輸入「新增工作」\n" +
     "4. 選單：輸入「選單」";
 }
@@ -180,7 +180,7 @@ function replyStaffRoleMenu(user) {
   var lines = [
     "工作選單",
     "1. 查庫存：直接輸入商品型號",
-    "2. 今日工作：輸入「今日工作」",
+    "2. 今日工作：輸入「今日摘要」或「今日工作」",
     "3. 新增工作：輸入「新增工作」"
   ];
   if (/^(assistant|admin|boss)$/.test(String(user && user.role || ""))) {
@@ -194,7 +194,30 @@ function replyStaffRoleMenu(user) {
 
 function replyMyTasks(user) {
   var name = String(user && (user.displayName || user.username) || "同仁");
-  return name + "，請由工作中心查看今日工作：\n" + LineIntent_getWorkCenterUrl_("tasks");
+  var role = String(user && user.role || "");
+  var roleLabel = "";
+  if (role === "retailSales" || role === "retail" || role === "sales") {
+    roleLabel = "零售業務";
+  } else if (role === "showroomSales" || role === "showroom") {
+    roleLabel = "門市業務";
+  } else if (role === "assistant") {
+    roleLabel = "助理";
+  } else if (role === "boss" || role === "admin" || role === "manager") {
+    roleLabel = "主管";
+  }
+
+  var lines = [
+    "您好，" + name + "。" + (roleLabel ? " (角色：" + roleLabel + ")" : ""),
+    "您的工作中心與今日摘要已準備好，請開啟下方連結查看：",
+    LineIntent_getWorkCenterUrl_("tasks"),
+    "",
+    "可在工作中心查看：",
+    "・今日工作摘要",
+    "・最近任務動態",
+    "・任務清單與篩選",
+    "・一鍵複製摘要"
+  ];
+  return lines.join("\n");
 }
 
 function startWorkCaptureFlow(user) {
