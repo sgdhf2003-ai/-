@@ -5556,39 +5556,61 @@ function getDailyBriefRecommendations_(stats, role) {
 function generateDailyBriefText_(stats, activities, role) {
   const recommendations = getDailyBriefRecommendations_(stats, role);
   const now = new Date();
-  const timeStr = `${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const date = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const timeStr = `${year}/${month}/${date} ${hours}:${minutes}`;
   const briefTitle = getDailyBriefTitleByRole_(role);
   
-  let briefText = `【${briefTitle}】\n`;
+  let briefText = `📋【${briefTitle}】\n`;
+  briefText += `產出時間：${timeStr}\n\n`;
+  
+  briefText += `一、今日指標\n`;
   if (!stats || stats.total === 0) {
-    briefText += `目前沒有任務資料。\n`;
+    briefText += `・目前沒有任務資料。\n`;
   } else {
-    briefText += `今日到期：${stats.dueToday} 件\n`;
-    briefText += `已逾期：${stats.overdue} 件\n`;
-    briefText += `異常：${stats.blocked} 件\n`;
-    briefText += `等資料：${stats.waiting} 件\n`;
-    briefText += `高優先：${stats.highPriority} 件\n`;
-    briefText += `今日完成：${stats.finished} 件\n`;
+    briefText += `・今日到期：${stats.dueToday || 0}\n`;
+    briefText += `・已逾期：${stats.overdue || 0}\n`;
+    briefText += `・異常：${stats.blocked || 0}\n`;
+    briefText += `・等資料：${stats.waiting || 0}\n`;
+    briefText += `・高優先：${stats.highPriority || 0}\n`;
+    briefText += `・今日完成：${stats.finished || 0}\n`;
   }
   
-  briefText += `\n【優先處理】\n`;
-  recommendations.forEach((rec, idx) => {
-    briefText += `${idx + 1}. ${rec}\n`;
-  });
+  briefText += `\n二、今日建議\n`;
+  if (!recommendations || recommendations.length === 0) {
+    briefText += `目前無特別建議，請依任務清單優先順序處理。\n`;
+  } else {
+    recommendations.forEach((rec, idx) => {
+      briefText += `${idx + 1}. ${rec}\n`;
+    });
+  }
   
-  briefText += `\n【最近動態】\n`;
+  briefText += `\n三、最近動態\n`;
   const top3 = (activities || []).slice(0, 3);
   if (top3.length === 0) {
-    briefText += `- 無最近動態\n`;
+    briefText += `・目前沒有新的任務動態。\n`;
   } else {
     top3.forEach(act => {
       const timeLabel = formatActivityTime_(act.timestamp);
       const roleStr = act.role ? `(${act.role})` : "";
-      briefText += `- [${timeLabel}] [${act.actor || ""}${roleStr}] ${act.summary || ""} ${act.taskTitle ? `(${act.taskTitle})` : ""}\n`;
+      const actorStr = act.actor || "";
+      const summaryStr = act.summary || "";
+      const rawTitle = act.taskTitle || "";
+      const cleanedTitle = rawTitle.length > 30 ? rawTitle.substring(0, 27) + "..." : rawTitle;
+      const titleSuffix = cleanedTitle ? ` (${cleanedTitle})` : "";
+      
+      let entry = `[${timeLabel}] [${actorStr}${roleStr}] ${summaryStr}${titleSuffix}`;
+      if (entry.length > 70) {
+        entry = entry.substring(0, 67) + "...";
+      }
+      briefText += `・${entry}\n`;
     });
   }
   
-  briefText += `\n同步時間：${timeStr}`;
+  briefText += `\n提醒：請以工作中心內容為準，必要時更新任務狀態或補充備註。`;
   return briefText;
 }
 
