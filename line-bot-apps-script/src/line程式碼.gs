@@ -12,6 +12,7 @@ var SCENE_IMAGE_FOLDER_ID = '1bR6nPsY1HP7FAHx8vsI8m6eh64L797-D';
 
 // ====== 全域執行快取 (優化多行查詢與即時庫存讀取速度，避免重複讀取試算表) ======
 var globalSheetData = null;
+var etaArrivalRowsCache_ = null;
 
 function getInventoryValues(ss) {
   if (typeof INVENTORY_ROWS !== "undefined" && INVENTORY_ROWS && INVENTORY_ROWS.length > 0) {
@@ -31,6 +32,7 @@ function getInventoryValues(ss) {
 // 當 LINE 收到訊息時，會自動觸發這個 doPost 函數
 function doPost(e) {
   globalSheetData = null; // 重置全域快取快照，避免跨 Webhook Request 快取髒資料 (Stale Cache)
+  etaArrivalRowsCache_ = null;
   var rawContent = "";
   try {
     if (!e || !e.postData || !e.postData.contents) {
@@ -1014,19 +1016,20 @@ function searchInventory(itemName, senderUserId) {
   // === 4. 如果有查詢需求量，將查詢需求與狀態排版在最上方，並以科技感燈號表示 ===
   var isNearStockWarning = false;
   var warningDiff = 0;
+  var requestedQtyInPieces = null;
   if (reqQty !== null) {
-    var reqQtyInPieces = reqQty;
+    requestedQtyInPieces = reqQty;
     
     // 單位換算
     if (reqUnit === "箱") {
-      reqQtyInPieces = reqQty * (packingVal > 0 ? packingVal : 1);
+      requestedQtyInPieces = reqQty * (packingVal > 0 ? packingVal : 1);
     } else if (reqUnit === "坪") {
-      reqQtyInPieces = reqQty * (numJ > 0 ? numJ : 1);
+      requestedQtyInPieces = reqQty * (numJ > 0 ? numJ : 1);
     }
     
     // 避免浮點運算造成 4560 被算成 4559.999999 之類的誤判
     var availableStockForCheck = Math.round(totalAvailableStock * 100) / 100;
-    var requiredStockForCheck = Math.round(reqQtyInPieces * 100) / 100;
+    var requiredStockForCheck = Math.round(requestedQtyInPieces * 100) / 100;
     
     reply += "查詢需求：" + reqQty + reqUnit + "\n";
     
@@ -1058,6 +1061,16 @@ function searchInventory(itemName, senderUserId) {
       }
     }
   }
+
+  var etaShortageState = getTaskEtaShortageState_(totalAvailableStock, requestedQtyInPieces);
+  var etaArrivalBlock = "";
+  if (etaShortageState === "INSUFFICIENT_STOCK" || etaShortageState === "OUT_OF_STOCK") {
+    try {
+      etaArrivalBlock = renderEtaArrivalBlock_(findFutureArrivalsForModel_(ss, model, getEtaTodayKey_()));
+    } catch (etaErr) {
+      etaArrivalBlock = "";
+    }
+  }
   
   // 如果是促銷商品，顯示警告語
   if (hasPromotion) {
@@ -1074,6 +1087,10 @@ function searchInventory(itemName, senderUserId) {
   reply += "🧮 坪數換算：" + numJText + "\n";
   reply += "📦 可用庫存：" + totalAvailableStock + " " + unit + "\n";
   reply += "🎨 庫存批號：\n" + batchText;
+
+  if (etaArrivalBlock) {
+    reply += "\n\n" + etaArrivalBlock;
+  }
   
   // 如果觸發庫存警示，在結果底部加入溫馨提醒
   if (isNearStockWarning) {
@@ -1148,6 +1165,224 @@ function searchInventory(itemName, senderUserId) {
   }
   var labelName = isSingleSearch ? "單片圖檔" : (isSceneSearch ? "實景圖檔" : "相關圖檔");
   return { "type": "text", "text": replyMsg + "\n\n您好！目前系統中找不到「" + model + "」的" + labelName + "連結喔！先提供文字庫存結果供您確認。" };
+}
+
+function getEtaTodayKey_() {
+  return Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd");
+}
+
+function getEtaDateCandidate_(year, month, day, todayKey) {
+  if (!isFinite(year) || !isFinite(month) || !isFinite(day) || month < 1 || month > 12 || day < 1 || day > 31) {
+    return null;
+  }
+  var utcDate = new Date(Date.UTC(year, month - 1, day));
+  if (utcDate.getUTCFullYear() !== year || utcDate.getUTCMonth() !== month - 1 || utcDate.getUTCDate() !== day) {
+    return null;
+  }
+  var monthKey = month < 10 ? "0" + month : "" + month;
+  var dayKey = day < 10 ? "0" + day : "" + day;
+  var dateKey = year + "-" + monthKey + "-" + dayKey;
+  var todayParts = String(todayKey).split("-");
+  var todayUtc = Date.UTC(parseInt(todayParts[0], 10), parseInt(todayParts[1], 10) - 1, parseInt(todayParts[2], 10));
+  var dateUtc = Date.UTC(year, month - 1, day);
+  var diffDays = Math.round((dateUtc - todayUtc) / 86400000);
+  return {
+    year: year,
+    dateKey: dateKey,
+    diffDays: diffDays,
+    absDays: Math.abs(diffDays)
+  };
+}
+
+function inferEtaMonthDayCandidate_(month, day, todayKey) {
+  var today = String(todayKey || getEtaTodayKey_());
+  var todayYear = parseInt(today.substring(0, 4), 10);
+  var todayMonth = parseInt(today.substring(5, 7), 10);
+  var candidates = [
+    getEtaDateCandidate_(todayYear - 1, month, day, today),
+    getEtaDateCandidate_(todayYear, month, day, today),
+    getEtaDateCandidate_(todayYear + 1, month, day, today)
+  ].filter(function(candidate) { return candidate; });
+  if (candidates.length === 0) return null;
+  candidates.sort(function(a, b) {
+    if (a.absDays !== b.absDays) return a.absDays - b.absDays;
+    if (a.diffDays >= 0 && b.diffDays < 0) return -1;
+    if (a.diffDays < 0 && b.diffDays >= 0) return 1;
+    return 0;
+  });
+  var selected = candidates[0];
+  if (!selected || selected.absDays > 183) return null;
+  var isYearBoundaryEta = month === 1 || month === 12;
+  var isNearYearBoundaryToday = todayMonth === 1 || todayMonth === 12;
+  if (isYearBoundaryEta && !isNearYearBoundaryToday && selected.absDays > 90) return null;
+  return selected;
+}
+
+function normalizeEtaModelKey_(value) {
+  if (value == null) return "";
+  if (typeof getModelCodeKey === "function") {
+    return getModelCodeKey(value);
+  }
+  return normalizeSearchKey(value);
+}
+
+function getEtaArrivalRows_(spreadsheet) {
+  if (etaArrivalRowsCache_) return etaArrivalRowsCache_;
+  var empty = { values: [], displayValues: [], warning: "" };
+  try {
+    if (!spreadsheet || typeof spreadsheet.getSheetByName !== "function") {
+      etaArrivalRowsCache_ = empty;
+      return etaArrivalRowsCache_;
+    }
+    var sheet = spreadsheet.getSheetByName("到港貨物庫存");
+    if (!sheet) {
+      etaArrivalRowsCache_ = empty;
+      return etaArrivalRowsCache_;
+    }
+    var range = sheet.getDataRange();
+    etaArrivalRowsCache_ = {
+      values: range.getValues() || [],
+      displayValues: range.getDisplayValues ? (range.getDisplayValues() || []) : [],
+      warning: ""
+    };
+    return etaArrivalRowsCache_;
+  } catch (err) {
+    etaArrivalRowsCache_ = { values: [], displayValues: [], warning: "ETA read failed" };
+    return etaArrivalRowsCache_;
+  }
+}
+
+function getEtaDateInfo_(rawValue, displayValue, todayKey) {
+  var today = String(todayKey || getEtaTodayKey_());
+  var year = parseInt(today.substring(0, 4), 10);
+  var rawDisplay = displayValue != null ? displayValue.toString().trim() : "";
+  var source = rawDisplay || (rawValue != null ? rawValue.toString().trim() : "");
+  var match = source.match(/^(\d{1,2})\/(\d{1,2})$/);
+  var candidate = null;
+  if (!match) {
+    match = source.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+    if (match) {
+      year = parseInt(match[1], 10);
+      match = [match[0], match[2], match[3]];
+    }
+  }
+  if (!match && Object.prototype.toString.call(rawValue) === "[object Date]" && !isNaN(rawValue.getTime())) {
+    var formatted = Utilities.formatDate(rawValue, "Asia/Taipei", "yyyy-MM-dd");
+    var parts = formatted.split("-");
+    year = parseInt(parts[0], 10);
+    match = [formatted, parts[1], parts[2]];
+  }
+  if (!match) return null;
+  var month = parseInt(match[1], 10);
+  var day = parseInt(match[2], 10);
+  if (/^\d{1,2}\/\d{1,2}$/.test(source)) {
+    candidate = inferEtaMonthDayCandidate_(month, day, today);
+  } else {
+    candidate = getEtaDateCandidate_(year, month, day, today);
+  }
+  if (!candidate) return null;
+  var dateKey = candidate.dateKey;
+  if (dateKey < today) return null;
+  return {
+    dateKey: dateKey,
+    displayDate: month + "/" + day,
+    displayLabel: dateKey === today ? "今日" : month + "/" + day
+  };
+}
+
+function parseEtaQuantityPieces_(value) {
+  if (value == null || value === "") return null;
+  var numeric;
+  if (typeof value === "number") {
+    numeric = value;
+  } else {
+    var text = value.toString().trim().replace(/,/g, "");
+    if (!/^\d+(?:\.\d+)?$/.test(text)) return null;
+    numeric = parseFloat(text);
+  }
+  if (!isFinite(numeric) || numeric < 0) return null;
+  return numeric;
+}
+
+function findFutureArrivalsForModel_(spreadsheet, modelCode, todayKey) {
+  var productKey = normalizeEtaModelKey_(modelCode);
+  var result = { matched: false, productKey: productKey, arrivals: [], warning: "" };
+  if (!productKey) return result;
+
+  var etaRows = getEtaArrivalRows_(spreadsheet);
+  if (etaRows.warning) result.warning = etaRows.warning;
+  var values = etaRows.values || [];
+  var displayValues = etaRows.displayValues || [];
+  var seen = {};
+
+  for (var r = 1; r < values.length; r++) {
+    var row = values[r] || [];
+    var displayRow = displayValues[r] || [];
+    var etaModel = (displayRow[1] != null && displayRow[1] !== "") ? displayRow[1] : row[1];
+    if (!etaModel || normalizeEtaModelKey_(etaModel) !== productKey) continue;
+    var dateInfo = getEtaDateInfo_(row[4], displayRow[4], todayKey);
+    if (!dateInfo) continue;
+    var quantityPieces = parseEtaQuantityPieces_((displayRow[3] != null && displayRow[3] !== "") ? displayRow[3] : row[3]);
+    var dedupeKey = dateInfo.dateKey + "|" + (quantityPieces == null ? "" : quantityPieces);
+    if (seen[dedupeKey]) continue;
+    seen[dedupeKey] = true;
+    result.arrivals.push({
+      dateKey: dateInfo.dateKey,
+      displayDate: dateInfo.displayDate,
+      displayLabel: dateInfo.displayLabel,
+      quantityPieces: quantityPieces
+    });
+  }
+
+  result.arrivals.sort(function(a, b) {
+    if (a.dateKey < b.dateKey) return -1;
+    if (a.dateKey > b.dateKey) return 1;
+    return 0;
+  });
+  result.arrivals = result.arrivals.slice(0, 2);
+  result.matched = result.arrivals.length > 0;
+  return result;
+}
+
+function getTaskEtaShortageState_(availableStock, requestedQty) {
+  if (!isFinite(availableStock)) return "UNKNOWN_STOCK";
+  if (availableStock <= 0) return "OUT_OF_STOCK";
+  if (requestedQty == null) return "IN_STOCK";
+  if (!isFinite(requestedQty)) return "UNKNOWN_STOCK";
+  if (requestedQty > availableStock) return "INSUFFICIENT_STOCK";
+  return "IN_STOCK";
+}
+
+function renderEtaArrivalLine_(arrival) {
+  var dateText = arrival.displayLabel === "今日" ? "今日" : arrival.displayDate;
+  var line = "・預計 " + dateText + " 到港";
+  if (arrival.quantityPieces != null) {
+    line += "，數量約 " + arrival.quantityPieces + " 片";
+  }
+  return line;
+}
+
+function renderEtaArrivalBlock_(etaResult) {
+  if (!etaResult || !etaResult.arrivals || etaResult.arrivals.length === 0) return "";
+  var arrivals = etaResult.arrivals;
+  var lines = ["📦 到港資訊"];
+  if (arrivals.length === 1) {
+    var arrival = arrivals[0];
+    var dateText = arrival.displayLabel === "今日" ? "今日" : arrival.displayDate;
+    var sentence = "系統記錄預計 " + dateText + " 到港";
+    if (arrival.quantityPieces != null) {
+      sentence += "，數量約 " + arrival.quantityPieces + " 片";
+    }
+    sentence += "。";
+    lines.push(sentence);
+    lines.push(arrival.displayLabel === "今日" ? "實際入庫與可出貨時間請洽業務確認。" : "實際到貨與可出貨時間請洽業務確認。");
+    return lines.join("\n");
+  }
+  for (var i = 0; i < arrivals.length; i++) {
+    lines.push(renderEtaArrivalLine_(arrivals[i]));
+  }
+  lines.push("實際到貨與可出貨時間請洽業務確認。");
+  return lines.join("\n");
 }
 
 // 輔助函數：解析數值
