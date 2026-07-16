@@ -3814,6 +3814,7 @@ function renderTasks() {
 
       if (filterDueDateVal === "dueToday") {
         if (taskLocalDate !== todayStr) return false;
+        if (isTaskFinishedOrCancelled_(task)) return false;
       } else if (filterDueDateVal === "overdue") {
         if (!taskLocalDate || taskLocalDate >= todayStr) return false;
         if (isTaskFinishedOrCancelled_(task)) return false;

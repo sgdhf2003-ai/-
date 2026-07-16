@@ -308,7 +308,7 @@ function replyAssistantCenter(user) {
           "action": {
             "type": "uri",
             "label": "查看全部",
-            "uri": LineIntent_getWorkCenterUrl_("holds")
+            "uri": LineIntent_getWorkCenterUrl_("tasks")
           }
         },
         {
@@ -316,7 +316,7 @@ function replyAssistantCenter(user) {
           "action": {
             "type": "uri",
             "label": "只看緊急",
-            "uri": LineIntent_getWorkCenterUrl_("holds") + "&filter=urgent"
+            "uri": LineIntent_getWorkCenterUrl_("tasks")
           }
         },
         {
@@ -350,7 +350,7 @@ function replyAssistantAbnormal(user) {
 }
 
 function replyBossOverview(user) {
-  return "請開啟主管工作中心查看今日總覽：\n" + LineIntent_getWorkCenterUrl_("dashboard");
+  return "請開啟主管工作中心查看今日總覽：\n" + LineIntent_getWorkCenterUrl_("tasks");
 }
 
 function replyCustomerHelp(user) {
