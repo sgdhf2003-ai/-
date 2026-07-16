@@ -1408,47 +1408,57 @@ function getEtaFlexQuantityText_(arrival) {
   return "約 " + arrival.quantityPieces + " 片";
 }
 
+function buildEtaArrivalCompactRow_(label, value, valueSize, valueColor) {
+  return {
+    "type": "box",
+    "layout": "horizontal",
+    "spacing": "sm",
+    "contents": [
+      {
+        "type": "text",
+        "text": label,
+        "size": "sm",
+        "color": "#777777",
+        "weight": "bold",
+        "flex": 5,
+        "wrap": false
+      },
+      {
+        "type": "text",
+        "text": value,
+        "size": valueSize,
+        "weight": "bold",
+        "color": valueColor,
+        "align": "end",
+        "flex": 5,
+        "wrap": true
+      }
+    ]
+  };
+}
+
 function buildEtaArrivalSummaryBox_(arrival, isPrimary) {
   var contents = [
-    {
-      "type": "text",
-      "text": "預計到港",
-      "size": "sm",
-      "color": "#777777",
-      "weight": "bold"
-    },
-    {
-      "type": "text",
-      "text": getEtaFlexDateText_(arrival),
-      "size": isPrimary ? "xxl" : "xl",
-      "weight": "bold",
-      "color": "#D94A2B",
-      "margin": "xs"
-    }
+    buildEtaArrivalCompactRow_(
+      isPrimary ? "📅 預計到港" : "📅 到港",
+      getEtaFlexDateText_(arrival),
+      isPrimary ? "xl" : "lg",
+      "#D94A2B"
+    )
   ];
   var quantityText = getEtaFlexQuantityText_(arrival);
   if (quantityText) {
-    contents.push({
-      "type": "text",
-      "text": "預計數量",
-      "size": "sm",
-      "color": "#777777",
-      "weight": "bold",
-      "margin": isPrimary ? "md" : "sm"
-    });
-    contents.push({
-      "type": "text",
-      "text": quantityText,
-      "size": isPrimary ? "xl" : "lg",
-      "weight": "bold",
-      "color": "#222222",
-      "margin": "xs"
-    });
+    contents.push(buildEtaArrivalCompactRow_(
+      isPrimary ? "📦 預計數量" : "📦 數量",
+      quantityText,
+      isPrimary ? "lg" : "md",
+      "#222222"
+    ));
   }
   return {
     "type": "box",
     "layout": "vertical",
-    "spacing": "xs",
+    "spacing": "sm",
     "contents": contents
   };
 }
@@ -1464,12 +1474,12 @@ function buildEtaArrivalFlex_(etaResult) {
   if (arrivals.length > 1) {
     bodyContents.push({
       "type": "separator",
-      "margin": "lg"
+      "margin": "md"
     });
     bodyContents.push({
       "type": "box",
       "layout": "vertical",
-      "margin": "lg",
+      "margin": "md",
       "contents": [
         buildEtaArrivalSummaryBox_(arrivals[1], false)
       ]
@@ -1478,15 +1488,15 @@ function buildEtaArrivalFlex_(etaResult) {
   bodyContents.push({
     "type": "box",
     "layout": "vertical",
-    "margin": "lg",
-    "paddingAll": "12px",
+    "margin": "md",
+    "paddingAll": "8px",
     "backgroundColor": "#FFF3CD",
-    "cornerRadius": "8px",
+    "cornerRadius": "6px",
     "contents": [
       {
         "type": "text",
         "text": "⚠️ 實際到貨與可出貨時間請洽業務確認",
-        "size": "sm",
+        "size": "xs",
         "color": "#664D03",
         "wrap": true
       }
@@ -1503,31 +1513,31 @@ function buildEtaArrivalFlex_(etaResult) {
         "type": "box",
         "layout": "horizontal",
         "backgroundColor": "#E85432",
-        "paddingAll": "16px",
-        "spacing": "md",
+        "paddingAll": "10px",
+        "spacing": "sm",
         "contents": [
           {
             "type": "text",
             "text": "🚢",
-            "size": "xxl",
+            "size": "xl",
             "flex": 0
           },
           {
             "type": "text",
             "text": "缺貨到港通知",
-            "size": "xl",
+            "size": "lg",
             "weight": "bold",
             "color": "#FFFFFF",
             "gravity": "center",
-            "wrap": true
+            "wrap": false
           }
         ]
       },
       "body": {
         "type": "box",
         "layout": "vertical",
-        "paddingAll": "18px",
-        "spacing": "md",
+        "paddingAll": "10px",
+        "spacing": "sm",
         "contents": bodyContents
       }
     }
