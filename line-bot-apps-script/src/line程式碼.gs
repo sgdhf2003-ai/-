@@ -1063,12 +1063,15 @@ function searchInventory(itemName, senderUserId) {
   }
 
   var etaShortageState = getTaskEtaShortageState_(totalAvailableStock, requestedQtyInPieces);
-  var etaArrivalBlock = "";
+  var etaResult = null;
+  var etaFlexMessage = null;
   if (etaShortageState === "INSUFFICIENT_STOCK" || etaShortageState === "OUT_OF_STOCK") {
     try {
-      etaArrivalBlock = renderEtaArrivalBlock_(findFutureArrivalsForModel_(ss, model, getEtaTodayKey_()));
+      etaResult = findFutureArrivalsForModel_(ss, model, getEtaTodayKey_());
+      etaFlexMessage = buildEtaArrivalFlex_(etaResult);
     } catch (etaErr) {
-      etaArrivalBlock = "";
+      etaResult = null;
+      etaFlexMessage = null;
     }
   }
   
@@ -1088,10 +1091,6 @@ function searchInventory(itemName, senderUserId) {
   reply += "📦 可用庫存：" + totalAvailableStock + " " + unit + "\n";
   reply += "🎨 庫存批號：\n" + batchText;
 
-  if (etaArrivalBlock) {
-    reply += "\n\n" + etaArrivalBlock;
-  }
-  
   // 如果觸發庫存警示，在結果底部加入溫馨提醒
   if (isNearStockWarning) {
     var dayStrForCheck = Utilities.formatDate(new Date(), "GMT+8", "u");
@@ -1125,6 +1124,12 @@ function searchInventory(itemName, senderUserId) {
 
   // 一般庫存查詢只回傳純文字，避免額外觸發 Drive 搜尋而拖慢 webhook
   if (!isImageSearch) {
+    if (etaFlexMessage) {
+      return [
+        { "type": "text", "text": replyMsg },
+        etaFlexMessage
+      ];
+    }
     return { "type": "text", "text": replyMsg };
   }
 
@@ -1383,6 +1388,150 @@ function renderEtaArrivalBlock_(etaResult) {
   }
   lines.push("實際到貨與可出貨時間請洽業務確認。");
   return lines.join("\n");
+}
+
+function getEtaFlexDateText_(arrival) {
+  if (!arrival) return "";
+  if (arrival.displayLabel === "今日") return "今日";
+  var dateText = arrival.displayDate || "";
+  return dateText.replace(/\s*\/\s*/g, " / ");
+}
+
+function getEtaFlexAltDateText_(arrival) {
+  if (!arrival) return "";
+  if (arrival.displayLabel === "今日") return "今日";
+  return arrival.displayDate || "";
+}
+
+function getEtaFlexQuantityText_(arrival) {
+  if (!arrival || arrival.quantityPieces == null) return "";
+  return "約 " + arrival.quantityPieces + " 片";
+}
+
+function buildEtaArrivalSummaryBox_(arrival, isPrimary) {
+  var contents = [
+    {
+      "type": "text",
+      "text": "預計到港",
+      "size": "sm",
+      "color": "#777777",
+      "weight": "bold"
+    },
+    {
+      "type": "text",
+      "text": getEtaFlexDateText_(arrival),
+      "size": isPrimary ? "xxl" : "xl",
+      "weight": "bold",
+      "color": "#D94A2B",
+      "margin": "xs"
+    }
+  ];
+  var quantityText = getEtaFlexQuantityText_(arrival);
+  if (quantityText) {
+    contents.push({
+      "type": "text",
+      "text": "預計數量",
+      "size": "sm",
+      "color": "#777777",
+      "weight": "bold",
+      "margin": isPrimary ? "md" : "sm"
+    });
+    contents.push({
+      "type": "text",
+      "text": quantityText,
+      "size": isPrimary ? "xl" : "lg",
+      "weight": "bold",
+      "color": "#222222",
+      "margin": "xs"
+    });
+  }
+  return {
+    "type": "box",
+    "layout": "vertical",
+    "spacing": "xs",
+    "contents": contents
+  };
+}
+
+function buildEtaArrivalFlex_(etaResult) {
+  if (!etaResult || !etaResult.arrivals || etaResult.arrivals.length === 0) return null;
+  var arrivals = etaResult.arrivals.slice(0, 2);
+  var firstDateText = getEtaFlexAltDateText_(arrivals[0]);
+  var altSuffix = arrivals.length > 1 ? firstDateText + " 起" : firstDateText;
+  var bodyContents = [];
+
+  bodyContents.push(buildEtaArrivalSummaryBox_(arrivals[0], true));
+  if (arrivals.length > 1) {
+    bodyContents.push({
+      "type": "separator",
+      "margin": "lg"
+    });
+    bodyContents.push({
+      "type": "box",
+      "layout": "vertical",
+      "margin": "lg",
+      "contents": [
+        buildEtaArrivalSummaryBox_(arrivals[1], false)
+      ]
+    });
+  }
+  bodyContents.push({
+    "type": "box",
+    "layout": "vertical",
+    "margin": "lg",
+    "paddingAll": "12px",
+    "backgroundColor": "#FFF3CD",
+    "cornerRadius": "8px",
+    "contents": [
+      {
+        "type": "text",
+        "text": "⚠️ 實際到貨與可出貨時間請洽業務確認",
+        "size": "sm",
+        "color": "#664D03",
+        "wrap": true
+      }
+    ]
+  });
+
+  return {
+    "type": "flex",
+    "altText": "缺貨到港通知：預計 " + altSuffix + " 到港",
+    "contents": {
+      "type": "bubble",
+      "size": "mega",
+      "header": {
+        "type": "box",
+        "layout": "horizontal",
+        "backgroundColor": "#E85432",
+        "paddingAll": "16px",
+        "spacing": "md",
+        "contents": [
+          {
+            "type": "text",
+            "text": "🚢",
+            "size": "xxl",
+            "flex": 0
+          },
+          {
+            "type": "text",
+            "text": "缺貨到港通知",
+            "size": "xl",
+            "weight": "bold",
+            "color": "#FFFFFF",
+            "gravity": "center",
+            "wrap": true
+          }
+        ]
+      },
+      "body": {
+        "type": "box",
+        "layout": "vertical",
+        "paddingAll": "18px",
+        "spacing": "md",
+        "contents": bodyContents
+      }
+    }
+  };
 }
 
 // 輔助函數：解析數值
