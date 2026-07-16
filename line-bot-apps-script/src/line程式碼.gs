@@ -18,11 +18,11 @@ function getInventoryValues(ss) {
   if (typeof INVENTORY_ROWS !== "undefined" && INVENTORY_ROWS && INVENTORY_ROWS.length > 0) {
     return INVENTORY_ROWS;
   }
-  
+
   if (globalSheetData) {
     return globalSheetData;
   }
-  
+
   var values = InventoryRepository_readInventoryRows(ss);
   globalSheetData = values;
   return values;
@@ -39,16 +39,16 @@ function doPost(e) {
       writeLogToSheet("N/A", "N/A", "系統錯誤：沒有 postData 資料（可能是直接以瀏覽器打開網址或以 GET 請求測試）。");
       return HtmlService.createHtmlOutput("Webhook works!");
     }
-    
+
     rawContent = e.postData.contents;
     var postData = JSON.parse(rawContent);
-    
+
     // 1. 處理外部試算表寫入 API 請求 (writeSpreadsheet)
     if (postData && postData.action === 'writeSpreadsheet') {
       var ssId = postData.spreadsheetId;
       var sheetsData = postData.sheetsData;
       var ss = SpreadsheetApp.openById(ssId);
-      
+
       for (var name in sheetsData) {
         var sheet = ss.getSheetByName(name);
         if (!sheet) {
@@ -59,31 +59,31 @@ function doPost(e) {
         if (rows && rows.length > 0) {
           var requiredRows = rows.length;
           var requiredCols = rows[0].length;
-          
+
           var maxRows = sheet.getMaxRows();
           var maxCols = sheet.getMaxColumns();
-          
+
           if (maxRows < requiredRows) {
             sheet.insertRowsAfter(maxRows, requiredRows - maxRows);
           }
           if (maxCols < requiredCols) {
             sheet.insertColumnsAfter(maxCols, requiredCols - maxCols);
           }
-          
+
           sheet.getRange(1, 1, requiredRows, requiredCols).setValues(rows);
         }
       }
       return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
     }
-    
+
     // 2. 處理 LINE Webhook 訊息
     var events = postData.events;
-    
+
     if (!events || events.length === 0) {
       writeLogToSheet("N/A", rawContent, "系統提示：收到的 events 長度為 0。");
       return HtmlService.createHtmlOutput("Webhook works!");
     }
-    
+
     for (var i = 0; i < events.length; i++) {
       var event = events[i];
       if (event.type === 'postback') {
@@ -94,7 +94,7 @@ function doPost(e) {
           writeLogToSheet("Postback Error", postbackErr.toString(), "系統錯誤", rawContent);
         }
       }
-      
+
       // 歡迎詞/說明與幫助內容
       var welcomeText = "您好！歡迎使用勁揚建材庫存查詢系統 🌸\n\n" +
                         "💡 **查詢指令說明**：\n\n" +
@@ -119,7 +119,7 @@ function doPost(e) {
         try {
           replyToLine(replyToken, welcomeText, false);
           writeLogToSheet("加入好友事件", welcomeText, "成功回覆歡迎詞", rawContent);
-          
+
           // 新好友自動綁定圖文選單
           var senderUserId = (event.source && event.source.userId) ? event.source.userId : "N/A";
           var clerkUserId = PropertiesService.getScriptProperties().getProperty('CLERK_USER_ID');
@@ -131,7 +131,7 @@ function doPost(e) {
         }
         continue;
       }
-      
+
       // 攔截小姐的確認訊息（文字「好/收到/OK」或貼圖/圖片）
       var senderUserId = (event.source && event.source.userId) ? event.source.userId : "N/A";
       var clerkUserId = PropertiesService.getScriptProperties().getProperty('CLERK_USER_ID');
@@ -160,13 +160,13 @@ function doPost(e) {
         } else if (event.message.type === 'sticker' || event.message.type === 'image') {
           shouldAck = true;
         }
-        
+
         if (shouldAck) {
           try {
             replyToLine(event.replyToken, "👍", true);
             // 將所有未發送的假日警示排程標記為已確認，取消週一重複通知
             markWeekendAlertsAsProcessed();
-            
+
             // 標記所有活躍顧客為已確認，停止後續警訊
             var cache = CacheService.getScriptCache();
             var activeListStr = cache.get("active_alert_customers") || "";
@@ -181,7 +181,7 @@ function doPost(e) {
               cache.remove("active_alert_customers");
             }
             clearPendingPromoReserveRequests();
-            
+
             writeLogToSheet("小姐確認回覆", "👍", "小姐已確認警示（已取消週一排程與設定免打擾）", rawContent);
           } catch (err) {
             writeLogToSheet("小姐確認回覆失敗", err.toString(), "錯誤", rawContent);
@@ -189,18 +189,18 @@ function doPost(e) {
           continue; // 結束該 event 的處理，不往下走一般文字查詢
         }
       }
-      
+
       // 確認是文字訊息
       if (event.type == 'message' && event.message.type == 'text') {
         var userMessage = event.message.text.trim();
         var replyToken = event.replyToken;
-        
+
         var lineUserId = event.source && event.source.userId ? event.source.userId : "";
         var activeDialogState = checkActiveDialogState_(lineUserId, userMessage, replyToken);
         if (activeDialogState) {
           continue;
         }
-        
+
         // 紀錄活躍會話 (排除小姐)
         if (!isFromClerk && senderUserId !== "N/A") {
           recordSessionUser(senderUserId);
@@ -217,11 +217,11 @@ function doPost(e) {
         if (typeof JingyangAssistant_tryHandleLineEvent === "function" && JingyangAssistant_tryHandleLineEvent(event)) {
           continue;
         }
-        
+
         // 1. 攔截一般顧客的「確認聯絡小姐」回覆 (如：好、要、需要、是、是的、確定等，或包含預留/保留字眼)
         var confirmRegex = /^(要|需要|是|是的|好|好的|確定|請幫我確認|請小姐確認|確認|麻煩小姐|麻煩確認|預留|保留)$/i;
         var hasReserveKeyword = (userMessage.indexOf("預留") !== -1 || userMessage.indexOf("保留") !== -1);
-        
+
         if ((confirmRegex.test(userMessage) || hasReserveKeyword) && !isFromClerk) {
           var lastWarnModel = CacheService.getScriptCache().get("last_warn_" + senderUserId);
           if (lastWarnModel) {
@@ -233,13 +233,13 @@ function doPost(e) {
                               "🌸 商品型號：" + lastWarnModel + "\n" +
                               "💬 回覆內容：" + userMessage + "\n\n" +
                               "💡 提示：顧客已確認需要您幫忙確認庫存並預留，請儘速與顧客聯繫！";
-              
+
               // 檢查小姐是否已確認，以及防重複發送
               var modelCode = getGlobalModelCodeKey(lastWarnModel);
               var cacheKey = "clerk_alert_count_" + modelCode + "_" + senderUserId;
               var alertCount = parseInt(CacheService.getScriptCache().get(cacheKey) || "0");
               var acked = CacheService.getScriptCache().get("clerk_acknowledged_" + senderUserId);
-              
+
               if (clerkUserId && alertCount < 2 && acked !== "true") {
                 pushMessageToUser(clerkUserId, alertText);
                 CacheService.getScriptCache().put(cacheKey, (alertCount + 1).toString(), 7200);
@@ -247,11 +247,11 @@ function doPost(e) {
               } else {
                 Logger.log("Prevented contact request alert to clerk due to limit or ack: " + modelCode);
               }
-              
+
               var clientReply = "好的！已為您通知服務小姐。小姐將會進一步幫您確認庫存「" + lastWarnModel + "」並與您聯絡，請稍候喔！";
               replyToLine(replyToken, clientReply, isFromClerk);
               writeLogToSheet(userMessage, clientReply, "顧客確認通知小姐成功", rawContent);
-              
+
               CacheService.getScriptCache().remove("last_warn_" + senderUserId);
             } catch (err) {
               writeLogToSheet(userMessage, "通知小姐確認失敗: " + err.toString(), "錯誤", rawContent);
@@ -266,12 +266,12 @@ function doPost(e) {
                               "👤 顧客名稱：" + customerName + "\n" +
                               "💬 訊息內容：" + userMessage + "\n\n" +
                               "💡 提示：顧客發送了預留/保留相關訊息，請與顧客聯繫確認！";
-              
+
               // 使用特殊的 key 限制無型號預留的通知次數，並檢查小姐是否已確認
               var cacheKey = "clerk_alert_count_general_reserve_" + senderUserId;
               var alertCount = parseInt(CacheService.getScriptCache().get(cacheKey) || "0");
               var acked = CacheService.getScriptCache().get("clerk_acknowledged_" + senderUserId);
-              
+
               if (clerkUserId && alertCount < 2 && acked !== "true") {
                 pushMessageToUser(clerkUserId, alertText);
                 CacheService.getScriptCache().put(cacheKey, (alertCount + 1).toString(), 7200);
@@ -279,7 +279,7 @@ function doPost(e) {
               } else {
                 Logger.log("Prevented general reserve alert to clerk due to limit or ack.");
               }
-              
+
               var clientReply = "好的！已為您轉告服務小姐。小姐將會進一步與您聯絡，請稍候喔！";
               replyToLine(replyToken, clientReply, isFromClerk);
               writeLogToSheet(userMessage, clientReply, "顧客無快取預留通知小姐成功", rawContent);
@@ -289,15 +289,15 @@ function doPost(e) {
             continue; // 結束該 event，不往下走一般庫存查詢
           }
         }
-        
+
         // 偵測是否為週末 (星期六=6, 星期日=7)
         var dayStr = Utilities.formatDate(new Date(), "GMT+8", "u");
         var isWeekend = (dayStr === "6" || dayStr === "7");
-        var weekendNoticeObj = { 
-          "type": "text", 
-          "text": "☀️ 【假日公告】您好，由於目前是休息日，服務人員無法第一時間為您處理及保留庫存喔！但您仍可先使用系統自動查詢，查詢結果如下：" 
+        var weekendNoticeObj = {
+          "type": "text",
+          "text": "☀️ 【假日公告】您好，由於目前是休息日，服務人員無法第一時間為您處理及保留庫存喔！但您仍可先使用系統自動查詢，查詢結果如下："
         };
-        
+
         // 綁定小姐通知管道的特殊指令
         if (userMessage === "###我是小姐###" || userMessage === "###綁定小姐###" || userMessage === "###綁定通知###") {
           try {
@@ -313,7 +313,7 @@ function doPost(e) {
           }
           continue;
         }
-        
+
         var lowerMsg = userMessage.toLowerCase();
         if (lowerMsg === "說明" || lowerMsg === "幫助" || lowerMsg === "帮助" || lowerMsg === "說明" || lowerMsg === "help" || lowerMsg === "instructions" || lowerMsg === "instruction" || lowerMsg === "歡迎" || lowerMsg === "欢迎") {
           try {
@@ -324,11 +324,11 @@ function doPost(e) {
           }
           continue;
         }
-        
+
         // 攔截促銷商品查詢指令（支援系列展開，例如：查看促銷 星月六角 或直接打 星月六角）
         var isPromoQuery = false;
         var promoQueryTarget = "";
-        
+
         var promoKeywordMatch = userMessage.match(/^(查看促銷商品|查看促銷|促銷商品|促銷)\s*(.*)$/i);
         if (promoKeywordMatch) {
           isPromoQuery = true;
@@ -344,7 +344,7 @@ function doPost(e) {
                 uniqueSeriesList.push(sName);
               }
             }
-            
+
             var normMsg = normalizeSearchKey(userMessage);
             for (var i = 0; i < uniqueSeriesList.length; i++) {
               if (normalizeSearchKey(uniqueSeriesList[i]) === normMsg && normMsg !== "") {
@@ -357,7 +357,7 @@ function doPost(e) {
             Logger.log("檢查促銷系列列表失敗：" + e.toString());
           }
         }
-        
+
         if (isPromoQuery) {
           try {
             var promoReply = searchPromotionalProducts(promoQueryTarget, senderUserId);
@@ -368,7 +368,7 @@ function doPost(e) {
           }
           continue;
         }
-        
+
         // 特殊除錯指令：在 LINE 直接查詢並顯示雲端硬碟資料夾 ID
         if (userMessage === "###列出資料夾###") {
           var replyText = "";
@@ -386,7 +386,7 @@ function doPost(e) {
           } catch (driveErr) {
             replyText = "讀取雲端硬碟失敗，請確認是否已在 Apps Script 網頁版執行 forceAuthorize 進行授權。\n錯誤：" + driveErr.toString();
           }
-          
+
           try {
             replyToLine(replyToken, replyText, true);
             writeLogToSheet(userMessage, replyText, "成功回覆資料夾ID", rawContent);
@@ -396,7 +396,7 @@ function doPost(e) {
           continue; // 結束本次 loop，不往下執行庫存搜尋
         }
         var lines = userMessage.split(/\r?\n/).map(function(l) { return l.trim(); }).filter(function(l) { return l !== ""; });
-        
+
         if (lines.length <= 1) {
           var replyText = "";
           var queryCount = 0;
@@ -408,15 +408,15 @@ function doPost(e) {
           } catch (err) {
             replyText = "搜尋庫存時發生錯誤：" + err.toString();
           }
-          
+
           // 如果連續問了 3 次相同的內容，主動詢問是否由小姐對接
           if (queryCount === 3 && senderUserId !== "N/A") {
             var core = userMessage.split(/\s+/)[0].trim();
             // 寫入快取，讓顧客回覆「是」或「需要」時能直接對接到此型號
             CacheService.getScriptCache().put("last_warn_" + senderUserId, core, 1800);
-            
+
             var offerText = "\n\n💡 哩厚 🌸 偵測到您已經連續查詢 3 次相同的「" + userMessage + "」囉！是不是在跟小幫手玩躲貓貓呢？🤪\n如果真的有需要，不要跟機器人捉迷藏啦！請問是否要幫您聯絡服務小姐，由小姐親自與您對接確認呢？💬\n(若需要，請直接回覆「是」或「需要」)";
-            
+
             if (typeof replyText === 'string') {
               replyText = replyText + offerText;
             } else if (replyText && typeof replyText === 'object') {
@@ -436,7 +436,7 @@ function doPost(e) {
             // 重設計數器，防止後續每次查詢都跳出提示
             CacheService.getScriptCache().put("exact_query_count_" + senderUserId, "0", 1800);
           }
-          
+
           // 回覆 LINE
           try {
             var finalReply = replyText;
@@ -474,7 +474,7 @@ function doPost(e) {
               rawMessages.push({ "type": "text", "text": "搜尋「" + line + "」時發生錯誤：" + err.toString() });
             }
           }
-          
+
           // 合併連續的文字訊息
           var combinedMessages = [];
           for (var idx = 0; idx < rawMessages.length; idx++) {
@@ -489,7 +489,7 @@ function doPost(e) {
               combinedMessages.push(msg);
             }
           }
-          
+
           // 處理 LINE 訊息上限限制 (最多 5 個區塊)
           // 假日多一個公告，且促銷按鈕佔 1 個，所以庫存查詢上限對應減少以預留按鈕欄位
           var maxBlocks = isWeekend ? 3 : 4;
@@ -500,7 +500,7 @@ function doPost(e) {
               "text": "⚠️ 系統提示：一次最多僅能回傳 5 個訊息區塊，其餘查詢結果已被省略。建議分批查詢以取得完整資訊。"
             });
           }
-          
+
           // 回覆 LINE
           try {
             var finalReply = combinedMessages;
@@ -533,7 +533,7 @@ function searchInventory(itemName, senderUserId) {
   } catch (e) {
     return "系統提示：無法開啟試算表，請確認試算表 ID 是否正確或權限是否已開啟。";
   }
-  
+
   var data = getInventoryValues(ss);
   if (!data) {
     return "系統提示：找不到名為「庫存查詢表」的分頁，請確認試算表下方的名稱是否正確喔！";
@@ -541,10 +541,10 @@ function searchInventory(itemName, senderUserId) {
   if (data.length <= 1) {
     return "系統提示：目前庫存查詢表中沒有資料喔！";
   }
-  
+
   // === 0. 檢查是否是型號圖片查詢 (例如 "EQ-1722 單片", "EQ-1722 實景", "EQ-1722 單片 實景") ===
   var msgClean = itemName.trim();
-  
+
   // 偵測系列字尾並切除（例如將「波波里花園系列」切除為「波波里花園」進行比對，提升智慧度）
   var isSeriesSuffixTyped = false;
   var searchItem = msgClean;
@@ -553,11 +553,11 @@ function searchInventory(itemName, senderUserId) {
     isSeriesSuffixTyped = true;
     searchItem = searchItem.replace(/\s*系列\s*$/, "").trim();
   }
-  
+
   var isImageSearch = false;
   var isSingleSearch = false;
   var isSceneSearch = false;
-  
+
   var imageMatch = msgClean.match(/\s*([+\/／或和與、]*\s*(單片|單磚|產品圖|圖片|圖檔|實景|場景|實照|實拍|實景圖|實景照|照片|相片|圖|图|照|单片|单砖|产品图|图片|图档|实景|场景|实照|实拍|实景图|实景照))+$/i);
   if (imageMatch) {
     isImageSearch = true;
@@ -575,11 +575,11 @@ function searchInventory(itemName, senderUserId) {
     }
     searchItem = msgClean.substring(0, imageMatch.index).trim();
   }
-  
+
   // === 1. 解析查詢需求（例如：IB2312 50、IB2312 10箱） ===
   var reqQty = null;
   var reqUnit = "";
-  
+
   if (!isImageSearch) {
     // 1) 先檢查是否有「空格 + 數字 + 可選單位」 (例如: "EQ-1722 500", "AP-6001 10箱")
     var qtySpaceMatch = searchItem.match(/\s+(\d+(?:\.\d+)?)\s*(片|包|箱|件|坪)?$/);
@@ -587,7 +587,7 @@ function searchInventory(itemName, senderUserId) {
     if (qtySpaceMatch) {
       var rawUnit = qtySpaceMatch[2] ? qtySpaceMatch[2].trim() : "";
       var remaining = searchItem.substring(0, qtySpaceMatch.index).trim();
-      
+
       // 💡 如果沒有指定單位，且剩餘的型號部分不包含任何數字，則不應將該數字視為數量（它很可能是型號的一部分，例如 "EQ 1721"）
       if (rawUnit === "" && !/\d/.test(remaining)) {
         // 不視為數量，忽略此比對
@@ -606,7 +606,7 @@ function searchInventory(itemName, senderUserId) {
         parsedQtyFromSpace = true;
       }
     }
-    
+
     if (!parsedQtyFromSpace) {
       // 2) 再檢查是否有緊鄰的「數字 + 強制單位」 (例如: "EQ-1722500片", "AP-600110箱")
       var qtyUnitMatch = searchItem.match(/(\d+(?:\.\d+)?)\s*(片|包|箱|件|坪)$/);
@@ -622,7 +622,7 @@ function searchInventory(itemName, senderUserId) {
       }
     }
   }
-  
+
   var headers = data[0];
   var idxModel = -1;
   var idxSeries = -1;
@@ -639,7 +639,7 @@ function searchInventory(itemName, senderUserId) {
   var idxWeight = -1;
   var idxPacking = -1; // 箱/入
   var idxNumJ = -1; // 坪/片
-  
+
   // 動態尋找欄位索引，保持與網頁後端一致
   for (var i = 0; i < headers.length; i++) {
     if (headers[i] == null) continue;
@@ -664,18 +664,18 @@ function searchInventory(itemName, senderUserId) {
     if (h.indexOf("箱/入") !== -1 || h.indexOf("包裝") !== -1) idxPacking = i;
     if (h.indexOf("坪/片") !== -1 || h.indexOf("換算") !== -1 || h.indexOf("用量") !== -1) idxNumJ = i;
   }
-  
+
   if (idxProductImgFolder === -1) idxProductImgFolder = 15;
   if (idxSceneImgFolder === -1) idxSceneImgFolder = 16;
-  
+
   if (idxModel === -1) {
     return "系統提示：在試算表中找不到「品項編號/型號」欄位，請檢查標題名稱。";
   }
-  
+
   // === 2. 搜尋符合的項目（標準化比對，忽略大小寫、空白與常見符號） ===
   searchItem = InventorySearch_cleanDisplayQuery(searchItem);
   var searchKey = InventorySearch_normalizeQuery(searchItem);
-  
+
   // === 1.5 檢查是否為系列名稱查詢 ===
   if (idxSeries !== -1) {
     var seriesMap = {};
@@ -696,7 +696,7 @@ function searchInventory(itemName, senderUserId) {
         }
       }
     }
-    
+
     // 比對系列名稱
     var matchedSeriesKey = "";
     var seriesKeys = Object.keys(seriesMap);
@@ -706,7 +706,7 @@ function searchInventory(itemName, senderUserId) {
         break;
       }
     }
-    
+
     if (matchedSeriesKey === "" && searchKey.length >= 2) {
       for (var k = 0; k < seriesKeys.length; k++) {
         if (seriesKeys[k].indexOf(searchKey) !== -1) {
@@ -715,7 +715,7 @@ function searchInventory(itemName, senderUserId) {
         }
       }
     }
-    
+
     if (matchedSeriesKey !== "") {
       var modelsList = seriesMap[matchedSeriesKey];
       var originalSeriesName = "";
@@ -728,7 +728,7 @@ function searchInventory(itemName, senderUserId) {
           break;
         }
       }
-      
+
       var seriesReply = "🔍 「" + originalSeriesName + "」系列編號列表如下：\n\n";
       for (var m = 0; m < modelsList.length; m++) {
         seriesReply += "- " + modelsList[m] + "\n";
@@ -745,7 +745,7 @@ function searchInventory(itemName, senderUserId) {
     idxReserved: idxReserved,
     limit: 0
   });
-  
+
   var isBatchSearchMatched = false;
   if (matches.length === 0 && idxBatch !== -1 && searchKey !== "") {
     // 1) 先嘗試「批號精準匹配」
@@ -771,26 +771,26 @@ function searchInventory(itemName, senderUserId) {
       }
     }
   }
-  
+
   if (matches.length === 0) {
     var guardReply = checkIntelligenceGuard(itemName, senderUserId);
     if (guardReply) {
       return { "type": "text", "text": guardReply };
     }
-    
+
     // 💡 模糊型號候選比對 (海納百川容錯，對年長顧客極其友善)
     var fuzzyCandidates = findFuzzyModelCandidates(searchItem, data, idxModel);
     if (fuzzyCandidates.length > 0) {
       var listReply = "客倌您好 🌸 系統沒有找到完全符合「" + searchItem + "」的商品，不過小幫手為您猜測，您是不是想找以下商品呢？\n\n";
       var actions = [];
       var limit = Math.min(fuzzyCandidates.length, 4);
-      
+
       for (var g = 0; g < fuzzyCandidates.length; g++) {
         var cand = fuzzyCandidates[g];
         var modelName = cand.model;
         var series = idxSeries !== -1 && cand.row[idxSeries] ? cand.row[idxSeries].toString().trim() : "未標示";
         var size = idxSize !== -1 && cand.row[idxSize] ? cand.row[idxSize].toString().trim() : "未標示";
-        
+
         // 統計該型號的所有批號庫存
         var totalStock = 0;
         var unit = getUnit(series);
@@ -801,13 +801,13 @@ function searchInventory(itemName, senderUserId) {
             totalStock += getAvailableStock_(row, idxStock, idxAvailable, idxReserved);
           }
         }
-        
+
         listReply += "🌸 商品編號：" + modelName + "\n";
         listReply += "🎀 產品系列：" + series + "\n";
         listReply += "📏 規格尺寸：" + size + "\n";
         listReply += "📦 總庫存量：" + (totalStock > 0 ? (totalStock + " " + unit + " ✅") : "0 " + unit + " ❌") + "\n";
         listReply += "────────────────\n";
-        
+
         if (g < limit) {
           var btnLabel = "👉 " + cand.code;
           if (btnLabel.length > 20) {
@@ -820,9 +820,9 @@ function searchInventory(itemName, senderUserId) {
           });
         }
       }
-      
+
       listReply = listReply.replace(/────────────────\n$/, "").trim();
-      
+
       // 建構 LINE 模板按鈕
       var template = {
         "type": "template",
@@ -833,13 +833,13 @@ function searchInventory(itemName, senderUserId) {
           "actions": actions
         }
       };
-      
+
       return [
         { "type": "text", "text": listReply },
         template
       ];
     }
-    
+
     // 若不是合理的型號格式，判定為非庫存類留言，給予溫暖客服回覆
     if (!isLikelyModelQuery(searchItem)) {
       return "您好 🌸 我是您的 AI 客服專員。目前我無法從系統中找到與「" + searchItem + "」相關的商品、型號或批號喔！\n\n" +
@@ -848,13 +848,13 @@ function searchInventory(itemName, senderUserId) {
              "💡 另外，我們在每則回覆下方都有為您準備好康的「促銷商品」連結按鈕，客倌隨時能點擊進去逛逛喔！🥰\n\n" +
              "如果有其他特殊需求或要聯絡小姐，可以直接回覆「是」或「需要」，我會立刻請服務小姐聯繫您！";
     }
-    
+
     return "您好！目前系統中查不到型號或批號「" + searchItem + "」的庫存資料，請確認輸入是否正確。也可以試試較短型號、移除多餘空白，或改用商品名稱關鍵字。下面有為您附上特惠促銷商品連結，客倌也可以去逛逛挑選好康喔！🌸🛒";
   }
-  
+
   // === 3. 依據型號進行分組與判斷 ===
   // 提取型號代碼來判斷是否為同一商品 (已移至全域以供促銷與庫存查詢共用)
-  
+
   var groups = {};
   for (var i = 0; i < matches.length; i++) {
     var key = getModelCodeKey(matches[i][idxModel]);
@@ -863,16 +863,16 @@ function searchInventory(itemName, senderUserId) {
     }
     groups[key].push(matches[i]);
   }
-  
+
   var groupKeys = Object.keys(groups);
-  
+
   // 3.1) 如果搜尋結果包含多個不同型號商品 -> 回傳型號清單供選擇
   if (groupKeys.length > 1) {
     if (isBatchSearchMatched) {
       var listReply = "🔍 您查詢的批號「" + searchItem + "」符合多個商品編號：\n\n";
       var actions = [];
       var limit = Math.min(groupKeys.length, 4);
-      
+
       for (var g = 0; g < groupKeys.length; g++) {
         var groupedRows = groups[groupKeys[g]];
         var firstRow = groupedRows[0];
@@ -880,18 +880,18 @@ function searchInventory(itemName, senderUserId) {
         var series = idxSeries !== -1 && firstRow[idxSeries] ? firstRow[idxSeries].toString().trim() : "未標示";
         var size = idxSize !== -1 && firstRow[idxSize] ? firstRow[idxSize].toString().trim() : "未標示";
         var unit = getUnit(series);
-        
+
         var batchStock = 0;
         for (var r = 0; r < groupedRows.length; r++) {
           batchStock += parseRobust(groupedRows[r][11]);
         }
-        
+
         listReply += "🌸 商品編號：" + modelName + "\n";
         listReply += "🎀 產品系列：" + series + "\n";
         listReply += "📏 規格尺寸：" + size + "\n";
         listReply += "🎨 批號庫存：" + (batchStock > 0 ? (batchStock + " " + unit + " ✅") : "0 " + unit + " ❌") + "\n";
         listReply += "────────────────\n";
-        
+
         if (g < limit) {
           var btnLabel = "👉 " + modelName;
           if (btnLabel.length > 20) {
@@ -904,9 +904,9 @@ function searchInventory(itemName, senderUserId) {
           });
         }
       }
-      
+
       listReply = listReply.replace(/────────────────\n$/, "").trim();
-      
+
       // 建構 LINE 模板按鈕
       var template = {
         "type": "template",
@@ -917,7 +917,7 @@ function searchInventory(itemName, senderUserId) {
           "actions": actions
         }
       };
-      
+
       return [
         { "type": "text", "text": listReply },
         template
@@ -936,34 +936,34 @@ function searchInventory(itemName, senderUserId) {
       return listReply.trim();
     }
   }
-  
+
   // 3.2) 如果搜尋結果為同一商品（可能有多筆不同批號資料）-> 進行合併排版與比對
   var targetKey = groupKeys[0];
   var groupedRows = groups[targetKey];
   var firstRow = groupedRows[0];
-  
+
   var model = firstRow[idxModel] ? firstRow[idxModel].toString().trim() : "未標示";
   var modelCode = getModelCodeKey(model);
-  
+
   var series = idxSeries !== -1 && firstRow[idxSeries] ? firstRow[idxSeries].toString().trim() : "未標示";
   var origin = idxOrigin !== -1 && firstRow[idxOrigin] ? firstRow[idxOrigin].toString().trim() : "未標示";
   var size = idxSize !== -1 && firstRow[idxSize] ? firstRow[idxSize].toString().trim() : "未標示";
-  
+
   // 依據系列判斷單位
   var unit = getUnit(series);
-  
+
   // 包裝（箱/入）、箱重（重量）、換算（坪/片）
   var packingVal = idxPacking !== -1 && firstRow[idxPacking] ? parseRobust(firstRow[idxPacking]) : 0;
   var packingText = packingVal > 0 ? (packingVal + " " + unit + "/件") : "未標示";
-  
+
   var weightVal = idxWeight !== -1 && firstRow[idxWeight] ? firstRow[idxWeight].toString().trim() : "未標示";
   if (weightVal !== "未標示" && weightVal.toLowerCase().indexOf("kg") === -1) {
     weightVal += " KG";
   }
-  
+
   var numJ = idxNumJ !== -1 && firstRow[idxNumJ] ? parseRobust(firstRow[idxNumJ]) : 0;
   var numJText = numJ > 0 ? (numJ + " " + unit + "/坪") : "未標示";
-  
+
   // 收集所有批號的可用庫存 (即使庫存為零也保留以供顯示)
   var totalAvailableStock = 0;
   var batchMap = {}; // 批號 -> 可用庫存
@@ -973,13 +973,13 @@ function searchInventory(itemName, senderUserId) {
     if (b === "") b = "(無批號)";
     var stock = getAvailableStock_(row, idxStock, idxAvailable, idxReserved); // 可用庫存
     totalAvailableStock += stock;
-    
+
     if (!batchMap[b]) {
       batchMap[b] = 0;
     }
     batchMap[b] += stock;
   }
-  
+
   var batchLines = [];
   var batchKeys = Object.keys(batchMap);
   for (var k = 0; k < batchKeys.length; k++) {
@@ -991,14 +991,14 @@ function searchInventory(itemName, senderUserId) {
     }
     batchLines.push("- " + displayName + "：" + batchStock + " " + unit + (batchStock > 0 ? " ✅" : " ❌"));
   }
-  
+
   var batchText = "";
   if (batchLines.length > 0) {
     batchText = batchLines.join("\n");
   } else {
     batchText = "- 🚫 暫無可用庫存";
   }
-  
+
   // 檢查是否有「促銷」或「促销」字眼在備註欄位中
   var hasPromotion = false;
   for (var r = 0; r < groupedRows.length; r++) {
@@ -1009,30 +1009,30 @@ function searchInventory(itemName, senderUserId) {
       break;
     }
   }
-  
+
   // 格式化商品基本資料與狀態訊息 (將查詢需求與庫存燈號狀態移至最上方)
   var reply = "";
-  
+
   // === 4. 如果有查詢需求量，將查詢需求與狀態排版在最上方，並以科技感燈號表示 ===
   var isNearStockWarning = false;
   var warningDiff = 0;
   var requestedQtyInPieces = null;
   if (reqQty !== null) {
     requestedQtyInPieces = reqQty;
-    
+
     // 單位換算
     if (reqUnit === "箱") {
       requestedQtyInPieces = reqQty * (packingVal > 0 ? packingVal : 1);
     } else if (reqUnit === "坪") {
       requestedQtyInPieces = reqQty * (numJ > 0 ? numJ : 1);
     }
-    
+
     // 避免浮點運算造成 4560 被算成 4559.999999 之類的誤判
     var availableStockForCheck = Math.round(totalAvailableStock * 100) / 100;
     var requiredStockForCheck = Math.round(requestedQtyInPieces * 100) / 100;
-    
+
     reply += "查詢需求：" + reqQty + reqUnit + "\n";
-    
+
     if (availableStockForCheck + 0.000001 >= requiredStockForCheck) {
       reply += "🟢 狀態：(庫存充足，可正常供應。)";
     } else {
@@ -1044,15 +1044,15 @@ function searchInventory(itemName, senderUserId) {
     warningDiff = Math.abs(availableStockForCheck - requiredStockForCheck);
     if (warningDiff <= 100) {
       isNearStockWarning = true;
-      
+
       // 將觸發吃緊警訊的型號記錄至快取中（保留 10 分鐘，以便顧客回覆好/要/需要時能對接通知小姐）
       if (senderUserId && senderUserId !== "N/A") {
         CacheService.getScriptCache().put("last_warn_" + senderUserId, model, 600);
       }
-      
+
       var dayStrForCheck = Utilities.formatDate(new Date(), "GMT+8", "u");
       var isWeekendForCheck = (dayStrForCheck === "6" || dayStrForCheck === "7");
-      
+
       if (isWeekendForCheck) {
         var customerName = getUserDisplayName(senderUserId);
         queueWeekendAlert(model, reqQty, reqUnit, totalAvailableStock, warningDiff, senderUserId, customerName);
@@ -1065,6 +1065,7 @@ function searchInventory(itemName, senderUserId) {
   var etaShortageState = getTaskEtaShortageState_(totalAvailableStock, requestedQtyInPieces);
   var etaResult = null;
   var etaFlexMessage = null;
+  var substituteResult = null;
   if (etaShortageState === "INSUFFICIENT_STOCK" || etaShortageState === "OUT_OF_STOCK") {
     try {
       etaResult = findFutureArrivalsForModel_(ss, model, getEtaTodayKey_());
@@ -1073,13 +1074,31 @@ function searchInventory(itemName, senderUserId) {
       etaResult = null;
       etaFlexMessage = null;
     }
+
+    // Core recommendation engine call
+    try {
+      var queryProduct = {
+        model: model,
+        size: size,
+        series: series,
+        stock: totalAvailableStock
+      };
+      var options = {
+        maxResults: 3
+      };
+      substituteResult = InventoryRepository_findSameSeriesSubstitutes(queryProduct, data, options);
+      console.log("SUBSTITUTE_ENGINE_OK: seriesKey=" + (substituteResult ? substituteResult.seriesKey : "") + ", returned=" + (substituteResult ? substituteResult.candidates.length : 0) + ", safe=" + (substituteResult ? substituteResult.safeCandidateCount : 0));
+    } catch (subErr) {
+      substituteResult = null;
+      console.log("SUBSTITUTE_ENGINE_ERROR: " + subErr.toString());
+    }
   }
-  
+
   // 如果是促銷商品，顯示警告語
   if (hasPromotion) {
     reply += "⚠️ 促銷不退貨\n~~~~~~~~~~~~~~~~~~\n\n";
   }
-  
+
   // 格式化商品基本資料訊息 (更換為可愛好看的風格)
   reply += "🌸 商品編號：" + model + "\n";
   reply += "🎀 產品系列：" + series + "\n";
@@ -1096,7 +1115,7 @@ function searchInventory(itemName, senderUserId) {
     var dayStrForCheck = Utilities.formatDate(new Date(), "GMT+8", "u");
     var isWeekendForCheck = (dayStrForCheck === "6" || dayStrForCheck === "7");
     var weekendNotice = isWeekendForCheck ? "\n（我們將於週一上班時間為您確認並主動回覆）" : "";
-    
+
     reply += "\n\n⚠️⚠️⚠️ 庫存即將完售 ⚠️⚠️⚠️\n" +
              "━━━━━━━━━━━━━━━━━━━━\n" +
              "📢 溫馨提醒：\n" +
@@ -1105,7 +1124,7 @@ function searchInventory(itemName, senderUserId) {
              "庫存隨時有變動可能，請問需要幫您請小姐進一步確定並預留嗎？" + weekendNotice + "\n" +
              "━━━━━━━━━━━━━━━━━━━━";
   }
-  
+
   // 取得當前型號編號作為提示範例中的動態提醒
   var modelBase = "";
   var codeMatch = model.match(/^([a-zA-Z0-9\-_/\.]+)/);
@@ -1114,12 +1133,12 @@ function searchInventory(itemName, senderUserId) {
   } else {
     modelBase = model.split(/\s+/)[0];
   }
-  
+
   // 加入底部的提示資訊
     reply += "\n\n💡 查詢圖片：型號 + 單片/磚 / 實景";
     reply += "\n💡 查詢範例：(例：" + modelBase + " 10箱/片)";
     reply += "\n💡 貼心提醒：輸入「批號」（如 7X24）時，會直接顯示該批號的可用庫存數量喔！另外下方也附上超值的促銷按鈕，歡迎客倌點擊挑選便宜好貨！🎁✨";
-  
+
   var replyMsg = reply.trim();
 
   // 一般庫存查詢只回傳純文字，避免額外觸發 Drive 搜尋而拖慢 webhook
@@ -1136,10 +1155,10 @@ function searchInventory(itemName, senderUserId) {
   // === 5. 只有查圖片時才解析相關連結按鈕 ===
   var productFolderVal = idxProductImgFolder !== -1 && firstRow.length > idxProductImgFolder && firstRow[idxProductImgFolder] ? firstRow[idxProductImgFolder].toString().trim() : "";
   var sceneFolderVal = idxSceneImgFolder !== -1 && firstRow.length > idxSceneImgFolder && firstRow[idxSceneImgFolder] ? firstRow[idxSceneImgFolder].toString().trim() : "";
-  
+
   var productLink = getLinkFromCell(productFolderVal, modelCode, PRODUCT_IMAGE_FOLDER_ID);
   var sceneLink = getLinkFromCell(sceneFolderVal, modelCode, SCENE_IMAGE_FOLDER_ID);
-  
+
   var actions = [];
   if (InventorySearch_isUsableImageLink(productLink) && isSingleSearch) {
     actions.push({
@@ -1598,7 +1617,7 @@ function getLineAuthorizationHeaderOrNull_(context) {
 function replyToLine(replyToken, replyData, skipPromo) {
   var url = 'https://api.line.me/v2/bot/message/reply';
   var messages = [];
-  
+
   if (typeof replyData === 'string') {
     messages = [{'type': 'text', 'text': replyData}];
   } else if (Array.isArray(replyData)) {
@@ -1606,7 +1625,7 @@ function replyToLine(replyToken, replyData, skipPromo) {
   } else {
     messages = [replyData];
   }
-  
+
   // 如果不跳過促銷，且目前回覆訊息長度小於 5
   if (isPromoCardEnabled_() && !skipPromo && messages.length < 5) {
     var promoButtonMsg = {
@@ -1629,7 +1648,7 @@ function replyToLine(replyToken, replyData, skipPromo) {
 
   var authorizationHeader = getLineAuthorizationHeaderOrNull_("replyToLine");
   if (!authorizationHeader) return false;
-  
+
   var options = {
     'method': 'post',
     'headers': {
@@ -1642,17 +1661,17 @@ function replyToLine(replyToken, replyData, skipPromo) {
       'messages': messages
     })
   };
-  
+
   try {
     var response = UrlFetchApp.fetch(url, options);
     var code = response.getResponseCode();
     if (code >= 200 && code < 300) return;
-    
+
     console.error("LINE reply failed: " + code + " " + response.getContentText());
   } catch (err) {
     console.error("LINE reply exception: " + err.toString());
   }
-  
+
   // 失敗時退回成純文字，避免整條訊息完全沒回覆
   try {
     var fallbackText = "";
@@ -1726,7 +1745,7 @@ function getDriveFileUrl(folderId, fileNameKeyword) {
   if (!folderId || folderId.trim() === "" || folderId.indexOf('請填入') !== -1) {
     return null;
   }
-  
+
   var cacheKey = "dr_file_" + folderId + "_" + fileNameKeyword.replace(/[^a-zA-Z0-9]/g, "");
   var cache = CacheService.getScriptCache();
   var cached = cache.get(cacheKey);
@@ -1736,7 +1755,7 @@ function getDriveFileUrl(folderId, fileNameKeyword) {
       return JSON.parse(cached);
     } catch(err) {}
   }
-  
+
   try {
     var folder = DriveApp.getFolderById(folderId);
     var query = 'title contains "' + fileNameKeyword + '" and mimeType contains "image/" and trashed = false';
@@ -1744,13 +1763,13 @@ function getDriveFileUrl(folderId, fileNameKeyword) {
     if (files.hasNext()) {
       var file = files.next();
       var fileId = file.getId();
-      
+
       try {
         file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
       } catch (shareErr) {
         console.warn("自動設定檔案共用失敗：" + shareErr.toString());
       }
-      
+
       var fileInfo = {
         directUrl: "https://lh3.googleusercontent.com/d/" + fileId,
         viewUrl: file.getUrl()
@@ -1797,7 +1816,7 @@ function getFolderIdFromCell(cellValue) {
   if (!cellValue) return null;
   var val = cellValue.toString().trim();
   if (val === "") return null;
-  
+
   // 檢查是否為網址格式，若是則從中提取資料夾或檔案 ID
   if (val.indexOf("http") === 0) {
     var match = val.match(/folders\/([a-zA-Z0-9\-_]+)/);
@@ -1805,24 +1824,24 @@ function getFolderIdFromCell(cellValue) {
     var matchFile = val.match(/id=([a-zA-Z0-9\-_]+)/);
     if (matchFile) return matchFile[1];
   }
-  
+
   // 檢查是否符合 Google Drive ID 的一般特徵（長度在 25 到 50 之間，包含大小寫字母、數字、底線和橫線）
   if (/^[a-zA-Z0-9\-_]{25,50}$/.test(val)) {
     return val;
   }
-  
+
   return null;
 }
 
 // 輔助函數：藉由資料夾名稱或 ID，在該資料夾中搜尋符合型號關鍵字的圖片，並回傳圖片資訊 (已加入資料夾 ID 快取 24 小時)
 function getDriveFileUrlByNameOrId(folderNameOrId, fileNameKeyword) {
   if (!folderNameOrId || folderNameOrId.trim() === "") return null;
-  
+
   var folderId = getFolderIdFromCell(folderNameOrId);
   if (folderId) {
     return getDriveFileUrl(folderId, fileNameKeyword);
   }
-  
+
   var cacheKey = "f_name_to_id_" + folderNameOrId.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, "");
   var cache = CacheService.getScriptCache();
   var cachedId = cache.get(cacheKey);
@@ -1830,7 +1849,7 @@ function getDriveFileUrlByNameOrId(folderNameOrId, fileNameKeyword) {
     if (cachedId === "NOT_FOUND") return null;
     return getDriveFileUrl(cachedId, fileNameKeyword);
   }
-  
+
   try {
     var folders = DriveApp.getFoldersByName(folderNameOrId);
     if (folders.hasNext()) {
@@ -1857,29 +1876,29 @@ function getLinkFromCell(cellValue, modelCode, defaultFolderId) {
     }
     return null;
   }
-  
+
   var val = cellValue.toString().trim();
   if (val === "") return null;
-  
+
   // 1. 如果是 Google Drive 資料夾連結 -> 💡 極速搜尋優化：直接返回資料夾連結，繞過 DriveApp 搜尋
   if (val.indexOf("http") === 0 && val.indexOf("folders/") !== -1) {
     return val;
   }
-  
+
   // 2. 如果是 Google Drive 單一檔案連結 (包含 file/d/)
   if (val.indexOf("http") === 0 && val.indexOf("file/d/") !== -1) {
     return val;
   }
-  
+
   // 3. 如果是其他網址
   if (val.indexOf("http") === 0) {
     return val;
   }
-  
+
   // 4. 如果是普通的資料夾名稱或 ID -> 回退至 DriveApp 搜尋
   var fileByName = getDriveFileUrlByNameOrId(val, modelCode);
   if (fileByName) return fileByName.viewUrl;
-  
+
   return null;
 }
 
@@ -1976,10 +1995,10 @@ function getDirectImageLink(cellValue, modelCode, defaultFolderId) {
     }
     return null;
   }
-  
+
   var val = cellValue.toString().trim();
   if (val === "") return null;
-  
+
   // 1. 如果是 Google Drive 單一檔案連結 (包含 file/d/)
   if (val.indexOf("http") === 0 && val.indexOf("file/d/") !== -1) {
     var fileIdMatch = val.match(/file\/d\/([a-zA-Z0-9\-_]+)/);
@@ -1990,7 +2009,7 @@ function getDirectImageLink(cellValue, modelCode, defaultFolderId) {
     var idMatch = val.match(/id=([a-zA-Z0-9\-_]+)/);
     if (idMatch) return "https://lh3.googleusercontent.com/d/" + idMatch[1];
   }
-  
+
   // 2. 如果是 Google Drive 資料夾連結
   if (val.indexOf("http") === 0 && val.indexOf("folders/") !== -1) {
     var matchFolder = val.match(/folders\/([a-zA-Z0-9\-_]+)/);
@@ -2000,11 +2019,11 @@ function getDirectImageLink(cellValue, modelCode, defaultFolderId) {
       if (fileInFolder) return fileInFolder.directUrl;
     }
   }
-  
+
   // 3. 如果是普通的資料夾名稱 or ID
   var fileByName = getDriveFileUrlByNameOrId(val, modelCode);
   if (fileByName) return fileByName.directUrl;
-  
+
   return null;
 }
 
@@ -2041,14 +2060,14 @@ function sendClerkStockAlert(model, reqQty, reqUnit, totalAvailableStock, warnin
       Logger.log("CLERK_USER_ID has not been set yet.");
       return;
     }
-    
+
     // 檢查小姐是否已確認，若是則停止發送
     var acked = CacheService.getScriptCache().get("clerk_acknowledged_" + senderUserId);
     if (acked === "true") {
       Logger.log("Prevented alert to clerk because clerk already acknowledged: " + senderUserId);
       return;
     }
-    
+
     // 防重複推播機制：2小時內相同顧客對相同商品最多通知小姐 2 次
     var modelCode = getGlobalModelCodeKey(model);
     var cacheKey = "clerk_alert_count_" + modelCode + "_" + senderUserId;
@@ -2058,13 +2077,13 @@ function sendClerkStockAlert(model, reqQty, reqUnit, totalAvailableStock, warnin
       return;
     }
     CacheService.getScriptCache().put(cacheKey, (alertCount + 1).toString(), 7200); // 2 小時快取 (7200 秒)
-    
+
     // 紀錄為活躍顧客，以便小姐回覆時消警
     recordActiveAlertCustomer(senderUserId);
-    
+
     // 取得顧客名稱
     var customerName = getUserDisplayName(senderUserId);
-    
+
     var alertText = "🚨🚨🚨 庫存吃緊警示 🚨🚨🚨\n" +
                     "━━━━━━━━━━━━━━━━━━━━\n" +
                     "有顧客在 LINE 上詢問此商品庫存：\n\n" +
@@ -2074,7 +2093,7 @@ function sendClerkStockAlert(model, reqQty, reqUnit, totalAvailableStock, warnin
                     "⚠️ 相差片數：" + Math.round(warningDiff) + " 片 (在 100 片以內)\n" +
                     "👤 詢問顧客：" + customerName + "\n\n" +
                     "💡 提示：請儘速與顧客確認或鎖定庫存喔！";
-                    
+
     var url = 'https://api.line.me/v2/bot/message/push';
     var authorizationHeader = getLineAuthorizationHeaderOrNull_("sendClerkStockAlert");
     if (!authorizationHeader) return;
@@ -2107,7 +2126,7 @@ function queueWeekendAlert(model, reqQty, reqUnit, totalAvailableStock, warningD
       Logger.log("Prevented weekend alert queue because clerk already acknowledged: " + senderUserId);
       return;
     }
-    
+
     // 防重複排程機制：2小時內相同顧客對相同商品最多排程 2 次
     var modelCode = getGlobalModelCodeKey(model);
     var cacheKey = "clerk_alert_count_" + modelCode + "_" + senderUserId;
@@ -2117,10 +2136,10 @@ function queueWeekendAlert(model, reqQty, reqUnit, totalAvailableStock, warningD
       return;
     }
     CacheService.getScriptCache().put(cacheKey, (alertCount + 1).toString(), 7200); // 2 小時快取 (7200 秒)
-    
+
     // 紀錄為活躍顧客，以便小姐回覆時消警
     recordActiveAlertCustomer(senderUserId);
-    
+
     var time = Utilities.formatDate(new Date(), "GMT+8", "yyyy-MM-dd HH:mm:ss");
     ReminderRepository_appendWeekendAlert(ssId, [time, model, reqQty, reqUnit, totalAvailableStock, warningDiff, senderUserId, customerName, "待發送"]);
   } catch (e) {
@@ -2160,16 +2179,16 @@ function processMondayReminders() {
       Logger.log("找不到『假日警示排程』分頁。");
       return;
     }
-    
+
     if (data.length <= 1) {
       Logger.log("沒有排程警示需要處理。");
       return;
     }
-    
+
     var clerkUserId = PropertiesService.getScriptProperties().getProperty('CLERK_USER_ID');
     var clerkAlerts = [];
     var processedCount = 0;
-    
+
     for (var r = 1; r < data.length; r++) {
       var row = data[r];
       var status = row[8]; // 狀態
@@ -2182,7 +2201,7 @@ function processMondayReminders() {
         var warningDiff = row[5];
         var senderUserId = row[6];
         var customerName = row[7];
-        
+
         // 1. 推播給顧客提醒
         if (senderUserId && senderUserId !== "N/A") {
           try {
@@ -2192,17 +2211,17 @@ function processMondayReminders() {
             console.error("發送顧客週一提醒失敗: " + custErr.toString());
           }
         }
-        
+
         // 2. 收集給小姐的警示
         clerkAlerts.push("- 商品：" + model + " | 需求：" + reqQty + reqUnit + " | 庫存：" + totalAvailableStock + " 片 | 差額：" + Math.round(warningDiff) + " 片 | 顧客：" + customerName);
-        
+
         // 3. 更新狀態為已發送
         var updateTime = Utilities.formatDate(new Date(), "GMT+8", "yyyy-MM-dd HH:mm:ss");
         ReminderRepository_setWeekendAlertStatus(ssId, r + 1, "已發送 (" + updateTime + ")");
         processedCount++;
       }
     }
-    
+
     // 3. 推播整合通知給小姐
     if (clerkAlerts.length > 0 && clerkUserId) {
       var alertText = "🔔 假日累積庫存警示通知\n" +
@@ -2211,7 +2230,7 @@ function processMondayReminders() {
                       "💡 提示：請確認上述顧客需求並及時鎖定庫存喔！";
       pushMessageToUser(clerkUserId, alertText);
     }
-    
+
     Logger.log("成功處理 " + processedCount + " 筆週一提醒。");
   } catch (err) {
     Logger.log("處理週一提醒時發生錯誤: " + err.toString());
@@ -2225,7 +2244,7 @@ function pushMessageToUser(userId, text) {
     'type': 'text',
     'text': text
   };
-  
+
   // 如果是發送給小姐的推送訊息，自動隨附 Quick Reply 快速回覆按鈕
   if (clerkUserId && userId === clerkUserId) {
     messageObj.quickReply = {
@@ -2304,11 +2323,11 @@ function getAvailableStock_(row, idxStock, idxAvailable, idxReserved) {
   var stockIdx = (typeof idxStock !== "undefined" && idxStock !== -1) ? idxStock : 10;
   var availIdx = (typeof idxAvailable !== "undefined" && idxAvailable !== -1) ? idxAvailable : 11;
   var reservIdx = (typeof idxReserved !== "undefined" && idxReserved !== -1) ? idxReserved : 12;
-  
+
   var physical = row.length > stockIdx ? parseRobust(row[stockIdx]) : 0;
   var reserved = row.length > reservIdx ? parseRobust(row[reservIdx]) : 0;
   var available = row.length > availIdx ? parseRobust(row[availIdx]) : (physical - reserved);
-  
+
   // 防呆與校正：可用庫存不應高於「實際現貨庫存 - 保留數量」
   var maxAllowed = physical - reserved;
   if (available > maxAllowed) {
@@ -2324,10 +2343,10 @@ function markWeekendAlertsAsProcessed() {
     var data = ReminderRepository_readWeekendAlertRows(ssId);
     if (!data) return;
     if (data.length <= 1) return;
-    
+
     var updateTime = Utilities.formatDate(new Date(), "GMT+8", "yyyy-MM-dd HH:mm:ss");
     var updateCount = 0;
-    
+
     for (var r = 1; r < data.length; r++) {
       var status = data[r][8];
       if (status === "待發送") {
@@ -2345,7 +2364,7 @@ function markWeekendAlertsAsProcessed() {
 // 智慧引導守衛：攔截閒聊、問候、抱怨或親切回覆，提供 AI 客服助理式的溫馨互動與引導
 function checkIntelligenceGuard(itemName, senderUserId) {
   var clean = itemName.trim().toLowerCase();
-  
+
   // 1. 常見問候/閒聊詞 (AI 客服助理問候)
   var greetings = /^(哈囉|hello|hi|你好|您好|在嗎|早安|午安|晚安|嗨|在吗|哈罗|有人在嗎|有人在吗|👋)$/i;
   if (greetings.test(clean)) {
@@ -2354,7 +2373,7 @@ function checkIntelligenceGuard(itemName, senderUserId) {
            "💡 如果想查看某個系列的所有型號，直接輸入「系列名稱」（例如：波波里花園）就可以囉！\n\n" +
            "請問今天有什麼我可以幫您的呢？😊";
   }
-  
+
   // 2. 感謝/親切回覆詞 (給予溫暖的回覆，並標記結束會話)
   var thanks = /^(謝謝|谢谢|感恩|感謝|感谢|ok|了解|知道|了解了|收到|好的|ok了|👌|辛苦了|麻煩了|麻煩您了|太好了|好棒|棒|讚|讚喔|太感謝了)$/;
   if (thanks.test(clean)) {
@@ -2382,7 +2401,7 @@ function checkIntelligenceGuard(itemName, senderUserId) {
     return "好的！請問您需要查詢或預留哪一個商品型號呢？\n" +
            "可以直接輸入型號（例如：EQ-1721）或系列名稱，我會立刻幫您處理喔！🌸";
   }
-  
+
   // 5. 抱怨/情緒詞 (以幽默調侃、詼諧自嘲的口吻回應，取代原本生硬的回覆)
   var complaints = /.*(笨死了|白痴|白癡|笨蛋|傻眼|北七|爛死了|爛|差勁|無言|白痴喔|不聰明|笨|爛機器人|廢物|智障|爛透了|白目|吵|囉唆|煩|廢|沒用|吵死了|裝死|傻逼|垃圾|爛貨).*$/;
   if (complaints.test(clean)) {
@@ -2391,7 +2410,7 @@ function checkIntelligenceGuard(itemName, senderUserId) {
            "💡 來～深呼吸，重新輸入正確編號給小幫手一次表現的機會嘛！🙏\n" +
            "（如果還是嫌我太笨，可以直接打「預留」或「請小姐確認」，我會乖乖去把我們溫柔親切的服務小姐請出來為您做最完美的真人服務喔！🥰🌸）";
   }
-  
+
   // 6. 詢問照片/圖片但沒有提供型號 (防呆與高齡化友善引導)
   var photoKeywords = /^(照片|圖片|圖檔|相片|看照片|看圖片|看圖|有照片嗎|有圖片嗎|有圖嗎|照片檔|单片|实景|产品图|圖片檔)$/;
   if (photoKeywords.test(clean)) {
@@ -2409,7 +2428,7 @@ function checkIntelligenceGuard(itemName, senderUserId) {
            "💡 如果您是想查詢「型號」，請直接輸入品項編號（如：EQ-1721）。\n\n" +
            "ℹ️ 您可以輸入「說明」或「幫助」取得完整的格式指引。";
   }
-  
+
   return null;
 }
 
@@ -2439,23 +2458,23 @@ function checkIdleCustomers() {
   var cache = CacheService.getScriptCache();
   var activeListStr = cache.get("active_session_users") || "";
   if (!activeListStr) return;
-  
+
   var list = activeListStr.split(",");
   var now = new Date().getTime();
   var updatedList = [];
-  
+
   for (var i = 0; i < list.length; i++) {
     var senderUserId = list[i];
     if (!senderUserId) continue;
-    
+
     var lastActiveTimeStr = cache.get("last_active_time_" + senderUserId);
     if (!lastActiveTimeStr) continue; // 已過期過久，跳過
-    
+
     var lastActiveTime = parseInt(lastActiveTimeStr);
     var elapsedMinutes = (now - lastActiveTime) / 60000;
-    
+
     var followUpSent = cache.get("follow_up_sent_" + senderUserId);
-    
+
     // 超過 5 分鐘未說話，且本會話還沒有發送過關懷問候
     if (elapsedMinutes >= 5 && elapsedMinutes < 15 && !followUpSent) {
       try {
@@ -2466,13 +2485,13 @@ function checkIdleCustomers() {
         Logger.log("Failed to push follow-up to user: " + senderUserId + ", error: " + e.toString());
       }
     }
-    
+
     // 只保留 20 分鐘內的活躍追蹤，超過後將自動排除不再追蹤
     if (elapsedMinutes < 20) {
       updatedList.push(senderUserId);
     }
   }
-  
+
   if (updatedList.length > 0) {
     cache.put("active_session_users", updatedList.join(","), 3600);
   } else {
@@ -2630,22 +2649,22 @@ function buildPromoReserveAlertText_(item, isReminder) {
 // 輔助功能：追蹤顧客是否連續 3 次查詢相同的搜尋內容（同編號、同數量）
 function updateExactQueryTracker(senderUserId, userMessage) {
   if (!senderUserId || senderUserId === "N/A") return 0;
-  
+
   // 標準化整個訊息作為比對基礎 (例如 "eq172110000")
   var normalizedQuery = normalizeSearchKey(userMessage);
   if (!normalizedQuery || normalizedQuery.length < 2) return 0;
-  
+
   var cache = CacheService.getScriptCache();
   var lastQuery = cache.get("last_exact_query_" + senderUserId);
   var count = parseInt(cache.get("exact_query_count_" + senderUserId) || "0");
-  
+
   if (lastQuery === normalizedQuery) {
     count += 1;
   } else {
     count = 1;
     cache.put("last_exact_query_" + senderUserId, normalizedQuery, 1800); // 30 分鐘
   }
-  
+
   cache.put("exact_query_count_" + senderUserId, count.toString(), 1800); // 30 分鐘
   return count;
 }
@@ -2654,12 +2673,12 @@ function updateExactQueryTracker(senderUserId, userMessage) {
 function isLikelyModelQuery(str) {
   if (!str) return false;
   var clean = str.trim();
-  
+
   // 型號格式特徵：英文開頭接數字，或數字接英文 (例如 EQ-1724, IB2312, 7A24)
   var modelPattern = /[a-zA-Z]+-?\d+/i;
   var numericPattern = /^\d+$/; // 純數字
   var alphanumericPattern = /^[a-zA-Z0-9]+$/; // 短代碼
-  
+
   if (modelPattern.test(clean) || numericPattern.test(clean)) {
     return true;
   }
@@ -2684,13 +2703,13 @@ function getLiveStockMap(ss) {
   values = getInventoryValues(ss);
   if (!values) return stockMap;
   if (values.length <= 1) return stockMap;
-  
+
   var headers = values[0];
   var idxModel = -1;
   var idxStock = -1;
   var idxAvailable = -1;
   var idxReserved = -1;
-  
+
   for (var i = 0; i < headers.length; i++) {
     if (headers[i] == null) continue;
     var h = headers[i].toString().replace(/\s+/g, '');
@@ -2702,14 +2721,14 @@ function getLiveStockMap(ss) {
     if (h.indexOf("保留") !== -1) idxReserved = i;
   }
   if (idxModel === -1) idxModel = 0;
-  
+
   for (var r = 1; r < values.length; r++) {
     var row = values[r];
     if (!row || row.length === 0) continue;
     var modelVal = row[idxModel] ? row[idxModel].toString().trim() : "";
     var targetKey = getModelCodeKey(modelVal);
     if (!targetKey) continue;
-    
+
     var stock = getAvailableStock_(row, idxStock, idxAvailable, idxReserved);
     if (stockMap[targetKey] === undefined) {
       stockMap[targetKey] = 0;
@@ -2725,7 +2744,7 @@ function getPromotionalProducts() {
   var ss = SpreadsheetApp.openById(ssId);
   var sheet = null;
   var sheets = ss.getSheets();
-  
+
   // 透過 sheetId (gid) 精準比對尋找分頁
   for (var i = 0; i < sheets.length; i++) {
     if (sheets[i].getSheetId() === 539717015) {
@@ -2733,7 +2752,7 @@ function getPromotionalProducts() {
       break;
     }
   }
-  
+
   // 如果找不到，模糊匹配分頁名稱含「促銷」的分頁，最後再退回「庫存查詢表」
   if (!sheet) {
     var allSheets = ss.getSheets();
@@ -2748,14 +2767,14 @@ function getPromotionalProducts() {
     sheet = ss.getSheetByName("庫存查詢表");
   }
   if (!sheet) return [];
-  
+
   var values = getInventoryValues(ss);
   if (!values || values.length <= 1) return [];
-  
+
   var headers = values[0];
   var idxModel = -1;
   var idxSeries = -1;
-  
+
   for (var i = 0; i < headers.length; i++) {
     if (headers[i] == null) continue;
     var h = headers[i].toString().replace(/\s+/g, '');
@@ -2766,22 +2785,22 @@ function getPromotionalProducts() {
       idxSeries = i;
     }
   }
-  
+
   if (idxModel === -1) idxModel = 0; // 防呆
-  
+
   // 核心效能優化：一次性讀取庫存對照表，建立記憶體內部的雜湊對照表 (Hash Map)
   var stockMap = getLiveStockMap(ss);
-  
+
   var promoItems = [];
   for (var r = 1; r < values.length; r++) {
     var row = values[r];
     if (!row || row.length === 0) continue;
-    
+
     var model = row[idxModel] ? row[idxModel].toString().trim() : "";
     if (!model) continue;
-    
+
     var series = (idxSeries !== -1 && row[idxSeries]) ? row[idxSeries].toString().trim() : "";
-    
+
     // 檢查該行是否包含「促銷」關鍵字
     var isPromo = false;
     var promoText = "";
@@ -2793,12 +2812,12 @@ function getPromotionalProducts() {
         break;
       }
     }
-    
+
     if (isPromo) {
       // O(1) 記憶體極速比對
       var targetKey = getModelCodeKey(model);
       var stockVal = (targetKey && stockMap[targetKey] !== undefined) ? stockMap[targetKey] : 0;
-      
+
       promoItems.push({
         model: model,
         series: series,
@@ -2817,7 +2836,7 @@ function searchPromotionalProducts(query, senderUserId) {
     if (items.length === 0) {
       return "客倌 🌸 目前系統中沒有查到標記有「促銷」的特惠商品喔！\n如果有其他商品需要查詢，隨時都可以直接輸入型號查詢喔！🥰";
     }
-    
+
     // 將所有商品依「系列」分組
     var groups = {};
     for (var i = 0; i < items.length; i++) {
@@ -2825,10 +2844,10 @@ function searchPromotionalProducts(query, senderUserId) {
       if (!groups[s]) groups[s] = [];
       groups[s].push(items[i]);
     }
-    
+
     var seriesNames = Object.keys(groups);
     var cleanQuery = query ? query.toString().trim() : "";
-    
+
     // 如果沒有輸入特定的查詢系列，顯示簡潔的折疊目錄大綱
     if (!cleanQuery) {
       var replyText = "✨🎁 勁揚建材 - 特惠促銷系列目錄 🎁✨\n";
@@ -2840,7 +2859,7 @@ function searchPromotionalProducts(query, senderUserId) {
       replyText += "━━━━━━━━━━━━━━━━━━━━\n";
       replyText += "💡 您可以直接輸入「系列名稱」（例如：星月六角）展開查看該系列的商品庫存與促銷內容喔！🥰\n\n";
       replyText += "🌐 您也可以點擊下方「網頁版折疊目錄」按鈕，在手機上直接瀏覽折疊式商品目錄！🫱🪪";
-      
+
       // 建立 Buttons Template
       var webAppUrl = getPromoWebAppUrl_(senderUserId);
       var actions = [
@@ -2850,7 +2869,7 @@ function searchPromotionalProducts(query, senderUserId) {
           "uri": webAppUrl
         }
       ];
-      
+
       // 加入前 3 個系列的點擊快速展開按鈕
       var maxButtons = Math.min(seriesNames.length, 3);
       for (var i = 0; i < maxButtons; i++) {
@@ -2860,7 +2879,7 @@ function searchPromotionalProducts(query, senderUserId) {
           "text": seriesNames[i]
         });
       }
-      
+
       var messages = [
         { "type": "text", "text": replyText },
         {
@@ -2875,7 +2894,7 @@ function searchPromotionalProducts(query, senderUserId) {
       ];
       return messages;
     }
-    
+
     // 若有輸入查詢內容，進行系列名稱匹配
     var matchedSeriesName = "";
     var normQuery = normalizeSearchKey(cleanQuery);
@@ -2893,17 +2912,17 @@ function searchPromotionalProducts(query, senderUserId) {
         }
       }
     }
-    
+
     // 如果找不到匹配的系列，回覆提示
     if (!matchedSeriesName) {
       return "找不到系列「" + cleanQuery + "」的促銷商品。您可以輸入「查看促銷」取得完整系列目錄，或直接輸入型號（如 EQ-1721）查詢商品庫存喔！🥰";
     }
-    
+
     // 展開該系列的商品明細
     var groupItems = groups[matchedSeriesName];
     var replyText = "✨🎁 「" + matchedSeriesName + "」系列 - 特惠促銷商品 🎁✨\n";
     replyText += "━━━━━━━━━━━━━━━━━━━━\n";
-    
+
     for (var i = 0; i < groupItems.length; i++) {
       var item = groupItems[i];
       replyText += "🌸 商品編號：" + item.model + "\n";
@@ -2912,10 +2931,10 @@ function searchPromotionalProducts(query, senderUserId) {
       replyText += "📢 促銷說明：" + item.promoText + "\n";
       replyText += "━━━━━━━━━━━━━━━━━━━━\n";
     }
-    
+
     replyText += "💡 溫馨提醒：特惠商品數量有限！如果有中意的商品，可以直接輸入「型號 + 預留」（例如：" + groupItems[0].model + " 預留），或回覆「是」聯絡小姐幫您保留喔！🫱🪪";
     return replyText;
-    
+
   } catch (e) {
     return "讀取促銷商品資料出錯：" + e.toString();
   }
@@ -2925,7 +2944,7 @@ function searchPromotionalProducts(query, senderUserId) {
 function findFuzzyModelCandidates(cleanInput, data, idxModel) {
   // 1. 移除非字母數字的字元，轉為小寫
   var normInput = cleanInput.toLowerCase().replace(/[^a-z0-9]/g, "");
-  
+
   // 2. 提取輸入中的所有數字序列（長度為 3 到 5 位）
   var numbers = cleanInput.match(/\d{3,5}/g);
   if (!numbers) {
@@ -2934,27 +2953,27 @@ function findFuzzyModelCandidates(cleanInput, data, idxModel) {
       numbers = cleanDigits;
     }
   }
-  
+
   if (!numbers || numbers.length === 0) {
     return [];
   }
-  
+
   var candidates = [];
   var seenModels = {};
-  
+
   for (var r = 1; r < data.length; r++) {
     var row = data[r];
     if (!row || row.length === 0) continue;
     var modelVal = row[idxModel] ? row[idxModel].toString().trim() : "";
     if (modelVal === "") continue;
-    
+
     // 提取該型號的編號部分並標準化
     var modelCode = getModelCodeKey(modelVal);
     if (!modelCode || seenModels[modelCode]) continue;
     seenModels[modelCode] = true;
-    
+
     var normModel = modelCode.toLowerCase();
-    
+
     // 檢查此型號是否包含輸入中的任一數字
     var hasNumberMatch = false;
     for (var n = 0; n < numbers.length; n++) {
@@ -2963,19 +2982,19 @@ function findFuzzyModelCandidates(cleanInput, data, idxModel) {
         break;
       }
     }
-    
+
     if (hasNumberMatch) {
       // 計算字母比對分數
       var queryLetters = normInput.replace(/[0-9]/g, "");
       var modelLetters = normModel.replace(/[0-9]/g, "");
-      
+
       var letterScore = 0;
       for (var l = 0; l < modelLetters.length; l++) {
         if (queryLetters.indexOf(modelLetters[l]) !== -1) {
           letterScore++;
         }
       }
-      
+
       candidates.push({
         model: modelVal,
         code: modelCode,
@@ -2984,12 +3003,12 @@ function findFuzzyModelCandidates(cleanInput, data, idxModel) {
       });
     }
   }
-  
+
   // 依字母比對分數從高到低排序
   candidates.sort(function(a, b) {
     return b.score - a.score;
   });
-  
+
   return candidates;
 }
 
@@ -3014,7 +3033,7 @@ function writeReserveToSheet_(item) {
   var ssId = "1C_R1DdTj5brxftl9fPabTKBGzcG-lxWWxWoyi-ItA48";
   var timeStr = Utilities.formatDate(new Date(item.createdAt), "GMT+8", "yyyy-MM-dd HH:mm:ss");
   var custStr = item.customerName || (item.userId ? "ID: " + item.userId : "未填寫");
-  
+
   ReservationRepository_appendReserveRecord(ssId, [
     timeStr,
     custStr,
@@ -3052,8 +3071,8 @@ function handleAssistantPostback_(event) {
 
   // Adjust boss read-only restriction to allow all assistant center actions
   var allowedBossActions = [
-    "assistant_start_flow", "complete_flow", "complete_notify", 
-    "problem_flow", "missing_data_flow", "change_status", 
+    "assistant_start_flow", "complete_flow", "complete_notify",
+    "problem_flow", "missing_data_flow", "change_status",
     "view_blocked_reason", "assistant_show_abnormal"
   ];
   if (operatorRole === "boss" && !allowedBossActions.includes(action)) {
@@ -3070,10 +3089,10 @@ function handleAssistantPostback_(event) {
       replyToLine(replyToken, "目前沒有助理待處理工作", true);
       return true;
     }
-    
+
     var sorted = getSortedTasks_(activeTasks);
     var topTask = sorted[0];
-    
+
     var fromStatus = topTask.status;
     if (topTask.status === "Created") {
       topTask.status = "Started";
@@ -3083,7 +3102,7 @@ function handleAssistantPostback_(event) {
       updateTaskInSheet_(topTask);
       appendAuditLog_(topTask.id, "assistant_work_started", operatorName, operatorRole, fromStatus, "Started", "開始處理最高優先工作");
     }
-    
+
     var cardMsg = buildSingleTaskCard_(topTask, userContext);
     replyToLine(replyToken, cardMsg, true);
     return true;
@@ -3098,23 +3117,23 @@ function handleAssistantPostback_(event) {
       replyToLine(replyToken, "找不到該工作項目。", true);
       return true;
     }
-    
+
     var allowedStates = ["Started", "Waiting", "Blocked", "Finished"];
     if (!to || !allowedStates.includes(to)) {
       replyToLine(replyToken, "無效的目標狀態：" + to, true);
       return true;
     }
-    
+
     if (task.status === "Finished" && to === "Started") {
       replyToLine(replyToken, "工作已完成，不允許重新開啟為執行中狀態。", true);
       return true;
     }
-    
+
     var fromStatus = task.status;
     task.status = to;
     task.updatedAt = new Date().toISOString();
     task.updatedBy = operatorName;
-    
+
     if (to === "Started" && !task.startedAt) {
       task.startedAt = new Date().toISOString();
     }
@@ -3124,12 +3143,12 @@ function handleAssistantPostback_(event) {
     if (to === "Finished") {
       task.completedAt = new Date().toISOString();
     }
-    
+
     updateTaskInSheet_(task);
-    
+
     var detailStr = reason ? "reason=" + reason : "status change";
     appendAuditLog_(task.id, "change_status", operatorName, operatorRole, fromStatus, to, detailStr);
-    
+
     // Push notification to creator if blocked or waiting
     if (to === "Blocked" || to === "Waiting") {
       var creatorLineId = findUserLineId_(task.createdBy);
@@ -3138,7 +3157,7 @@ function handleAssistantPostback_(event) {
         sendLinePushMessage_(creatorLineId, prefix + "工作「" + task.title + "」已標記為【" + (to === "Blocked" ? "已異常" : "等待中") + "】，原因：【" + reason + "】");
       }
     }
-    
+
     var cardMsg = buildSingleTaskCard_(task, userContext);
     replyToLine(replyToken, cardMsg, true);
     return true;
@@ -3200,16 +3219,16 @@ function handleAssistantPostback_(event) {
       replyToLine(replyToken, "找不到該工作項目。", true);
       return true;
     }
-    
+
     var fromStatus = task.status;
     task.status = "Finished";
     task.completedAt = new Date().toISOString();
     task.updatedAt = new Date().toISOString();
     task.updatedBy = operatorName;
     updateTaskInSheet_(task);
-    
+
     appendAuditLog_(task.id, "complete_notify", operatorName, operatorRole, fromStatus, "Finished", "notify=" + notify);
-    
+
     if (notify === "yes") {
       var targetName = task.sourceUser || task.createdBy;
       var creatorLineId = findUserLineId_(targetName);
@@ -3232,7 +3251,7 @@ function handleAssistantPostback_(event) {
     var staffUsers = users.filter(function(u) {
       return ["assistant", "retailSales", "showroomSales"].includes(u.role) && u.status !== "disabled";
     });
-    
+
     var qItems = staffUsers.slice(0, 13).map(function(u) {
       var uName = u.displayName || u.username;
       return {
@@ -3245,7 +3264,7 @@ function handleAssistantPostback_(event) {
         }
       };
     });
-    
+
     replyToLine(replyToken, {
       type: "text",
       text: "請選擇轉指派的同仁：",
@@ -3262,20 +3281,20 @@ function handleAssistantPostback_(event) {
       replyToLine(replyToken, "找不到該工作項目。", true);
       return true;
     }
-    
+
     var fromStatus = task.status;
     task.assignedTo = to;
     task.updatedAt = new Date().toISOString();
     task.updatedBy = operatorName;
     updateTaskInSheet_(task);
-    
+
     appendAuditLog_(task.id, "assistant_work_reassigned", operatorName, operatorRole, fromStatus, task.status, "轉交給 " + to);
-    
+
     var targetLineId = findUserLineId_(to);
     if (targetLineId) {
       sendLinePushMessage_(targetLineId, "🔔 工作轉交通知：助理 " + operatorName + " 將工作「" + task.title + "」轉交給您處理！");
     }
-    
+
     replyToLine(replyToken, "工作已轉交給 " + to + "！", true);
     return true;
   }
@@ -3332,18 +3351,18 @@ function handleAssistantPostback_(event) {
       replyToLine(replyToken, "找不到該工作項目。", true);
       return true;
     }
-    
+
     if (!/^(admin|boss)$/.test(operatorRole) && task.createdBy !== operatorName) {
       replyToLine(replyToken, "權限不足！只有主管、管理員或該工作建立人可以取消此工作。", true);
       return true;
     }
-    
+
     var fromStatus = task.status;
     task.status = "Cancelled";
     task.updatedAt = new Date().toISOString();
     task.updatedBy = operatorName;
     updateTaskInSheet_(task);
-    
+
     appendAuditLog_(task.id, "assistant_work_cancelled", operatorName, operatorRole, fromStatus, "Cancelled", "取消工作");
     replyToLine(replyToken, "工作已成功取消。", true);
     return true;
@@ -3431,10 +3450,10 @@ function updateTaskInSheet_(task) {
     if (!sheet) return false;
     var values = sheet.getDataRange().getValues();
     var headers = values[0].map(function(h) { return String(h || "").trim(); });
-    
+
     var idColIndex = headers.indexOf("id");
     if (idColIndex === -1) return false;
-    
+
     var rowIndex = -1;
     for (var i = 1; i < values.length; i++) {
       if (String(values[i][idColIndex]) === String(task.id)) {
@@ -3442,7 +3461,7 @@ function updateTaskInSheet_(task) {
         break;
       }
     }
-    
+
     if (rowIndex === -1) {
       var newRow = headers.map(function(h) { return task[h] ?? ""; });
       sheet.appendRow(newRow);
@@ -3465,18 +3484,18 @@ function checkActiveDialogState_(lineUserId, userMessage, replyToken) {
   var stateKey = "state_" + lineUserId;
   var stateVal = cache.get(stateKey);
   if (!stateVal) return false;
-  
+
   if (userMessage === "取消") {
     cache.remove(stateKey);
     replyToLine(replyToken, "操作已取消。", true);
     return true;
   }
-  
+
   var parts = stateVal.split("_");
   var action = parts[0];
   var type = parts[1];
   var taskId = stateVal.slice(action.length + 1 + type.length + 1);
-  
+
   if (action === "waiting" && type === "missing") {
     var task = getTaskById_(taskId);
     if (!task) {
@@ -3490,7 +3509,7 @@ function checkActiveDialogState_(lineUserId, userMessage, replyToken) {
     var userContext = getLineUserContext(lineUserId);
     task.updatedBy = userContext.displayName || userContext.username || "助理";
     updateTaskInSheet_(task);
-    
+
     var creatorLineId = findUserLineId_(task.createdBy);
     if (creatorLineId) {
       var ok = sendLinePushMessage_(creatorLineId, "🔔 助理通知：您交辦的工作「" + task.title + "」缺少資料，原因：【" + userMessage + "】，請儘速補齊資料！");
@@ -3498,13 +3517,13 @@ function checkActiveDialogState_(lineUserId, userMessage, replyToken) {
     } else {
       appendAuditLog_(task.id, "assistant_notification_failed", task.updatedBy, userContext.role, fromStatus, "Waiting", "找不到交辦人：" + task.createdBy);
     }
-    
+
     appendAuditLog_(task.id, "assistant_work_waiting", task.updatedBy, userContext.role, fromStatus, "Waiting", userMessage);
     cache.remove(stateKey);
     replyToLine(replyToken, "已將狀態標記為【等待中】，並通知交辦人！", true);
     return true;
   }
-  
+
   if (action === "waiting" && type === "problem") {
     var task = getTaskById_(taskId);
     if (!task) {
@@ -3518,7 +3537,7 @@ function checkActiveDialogState_(lineUserId, userMessage, replyToken) {
     var userContext = getLineUserContext(lineUserId);
     task.updatedBy = userContext.displayName || userContext.username || "助理";
     updateTaskInSheet_(task);
-    
+
     var creatorLineId = findUserLineId_(task.createdBy);
     if (creatorLineId) {
       sendLinePushMessage_(creatorLineId, "⚠️ 助理通知：您交辦的工作「" + task.title + "」發生問題：【" + userMessage + "】！");
@@ -3526,13 +3545,13 @@ function checkActiveDialogState_(lineUserId, userMessage, replyToken) {
     if (task.priority === "urgent") {
       notifyBosses_("🚨 緊急工作異常通知：由 " + task.createdBy + " 交辦的「" + task.title + "」發生問題：【" + userMessage + "】，請協助處理！");
     }
-    
+
     appendAuditLog_(task.id, "assistant_work_blocked", task.updatedBy, userContext.role, fromStatus, "Blocked", userMessage);
     cache.remove(stateKey);
     replyToLine(replyToken, "已將工作標記為【已異常】，並通知相關人員！", true);
     return true;
   }
-  
+
   if (action === "waiting" && type === "note") {
     var task = getTaskById_(taskId);
     if (!task) {
@@ -3544,13 +3563,13 @@ function checkActiveDialogState_(lineUserId, userMessage, replyToken) {
     var userContext = getLineUserContext(lineUserId);
     task.updatedBy = userContext.displayName || userContext.username || "助理";
     updateTaskInSheet_(task);
-    
+
     appendAuditLog_(task.id, "assistant_add_note", task.updatedBy, userContext.role, task.status, task.status, userMessage);
     cache.remove(stateKey);
     replyToLine(replyToken, "備註已成功追加！", true);
     return true;
   }
-  
+
   return false;
 }
 
@@ -3616,7 +3635,7 @@ function sendLinePushMessage_(targetId, message) {
   if (!targetId || !message) return false;
   var authorizationHeader = getLineAuthorizationHeaderOrNull_("sendLinePushMessage_");
   if (!authorizationHeader) return false;
-  
+
   var url = "https://api.line.me/v2/bot/message/push";
   var options = {
     method: "post",
@@ -3646,26 +3665,26 @@ function getSortedTasks_(tasks) {
     var pA = a.priority === "urgent" ? 3 : (a.priority === "high" ? 2 : 1);
     var pB = b.priority === "urgent" ? 3 : (b.priority === "high" ? 2 : 1);
     if (pA !== pB) return pB - pA;
-    
+
     var dueA = a.dueDate || "9999-99-99";
     var dueB = b.dueDate || "9999-99-99";
-    
+
     var isExpiredA = dueA < todayStr;
     var isExpiredB = dueB < todayStr;
     if (isExpiredA !== isExpiredB) {
       return isExpiredA ? -1 : 1;
     }
-    
+
     var isTodayA = dueA === todayStr;
     var isTodayB = dueB === todayStr;
     if (isTodayA !== isTodayB) {
       return isTodayA ? -1 : 1;
     }
-    
+
     if (dueA !== dueB) {
       return dueA < dueB ? -1 : 1;
     }
-    
+
     var createA = a.createdAt || "";
     var createB = b.createdAt || "";
     return createA < createB ? -1 : 1;
