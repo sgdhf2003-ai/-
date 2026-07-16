@@ -1,17 +1,41 @@
 import os
 import sys
 import json
+import re
 import subprocess
 from pathlib import Path
 
 OFFICIAL_PATH = Path("/Users/chenhaoan/Documents/jingyang-sales-app").resolve()
 
 DEFAULT_CLASP_EXTENSIONS = {".gs", ".js", ".html", ".json"}
+SECRET_SCAN_EXTENSIONS = {
+    ".gs", ".js", ".mjs", ".cjs", ".json", ".py", ".html",
+    ".css", ".toml", ".yaml", ".yml"
+}
+SECRET_NAME_PATTERN = re.compile(r"(TOKEN|SECRET|API_KEY|ACCESS_TOKEN|CHANNEL_TOKEN|PASSWORD)", re.IGNORECASE)
+STRING_LITERAL_PATTERN = re.compile(r"""(['"])([^'"]{1,600})\1""")
+BEARER_LITERAL_PATTERN = re.compile(r"Bearer\s+([A-Za-z0-9._~+/=-]{40,})")
+LINE_TOKEN_SHAPE_PATTERN = re.compile(r"^[A-Za-z0-9+/]{120,}={0,2}$")
+
+SAFE_SECRET_LITERALS = {
+    "",
+    "REMOVED_LEGACY_TOKEN",
+    "REPLACE_ME",
+    "YOUR_TOKEN_HERE",
+    "LINE_CHANNEL_ACCESS_TOKEN",
+    "JINGYANG_LINE_CHANNEL_ACCESS_TOKEN",
+}
 
 def fail(msg, code="CROSS_PROJECT_SOURCE_BLOCKED"):
     print(f"Error: {msg}")
     print(f"Code: {code}")
     sys.exit(1)
+
+def mask_secret(value):
+    value = str(value)
+    if len(value) <= 8:
+        return value[:1] + "…" + value[-1:]
+    return value[:4] + "…" + value[-4:]
 
 def check_env():
     cwd = Path.cwd().resolve()
@@ -49,6 +73,97 @@ def get_upload_candidates(target_dir, clasp_conf):
         if path.is_file() and path.suffix in extensions:
             files.append(path.relative_to(root_dir))
     return root_dir, files
+
+def is_legacy_path(path):
+    return any(part.casefold() == "legacy" for part in Path(path).parts)
+
+def is_safe_secret_literal(value):
+    value = str(value or "").strip()
+    if value in SAFE_SECRET_LITERALS:
+        return True
+    if value.startswith("${") and value.endswith("}"):
+        return True
+    if "process.env" in value or "PropertiesService" in value:
+        return True
+    if value.startswith("http://") or value.startswith("https://"):
+        return True
+    if value.startswith("AKfyc"):
+        return True
+    return False
+
+def is_secret_assignment_context(line, literal_start):
+    prefix = line[:literal_start]
+    return re.search(
+        r"""(?i)(["']?[A-Za-z0-9_]*(TOKEN|SECRET|API_KEY|ACCESS_TOKEN|CHANNEL_TOKEN|PASSWORD)[A-Za-z0-9_]*["']?\s*[:=]\s*)$""",
+        prefix
+    ) is not None
+
+def secret_category_for_literal(line, literal, literal_start):
+    literal = str(literal or "").strip()
+    if is_safe_secret_literal(literal):
+        return None
+
+    bearer_match = BEARER_LITERAL_PATTERN.search(literal)
+    if bearer_match:
+        return "hardcoded_bearer_token"
+
+    if LINE_TOKEN_SHAPE_PATTERN.match(literal):
+        return "line_channel_access_token_literal"
+
+    if is_secret_assignment_context(line, literal_start) and len(literal) >= 40:
+        has_alpha = any(ch.isalpha() for ch in literal)
+        has_digit = any(ch.isdigit() for ch in literal)
+        if has_alpha and has_digit:
+            return "secret_named_long_literal"
+
+    return None
+
+def scan_file_for_secrets(path, rel_path):
+    findings = []
+    if path.suffix not in SECRET_SCAN_EXTENSIONS:
+        return findings
+    try:
+        content = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        return findings
+
+    for line_no, line in enumerate(content.splitlines(), start=1):
+        for match in STRING_LITERAL_PATTERN.finditer(line):
+            literal = match.group(2)
+            category = secret_category_for_literal(line, literal, match.start())
+            if not category:
+                continue
+            findings.append({
+                "path": str(rel_path),
+                "line": line_no,
+                "category": category,
+                "masked": mask_secret(literal),
+                "length": len(literal),
+            })
+    return findings
+
+def validate_upload_candidates(root_dir, upload_candidates):
+    legacy_candidates = [path for path in upload_candidates if is_legacy_path(path)]
+    if legacy_candidates:
+        for path in legacy_candidates:
+            print(f"LEGACY_FILE_IN_UPLOAD_SCOPE: {path}")
+        fail("Legacy files must not be included in Apps Script upload scope", "LEGACY_FILE_IN_UPLOAD_SCOPE")
+
+    findings = []
+    for rel_path in upload_candidates:
+        abs_path = root_dir / rel_path
+        findings.extend(scan_file_for_secrets(abs_path, rel_path))
+
+    if findings:
+        for item in findings:
+            print(
+                "POTENTIAL_SECRET_LITERAL: "
+                f"{item['path']}:{item['line']} "
+                f"category={item['category']} "
+                f"masked={item['masked']} "
+                f"length={item['length']}"
+            )
+        fail("Potential secret literal found in Apps Script upload scope", "POTENTIAL_SECRET_LITERAL")
 
 def main():
     check_env()
@@ -100,6 +215,7 @@ def main():
 
     if is_check:
         root_dir, upload_candidates = get_upload_candidates(target_dir, clasp_conf)
+        validate_upload_candidates(root_dir, upload_candidates)
 
         print("\n=== Check Mode (Dry Run) ===")
         print("No clasp command was executed.")
@@ -119,6 +235,9 @@ def main():
         print(f"deployment ID: {expected_deploy_id}")
         print(f"cross-project status: SAFE (Cwd complies with boundary)")
         sys.exit(0)
+
+    root_dir, upload_candidates = get_upload_candidates(target_dir, clasp_conf)
+    validate_upload_candidates(root_dir, upload_candidates)
     
     # Clasp status
     res = subprocess.run(["clasp", "status"], cwd=target_dir, capture_output=True, text=True)

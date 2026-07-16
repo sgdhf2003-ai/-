@@ -1,5 +1,5 @@
 // ====== 這是修復過空格的專屬 Access Token ======
-var CHANNEL_ACCESS_TOKEN = PropertiesService.getScriptProperties().getProperty('LINE_CHANNEL_ACCESS_TOKEN') || '';
+var CHANNEL_ACCESS_TOKEN = getLineAccessTokenOrNull_() || '';
 
 // ====== 客戶端專用圖文選單 ID ======
 var CUSTOMER_RICH_MENU_ID = 'richmenu-652c0daf14cf62fe48e677f227995458';
@@ -1570,6 +1570,30 @@ function isPromoCardEnabled_() {
   return false;
 }
 
+function getLineAccessTokenOrNull_() {
+  var props = PropertiesService.getScriptProperties();
+  var token = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN') ||
+              props.getProperty('JINGYANG_LINE_CHANNEL_ACCESS_TOKEN') ||
+              "";
+  token = String(token || "").trim();
+  return token ? token : null;
+}
+
+function logLineSecurityError_(code, context) {
+  var safeCode = String(code || "LINE_SECURITY_ERROR");
+  var safeContext = String(context || "line-api").replace(/[^A-Za-z0-9_.:-]/g, "_").substring(0, 80);
+  Logger.log("[LINE_SECURITY] " + safeCode + " context=" + safeContext);
+}
+
+function getLineAuthorizationHeaderOrNull_(context) {
+  var token = getLineAccessTokenOrNull_();
+  if (!token) {
+    logLineSecurityError_("LINE_TOKEN_MISSING", context);
+    return null;
+  }
+  return 'Bearer ' + token;
+}
+
 // 負責把訊息傳回給 LINE 的底層程式（支援傳送純文字或 LINE 訊息物件陣列）
 function replyToLine(replyToken, replyData, skipPromo) {
   var url = 'https://api.line.me/v2/bot/message/reply';
@@ -1602,12 +1626,15 @@ function replyToLine(replyToken, replyData, skipPromo) {
     };
     messages.push(promoButtonMsg);
   }
+
+  var authorizationHeader = getLineAuthorizationHeaderOrNull_("replyToLine");
+  if (!authorizationHeader) return false;
   
   var options = {
     'method': 'post',
     'headers': {
       'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + CHANNEL_ACCESS_TOKEN
+      'Authorization': authorizationHeader
     },
     'muteHttpExceptions': true,
     'payload': JSON.stringify({
@@ -1643,7 +1670,7 @@ function replyToLine(replyToken, replyData, skipPromo) {
       'method': 'post',
       'headers': {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + CHANNEL_ACCESS_TOKEN
+        'Authorization': authorizationHeader
       },
       'muteHttpExceptions': true,
       'payload': JSON.stringify({
@@ -1660,10 +1687,12 @@ function replyToLine(replyToken, replyData, skipPromo) {
 function testUrlFetch() {
   try {
     var url = 'https://api.line.me/v2/bot/info';
+    var authorizationHeader = getLineAuthorizationHeaderOrNull_("testUrlFetch");
+    if (!authorizationHeader) return false;
     var options = {
       'method': 'get',
       'headers': {
-        'Authorization': 'Bearer ' + CHANNEL_ACCESS_TOKEN
+        'Authorization': authorizationHeader
       },
       'muteHttpExceptions': true
     };
@@ -1984,10 +2013,12 @@ function getUserDisplayName(userId) {
   if (!userId || userId === "N/A") return "顧客";
   try {
     var url = 'https://api.line.me/v2/bot/profile/' + userId;
+    var authorizationHeader = getLineAuthorizationHeaderOrNull_("getUserDisplayName");
+    if (!authorizationHeader) return "顧客";
     var options = {
       'method': 'get',
       'headers': {
-        'Authorization': 'Bearer ' + CHANNEL_ACCESS_TOKEN
+        'Authorization': authorizationHeader
       },
       'muteHttpExceptions': true
     };
@@ -2045,11 +2076,13 @@ function sendClerkStockAlert(model, reqQty, reqUnit, totalAvailableStock, warnin
                     "💡 提示：請儘速與顧客確認或鎖定庫存喔！";
                     
     var url = 'https://api.line.me/v2/bot/message/push';
+    var authorizationHeader = getLineAuthorizationHeaderOrNull_("sendClerkStockAlert");
+    if (!authorizationHeader) return;
     var options = {
       'method': 'post',
       'headers': {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + CHANNEL_ACCESS_TOKEN
+        'Authorization': authorizationHeader
       },
       'payload': JSON.stringify({
         'to': clerkUserId,
@@ -2226,11 +2259,13 @@ function pushMessageToUser(userId, text) {
   }
 
   var url = 'https://api.line.me/v2/bot/message/push';
+  var authorizationHeader = getLineAuthorizationHeaderOrNull_("pushMessageToUser");
+  if (!authorizationHeader) return false;
   var options = {
     'method': 'post',
     'headers': {
       'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + CHANNEL_ACCESS_TOKEN
+      'Authorization': authorizationHeader
     },
     'payload': JSON.stringify({
       'to': userId,
@@ -2246,10 +2281,12 @@ function pushMessageToUser(userId, text) {
 function linkRichMenuToUser(userId) {
   if (typeof CUSTOMER_RICH_MENU_ID === "undefined" || !CUSTOMER_RICH_MENU_ID) return;
   var url = 'https://api.line.me/v2/bot/user/' + userId + '/richmenu/' + CUSTOMER_RICH_MENU_ID;
+  var authorizationHeader = getLineAuthorizationHeaderOrNull_("linkRichMenuToUser");
+  if (!authorizationHeader) return false;
   var options = {
     'method': 'post',
     'headers': {
-      'Authorization': 'Bearer ' + CHANNEL_ACCESS_TOKEN
+      'Authorization': authorizationHeader
     },
     'muteHttpExceptions': true
   };
@@ -3577,14 +3614,14 @@ function appendAuditLog_(workId, action, operator, operatorRole, fromStatus, toS
 
 function sendLinePushMessage_(targetId, message) {
   if (!targetId || !message) return false;
-  var token = JingyangAssistant_getLineToken_();
-  if (!token) return false;
+  var authorizationHeader = getLineAuthorizationHeaderOrNull_("sendLinePushMessage_");
+  if (!authorizationHeader) return false;
   
   var url = "https://api.line.me/v2/bot/message/push";
   var options = {
     method: "post",
     headers: {
-      "Authorization": "Bearer " + token,
+      "Authorization": authorizationHeader,
       "Content-Type": "application/json"
     },
     payload: JSON.stringify({

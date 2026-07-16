@@ -198,8 +198,11 @@ function JingyangAssistant_setupMenuReply_(user, lineUserId) {
 }
 
 function JingyangAssistant_ensureRichMenu_() {
-  var token = JingyangAssistant_getLineToken_();
-  if (!token) throw new Error("LINE Channel Access Token 未設定");
+  var token = JingyangAssistant_getLineTokenOrNull_();
+  var authorizationHeader = JingyangAssistant_getLineAuthorizationHeaderOrNull_(token, "JingyangAssistant_ensureRichMenu_");
+  if (!authorizationHeader) {
+    throw new Error("LINE_TOKEN_MISSING");
+  }
 
   var existingId = JingyangAssistant_findRichMenuByName_(token, JINGYANG_ASSISTANT_MENU_NAME);
   if (existingId) return existingId;
@@ -219,7 +222,7 @@ function JingyangAssistant_ensureRichMenu_() {
   var createRes = UrlFetchApp.fetch("https://api.line.me/v2/bot/richmenu", {
     method: "post",
     headers: {
-      "Authorization": "Bearer " + token,
+      "Authorization": authorizationHeader,
       "Content-Type": "application/json"
     },
     payload: JSON.stringify(menuConfig),
@@ -236,9 +239,12 @@ function JingyangAssistant_ensureRichMenu_() {
 }
 
 function JingyangAssistant_findRichMenuByName_(token, menuName) {
+  var authorizationHeader = JingyangAssistant_getLineAuthorizationHeaderOrNull_(token, "JingyangAssistant_findRichMenuByName_");
+  if (!authorizationHeader) return "";
+
   var res = UrlFetchApp.fetch("https://api.line.me/v2/bot/richmenu/list", {
     method: "get",
-    headers: { "Authorization": "Bearer " + token },
+    headers: { "Authorization": authorizationHeader },
     muteHttpExceptions: true
   });
 
@@ -253,6 +259,9 @@ function JingyangAssistant_findRichMenuByName_(token, menuName) {
 }
 
 function JingyangAssistant_uploadRichMenuImage_(token, menuId) {
+  var authorizationHeader = JingyangAssistant_getLineAuthorizationHeaderOrNull_(token, "JingyangAssistant_uploadRichMenuImage_");
+  if (!authorizationHeader) return false;
+
   var imageRes = UrlFetchApp.fetch(JINGYANG_ASSISTANT_MENU_IMAGE_URL, { muteHttpExceptions: true });
   if (imageRes.getResponseCode() < 200 || imageRes.getResponseCode() >= 300) {
     throw new Error("讀取選單圖片失敗 HTTP " + imageRes.getResponseCode());
@@ -261,7 +270,7 @@ function JingyangAssistant_uploadRichMenuImage_(token, menuId) {
   var uploadRes = UrlFetchApp.fetch("https://api-data.line.me/v2/bot/richmenu/" + menuId + "/content", {
     method: "post",
     headers: {
-      "Authorization": "Bearer " + token,
+      "Authorization": authorizationHeader,
       "Content-Type": "image/jpeg"
     },
     payload: imageRes.getBlob().getBytes(),
@@ -274,12 +283,16 @@ function JingyangAssistant_uploadRichMenuImage_(token, menuId) {
 }
 
 function JingyangAssistant_linkRichMenuToUser_(lineUserId, menuId) {
-  var token = JingyangAssistant_getLineToken_();
+  var authorizationHeader = JingyangAssistant_getLineAuthorizationHeaderOrNull_(
+    JingyangAssistant_getLineTokenOrNull_(),
+    "JingyangAssistant_linkRichMenuToUser_"
+  );
+  if (!authorizationHeader) return false;
   if (!lineUserId || !menuId) throw new Error("缺少 LINE 使用者或選單 ID");
 
   var res = UrlFetchApp.fetch("https://api.line.me/v2/bot/user/" + lineUserId + "/richmenu/" + menuId, {
     method: "post",
-    headers: { "Authorization": "Bearer " + token },
+    headers: { "Authorization": authorizationHeader },
     muteHttpExceptions: true
   });
 
@@ -439,8 +452,29 @@ function JingyangAssistant_buildAppViewUrl_(view) {
   return appUrl + sep + "view=" + encodeURIComponent(view);
 }
 
-function JingyangAssistant_getLineToken_() {
-  return PropertiesService.getScriptProperties().getProperty("JINGYANG_LINE_CHANNEL_ACCESS_TOKEN") ||
+function JingyangAssistant_getLineTokenOrNull_() {
+  var token = PropertiesService.getScriptProperties().getProperty("JINGYANG_LINE_CHANNEL_ACCESS_TOKEN") ||
     PropertiesService.getScriptProperties().getProperty("LINE_CHANNEL_ACCESS_TOKEN") ||
     (typeof CHANNEL_ACCESS_TOKEN !== "undefined" ? CHANNEL_ACCESS_TOKEN : "");
+  token = String(token || "").trim();
+  return token ? token : null;
+}
+
+function JingyangAssistant_logLineSecurityError_(code, context) {
+  var safeCode = String(code || "LINE_SECURITY_ERROR");
+  var safeContext = String(context || "jingyang-assistant").replace(/[^A-Za-z0-9_.:-]/g, "_").substring(0, 80);
+  Logger.log("[LINE_SECURITY] " + safeCode + " context=" + safeContext);
+}
+
+function JingyangAssistant_getLineAuthorizationHeaderOrNull_(token, context) {
+  token = String(token || "").trim();
+  if (!token) {
+    JingyangAssistant_logLineSecurityError_("LINE_TOKEN_MISSING", context);
+    return null;
+  }
+  return "Bearer " + token;
+}
+
+function JingyangAssistant_getLineToken_() {
+  return JingyangAssistant_getLineTokenOrNull_() || "";
 }
