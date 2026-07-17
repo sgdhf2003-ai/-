@@ -121,14 +121,14 @@ function overwriteObjects(sheetName, headers, objects) {
   if (lastRow > 1) {
     sheet.getRange(2, 1, lastRow - 1, headers.length).clearContent();
   }
-  
+
   const validObjects = (objects || []).filter(Boolean);
   if (!validObjects.length) return;
-  
+
   const rows = validObjects.map((object) => {
     return headers.map((header) => object[header] ?? "");
   });
-  
+
   sheet.getRange(2, 1, rows.length, headers.length).setValues(rows);
 }
 
@@ -159,7 +159,7 @@ function loginUser(data) {
 
   const usersSheet = ensureSheet(ensureSpreadsheet(), SHEETS.users, HEADERS.users);
   const users = readObjects(SHEETS.users, HEADERS.users);
-  
+
   let userIndex = -1;
   const user = users.find((item, index) => {
     const match = normalizeLoginValue(item.username) === username || normalizeLoginValue(item.displayName) === username;
@@ -179,10 +179,10 @@ function loginUser(data) {
     if (colIndex > 0) {
       usersSheet.getRange(rowNum, colIndex).setValue(lineUserId);
     }
-    
+
     // Bind the LINE Salesperson Rich Menu dynamically
     linkLineRichMenu(lineUserId, user.role);
-    
+
     // Send a push confirmation message via the LINE bot
     sendLinePushMessage(lineUserId, "🎉 帳號綁定成功！\n您的 LINE 帳號已成功綁定為業務「" + user.displayName + "」，選單已切換為業務專用選單。");
   }
@@ -209,13 +209,13 @@ function uploadPhoto(data) {
   const storeFolder = getOrCreateFolder(root, sanitizeName(photo.storeName || photo.storeId || "未指定店家"));
   const createdAt = photo.createdAt ? new Date(photo.createdAt) : new Date();
   const timestamp = Utilities.formatDate(createdAt, Session.getScriptTimeZone(), "yyyyMMdd-HHmmss");
-  
+
   const prefix = targetTable === "samples" ? (photo.itemType || "樣品") : targetTable === "complaints" ? (photo.category || "客訴") : (photo.category || "照片");
   const fileName = sanitizeName(timestamp + "-" + prefix + "-" + (photo.storeName || "店家")) + ".jpg";
   const blob = dataUrlToBlob(imageDataUrl, fileName);
   const file = storeFolder.createFile(blob);
   const updatedAt = new Date().toISOString();
-  
+
   const savedPhoto = {
     id: photo.id,
     storeId: photo.storeId,
@@ -227,7 +227,7 @@ function uploadPhoto(data) {
     updatedAt,
     ...photo
   };
-  
+
   if (targetTable === "samples") {
     upsertSamples([savedPhoto]);
   } else if (targetTable === "complaints") {
@@ -254,18 +254,18 @@ function upsertHolds(holds, isSnapshot, userContext) {
   logDebug("upsertHolds called with holds count: " + (holds ? holds.length : 0) + ", isSnapshot: " + isSnapshot + ", userContext: " + JSON.stringify(userContext));
   const storesById = makeLookup(readObjects(SHEETS.stores, HEADERS.stores), "id");
   const existingHolds = makeLookup(readObjects(SHEETS.holds, HEADERS.holds), "id");
-  
+
   // If isSnapshot is true, check for deleted holds to send deduction notifications
   if (isSnapshot) {
     const incomingIds = new Set(holds.filter(Boolean).map(h => h.id));
     const deletedHolds = Object.values(existingHolds).filter(h => h && h.id && !incomingIds.has(h.id));
     logDebug("Detected deleted holds count: " + deletedHolds.length);
-    
+
     deletedHolds.forEach((hold) => {
       const store = storesById[hold.storeId] || {};
       const storeName = hold.storeName || store.name || "未知店家";
       const owner = hold.salesOwner || store.salesOwner || "無";
-      
+
       let msg = "🗑️ 保留項目扣除通知\n";
       msg += "━━━━━━━━━━━━━━━\n";
       msg += "🏬 店家：" + storeName + "\n";
@@ -273,7 +273,7 @@ function upsertHolds(holds, isSnapshot, userContext) {
       msg += "📅 原保留日：" + (hold.holdDate || "未設定") + "\n";
       msg += "📍 原保留地：" + (hold.holdAddress || "未填寫") + "\n";
       msg += "📝 備註：" + (hold.note || "無") + "\n";
-      
+
       if (userContext && userContext.role === "admin") {
         // Admin deleted the hold -> Notify the local sales rep
         msg += "👤 扣除人員：管理員";
@@ -298,7 +298,7 @@ function upsertHolds(holds, isSnapshot, userContext) {
     if (isNew) {
       const storeName = hold.storeName || store.name || "未知店家";
       const owner = hold.salesOwner || store.salesOwner || "無";
-      
+
       let msg = "🔔 新保留物品提醒\n";
       msg += "━━━━━━━━━━━━━━━\n";
       msg += "🏬 店家：" + storeName + "\n";
@@ -306,7 +306,7 @@ function upsertHolds(holds, isSnapshot, userContext) {
       msg += "📅 日期：" + (hold.holdDate || "未設定") + " 至 " + (hold.expiresAt || "未設定") + "\n";
       msg += "📍 地點：" + (hold.holdAddress || "未填寫") + "\n";
       msg += "📝 備註：" + (hold.note || "無");
-      
+
       logDebug("New hold created. Store: " + storeName + ", Owner: " + owner + ", Item: " + hold.item);
       sendOneSignalPush(owner, "新保留提醒 🔔", msg);
       sendLinePushToOwner(owner, msg);
@@ -629,7 +629,7 @@ function testLineNotifyAction(data) {
   const appId = data.appId || getSetting("oneSignalAppId") || DEFAULT_ONESIGNAL_APP_ID;
   const apiKey = data.apiKey || getSetting("oneSignalApiKey");
   if (!appId || !apiKey) return { ok: false, error: "未設定 OneSignal App ID 或 REST API Key" };
-  
+
   const url = "https://onesignal.com/api/v1/notifications";
   const payload = {
     app_id: appId,
@@ -709,7 +709,7 @@ function sendLinePushMessage(targetId, message) {
 function sendLinePushToOwner(ownerName, message) {
   logDebug("sendLinePushToOwner called. ownerName: " + ownerName + ", message: " + message);
   if (!ownerName || ownerName === "無") return;
-  
+
   if (ownerName === "全部" || ownerName === "管理員") {
     const admins = readObjects(SHEETS.users, HEADERS.users).filter(u => u.role === "admin" && u.lineUserId);
     logDebug("Found admins to push: " + admins.map(a => a.displayName).join(", "));
@@ -730,10 +730,10 @@ function sendLinePushToOwner(ownerName, message) {
 function linkLineRichMenu(lineUserId, role) {
   const token = getSetting("lineChannelAccessToken") || DEFAULT_CHANNEL_ACCESS_TOKEN;
   if (!token || !lineUserId) return;
-  
+
   const isInternal = ["admin", "sales", "retailSales", "showroomSales", "assistant", "boss"].includes(role);
   const richMenuCustomerId = getSetting("lineRichMenuCustomer");
-  
+
   if (isInternal) {
     const richMenuSalesId = ensureJingyangBusinessRichMenu(token);
     setSetting("lineRichMenuSales", richMenuSalesId);
@@ -907,11 +907,11 @@ function setupLineRichMenus() {
       payload: JSON.stringify(config),
       muteHttpExceptions: true
     });
-    
+
     if (res.getResponseCode() !== 200) {
       throw new Error("Failed to create Rich Menu: " + res.getContentText());
     }
-    
+
     const richMenuId = JSON.parse(res.getContentText()).richMenuId;
 
     // Upload Image
@@ -925,7 +925,7 @@ function setupLineRichMenus() {
       payload: imgBlob.getBytes(),
       muteHttpExceptions: true
     });
-    
+
     if (uploadRes.getResponseCode() !== 200) {
       throw new Error("Failed to upload Rich Menu image: " + uploadRes.getContentText());
     }
@@ -952,17 +952,17 @@ function setupLineRichMenus() {
 
 function handleLineWebhook(payload) {
   if (!payload || !payload.events) return;
-  
+
   payload.events.forEach((event) => {
     logDebug("LINE Webhook Event: " + JSON.stringify(event));
-    
+
     // 1. POSTBACK EVENT HANDLER
     if (event.type === "postback") {
       const dataStr = event.postback.data || "";
       const params = parsePostbackData(dataStr);
       const userId = event.source.userId;
       const replyToken = event.replyToken;
-      
+
       if (params.action === "taskDone") {
         updateTaskStatus({ id: params.id, status: "done" });
         replyLineMessage(replyToken, "✅ 任務已標記為【已完成】！");
@@ -994,21 +994,21 @@ function handleLineWebhook(payload) {
       else if (params.action === "workTransition") {
         const toStatus = params.to;
         const id = params.id;
-        
+
         const tasks = readObjects(SHEETS.tasks, HEADERS.tasks);
         const task = tasks.find(t => t.id === id);
         if (!task) {
           replyLineMessage(replyToken, "⚠️ 找不到該工作項目。");
           return;
         }
-        
+
         task.status = toStatus;
         task.updatedAt = new Date().toISOString();
         if (toStatus === "Finished") {
           task.completedAt = new Date().toISOString();
         }
         upsertObjects(SHEETS.tasks, HEADERS.tasks, [task]);
-        
+
         if (toStatus === "Finished") {
           if (task.type === "reservation" || task.type === "reservationFollow") {
             const msg1 = {
@@ -1026,7 +1026,7 @@ function handleLineWebhook(payload) {
           } else {
             const contextData = { customerId: task.customerId || "", customerName: task.customerName || "" };
             PropertiesService.getScriptProperties().setProperty("pendingNextWorkContext:" + userId, JSON.stringify(contextData));
-            
+
             const msg2 = {
               type: "text",
               text: "🎉 工作已完成！下一步？今天有沒有新的需求？",
@@ -1045,7 +1045,7 @@ function handleLineWebhook(payload) {
             return;
           }
         }
-        
+
         const statusMap = {
           Created: "已建立",
           Started: "執行中",
@@ -1060,13 +1060,13 @@ function handleLineWebhook(payload) {
       else if (params.action === "assistantHook") {
         const notify = params.notify;
         const id = params.id;
-        
+
         if (notify === "yes") {
           const tasks = readObjects(SHEETS.tasks, HEADERS.tasks);
           const task = tasks.find(t => t.id === id);
           const customerName = task ? task.customerName : "";
           const customerId = task ? task.customerId : "";
-          
+
           const assistantWork = {
             id: "work-" + new Date().getTime() + "-" + Math.floor(Math.random() * 1000),
             type: "other",
@@ -1085,7 +1085,7 @@ function handleLineWebhook(payload) {
             updatedAt: new Date().toISOString(),
             note: ""
           };
-          
+
           createTask({ task: assistantWork });
           replyLineMessage(replyToken, "👤 已成功通知助理！工作項目【助理待辦：處理保留出貨訂單】已建立。");
         } else {
@@ -1095,14 +1095,14 @@ function handleLineWebhook(payload) {
       }
       return;
     }
-    
+
     // 2. MESSAGE TEXT EVENT HANDLER
     if (event.type === "message" && event.message.type === "text") {
       const text = String(event.message.text).trim();
       const normalizedText = text.replace(/[\s\u3000]+/g, "").toLowerCase();
       const userId = event.source.userId;
       const replyToken = event.replyToken;
-      
+
       // 雙模式 Intent Router：內部明確指令在其它流程與 fallback 前處理
       if (typeof LineIntent_tryHandleTextEvent === "function") {
         const routed = LineIntent_tryHandleTextEvent(event);
@@ -1110,7 +1110,7 @@ function handleLineWebhook(payload) {
           return;
         }
       }
-      
+
       // Step 1: Bind Command Interception
       if (normalizedText === "綁定") {
         const bindUrl = "https://brown-phi.vercel.app/?lineUserId=" + userId;
@@ -1118,14 +1118,14 @@ function handleLineWebhook(payload) {
         replyLineMessage(replyToken, msg);
         return;
       }
-      
+
       // Step 2: Load and Verify User
       const user = readObjects(SHEETS.users, HEADERS.users).find(u => u.lineUserId === userId);
       if (!user) {
         replyLineMessage(replyToken, "⚠️ 您的 LINE 帳號尚未完成內部人員身分綁定，請輸入「綁定」進行設定。");
         return;
       }
-      
+
       // Step 3: Pending Note Check
       const pendingTaskId = PropertiesService.getScriptProperties().getProperty("pendingTask:" + userId);
       if (pendingTaskId) {
@@ -1134,7 +1134,7 @@ function handleLineWebhook(payload) {
         replyLineMessage(replyToken, "📝 備註已成功記錄到該任務中！");
         return;
       }
-      
+
       // Step 4: Workflow Command Interception (Priority #1)
       let matchedCommand = null;
       if (normalizedText === "選單" || normalizedText === "menu") {
@@ -1152,14 +1152,14 @@ function handleLineWebhook(payload) {
       } else if (normalizedText === "業務進度") {
         matchedCommand = "業務進度";
       }
-      
+
       console.log("[LINE_TEXT_COMMAND]", text, normalizedText, matchedCommand);
       logDebug("[LINE_TEXT_COMMAND] Raw: " + text + " | Normalized: " + normalizedText + " | Matched: " + matchedCommand);
-      
+
       if (matchedCommand) {
         PropertiesService.getScriptProperties().deleteProperty("pendingWorkStep:" + userId);
         PropertiesService.getScriptProperties().deleteProperty("pendingWorkData:" + userId);
-        
+
         if (matchedCommand === "選單") {
           replyRoleMenu(replyToken, user);
         } else if (matchedCommand === "今日工作") {
@@ -1177,7 +1177,7 @@ function handleLineWebhook(payload) {
         }
         return;
       }
-      
+
       // Step 4a: Workflow Next Step Hook Interception
       if (normalizedText.startsWith("🚚下一步：")) {
         const cleanOpt = normalizedText.slice(5).replace(/[^\w\u4e00-\u9fa5]/g, "");
@@ -1194,18 +1194,18 @@ function handleLineWebhook(payload) {
           "其他": "other"
         };
         const nextType = typeMapClean[cleanOpt] || "other";
-        
+
         const contextStr = PropertiesService.getScriptProperties().getProperty("pendingNextWorkContext:" + userId);
         const context = contextStr ? JSON.parse(contextStr) : { customerId: "", customerName: "" };
-        
+
         const data = {
           type: nextType,
           customerId: context.customerId,
           customerName: context.customerName
         };
-        
+
         PropertiesService.getScriptProperties().setProperty("pendingWorkData:" + userId, JSON.stringify(data));
-        
+
         const msg = {
           type: "text",
           text: "好的，已為您帶入同一個客戶。請選擇新工作期限：",
@@ -1218,12 +1218,12 @@ function handleLineWebhook(payload) {
             ]
           }
         };
-        
+
         PropertiesService.getScriptProperties().setProperty("pendingWorkStep:" + userId, "3");
         replyLineCustomMessage(replyToken, [msg]);
         return;
       }
-      
+
       // Step 4b: Work creation command Interception
       if (normalizedText === "新增工作" || normalizedText === "新增回報") {
         const msg = {
@@ -1246,17 +1246,17 @@ function handleLineWebhook(payload) {
         };
         PropertiesService.getScriptProperties().setProperty("pendingWorkStep:" + userId, "1");
         PropertiesService.getScriptProperties().deleteProperty("pendingWorkData:" + userId);
-        
+
         replyLineCustomMessage(replyToken, [msg]);
         return;
       }
-      
+
       // Step 4c: Voice ready interception
       if (normalizedText === "🎤語音輸入" || normalizedText === "🎤語音回報" || normalizedText === "🎤語音") {
         replyLineMessage(replyToken, "🎙️ 勁揚 AI 語音助理已就緒！\n請直接點擊 LINE 內建麥克風並傳送您的語音訊息，AI 將會自動分析您的意圖、辨識店家、商品並自動建立工作流程！\n\n(語音分析與實時流程對接功能將於 Capability Package 2 推出，目前為 Voice Ready 介面演示)");
         return;
       }
-      
+
       // Step 4d: Create workflow wizard state machine
       const pendingWorkStep = PropertiesService.getScriptProperties().getProperty("pendingWorkStep:" + userId);
       if (pendingWorkStep === "1") {
@@ -1278,32 +1278,32 @@ function handleLineWebhook(payload) {
           replyLineMessage(replyToken, "⚠️ 請點選 Quick Reply 選項來選擇工作類別，勿自行輸入文字。");
           return;
         }
-        
+
         const data = { type: type };
         PropertiesService.getScriptProperties().setProperty("pendingWorkData:" + userId, JSON.stringify(data));
-        
+
         const recentStores = getSalespersonStores(user.salesOwner);
         const quickReplyItems = recentStores.map(s => {
           return { type: "action", action: { type: "message", label: s.shortName || s.name, text: s.shortName || s.name } };
         });
         quickReplyItems.push({ type: "action", action: { type: "message", label: "無/其他客戶", text: "無" } });
-        
+
         const msg = {
           type: "text",
           text: "請選擇客戶/店家：",
           quickReply: { items: quickReplyItems }
         };
-        
+
         PropertiesService.getScriptProperties().setProperty("pendingWorkStep:" + userId, "2");
         replyLineCustomMessage(replyToken, [msg]);
         return;
       }
-      
+
       if (pendingWorkStep === "2") {
         const storeName = text;
         const dataStr = PropertiesService.getScriptProperties().getProperty("pendingWorkData:" + userId);
         const data = dataStr ? JSON.parse(dataStr) : {};
-        
+
         if (storeName === "無" || storeName === "無/其他客戶" || storeName === "其他") {
           data.customerId = "";
           data.customerName = "";
@@ -1318,9 +1318,9 @@ function handleLineWebhook(payload) {
             data.customerName = storeName;
           }
         }
-        
+
         PropertiesService.getScriptProperties().setProperty("pendingWorkData:" + userId, JSON.stringify(data));
-        
+
         const msg = {
           type: "text",
           text: "請選擇工作到期日：",
@@ -1333,20 +1333,20 @@ function handleLineWebhook(payload) {
             ]
           }
         };
-        
+
         PropertiesService.getScriptProperties().setProperty("pendingWorkStep:" + userId, "3");
         replyLineCustomMessage(replyToken, [msg]);
         return;
       }
-      
+
       if (pendingWorkStep === "3") {
         const dateOpt = text;
         const dataStr = PropertiesService.getScriptProperties().getProperty("pendingWorkData:" + userId);
         const data = dataStr ? JSON.parse(dataStr) : {};
-        
+
         let dueDateStr = new Date().toISOString().slice(0, 10);
         const now = new Date();
-        
+
         if (dateOpt === "今天") {
           dueDateStr = now.toISOString().slice(0, 10);
         } else if (dateOpt === "明天") {
@@ -1365,7 +1365,7 @@ function handleLineWebhook(payload) {
             dueDateStr = dateOpt;
           }
         }
-        
+
         const typeMapEmoji = {
           delivery: "🚚送貨",
           reservation: "📦保留",
@@ -1378,10 +1378,10 @@ function handleLineWebhook(payload) {
           sample: "🧱送樣",
           other: "📝其他"
         };
-        
+
         const typeLabel = typeMapEmoji[data.type] || "📝工作";
         const title = typeLabel + (data.customerName ? " - " + data.customerName : "");
-        
+
         const workItem = {
           id: "work-" + new Date().getTime() + "-" + Math.floor(Math.random() * 1000),
           type: data.type,
@@ -1400,12 +1400,12 @@ function handleLineWebhook(payload) {
           updatedAt: new Date().toISOString(),
           note: ""
         };
-        
+
         createTask({ task: workItem });
-        
+
         PropertiesService.getScriptProperties().deleteProperty("pendingWorkStep:" + userId);
         PropertiesService.getScriptProperties().deleteProperty("pendingWorkData:" + userId);
-        
+
         const msg = {
           type: "text",
           text: "🎉 工作已成功建立！\n\n" +
@@ -1420,11 +1420,11 @@ function handleLineWebhook(payload) {
             ]
           }
         };
-        
+
         replyLineCustomMessage(replyToken, [msg]);
         return;
       }
-      
+
       // Step 5: Role-Specific command checks
       if (user.role === "assistant") {
         if (normalizedText === "保留訂單") {
@@ -1438,7 +1438,7 @@ function handleLineWebhook(payload) {
           return;
         }
       }
-      
+
       if (user.role === "showroomSales") {
         if (normalizedText === "客戶追蹤") {
           replyLineMessage(replyToken, "🔍 請輸入客戶名稱或直接到 App「保留/案場」模組中點選追蹤狀態。");
@@ -1448,19 +1448,19 @@ function handleLineWebhook(payload) {
           return;
         }
       }
-      
+
       if (user.role === "retailSales" || user.role === "sales") {
         if (normalizedText === "查詢資料") {
           replyLineMessage(replyToken, "🔍 請輸入要查詢的「系列」或「編號」來為您即時搜尋樣品或保留資料。");
           return;
         }
       }
-      
+
       if (normalizedText === "問ai" || normalizedText === "問ai助理" || normalizedText === "問 AI") {
         replyLineMessage(replyToken, "🤖 AI 助理功能準備中，目前可使用今日工作、查詢資料、新增工作。");
         return;
       }
-      
+
       // Step 6: Inventory check commands
       if (normalizedText === "查詢庫存" || normalizedText === "查詢保留" || normalizedText === "今日保留" || normalizedText === "庫存") {
         if (normalizedText === "查詢保留" || normalizedText === "今日保留") {
@@ -1470,7 +1470,7 @@ function handleLineWebhook(payload) {
         }
         return;
       }
-      
+
       // Step 7: Sample Search Keyword checks
       let keyword = text;
       let isExplicit = false;
@@ -1478,16 +1478,16 @@ function handleLineWebhook(payload) {
         keyword = text.slice(2).trim();
         isExplicit = true;
       }
-      
+
       const normalizedKeyword = keyword.replace(/[\s\u3000]+/g, "").toLowerCase();
       if (normalizedKeyword) {
         const samples = readObjects(SHEETS.samples, HEADERS.samples);
         const matches = samples.filter(s => {
-          return String(s.modelName || "").replace(/[\s\u3000]+/g, "").toLowerCase().indexOf(normalizedKeyword) !== -1 || 
+          return String(s.modelName || "").replace(/[\s\u3000]+/g, "").toLowerCase().indexOf(normalizedKeyword) !== -1 ||
                  String(s.itemType || "").replace(/[\s\u3000]+/g, "").toLowerCase().indexOf(normalizedKeyword) !== -1 ||
                  String(s.storeName || "").replace(/[\s\u3000]+/g, "").toLowerCase().indexOf(normalizedKeyword) !== -1;
         });
-        
+
         if (matches.length > 0) {
           const list = matches.slice(0, 10).map(s => "- 樣品: " + (s.modelName || s.itemType) + "\n  店家: " + s.storeName + "\n  數量: " + (s.quantity || "0") + "\n  位置: " + (s.note || "現場")).join("\n\n");
           replyLineMessage(replyToken, "📦 庫存搜尋結果 (最多顯示10筆)：\n\n" + list);
@@ -1497,7 +1497,7 @@ function handleLineWebhook(payload) {
           return;
         }
       }
-      
+
       replyLineMessage(replyToken, "🤖 AI 助理功能準備中，目前可使用今日工作、查詢資料、新增工作。");
     }
   });
@@ -1517,7 +1517,7 @@ function parsePostbackData(dataStr) {
 function replyLineMessage(replyToken, text) {
   const token = getSetting("lineChannelAccessToken") || DEFAULT_CHANNEL_ACCESS_TOKEN;
   if (!token) return;
-  
+
   const url = "https://api.line.me/v2/bot/message/reply";
   UrlFetchApp.fetch(url, {
     method: "post",
@@ -1550,19 +1550,19 @@ function logDebug(message) {
 function listMyTasks(data) {
   const spreadsheet = ensureSpreadsheet();
   ensureAllSheets(spreadsheet);
-  
+
   const tasks = readObjects(SHEETS.tasks, HEADERS.tasks);
-  
+
   let user = null;
   if (data.lineUserId) {
     const users = readObjects(SHEETS.users, HEADERS.users);
     user = users.find(u => u.lineUserId === data.lineUserId);
   }
-  
+
   if (!user && data.userContext) {
     user = data.userContext;
   }
-  
+
   if (!user) {
     user = {
       role: data.role || "",
@@ -1570,21 +1570,21 @@ function listMyTasks(data) {
       username: data.username || ""
     };
   }
-  
+
   const role = user.role;
   const username = user.username || "";
   const salesOwner = user.salesOwner || "";
   const displayName = user.displayName || "";
-  
+
   const filtered = tasks.filter(task => {
     if (!["open", "inProgress", "delayed", "blocked"].includes(task.status)) {
       return false;
     }
-    
+
     if (role === "admin" || role === "boss") {
       return true;
     }
-    
+
     if (role === "assistant") {
       return (
         task.assignedRole === "assistant" ||
@@ -1593,7 +1593,7 @@ function listMyTasks(data) {
         task.assignedTo === salesOwner
       );
     }
-    
+
     if (role === "retailSales" || role === "showroomSales" || role === "sales") {
       return (
         task.assignedTo === username ||
@@ -1603,28 +1603,28 @@ function listMyTasks(data) {
         (role === "sales" && (task.assignedRole === "retailSales" || task.assignedRole === "showroomSales"))
       );
     }
-    
+
     return (
       task.assignedTo === username ||
       task.assignedTo === displayName ||
       task.assignedTo === salesOwner
     );
   });
-  
+
   const todayStr = new Date().toISOString().slice(0, 10);
   filtered.sort((a, b) => {
     const dateA = a.dueDate || "9999-12-31";
     const dateB = b.dueDate || "9999-12-31";
-    
+
     const isDueA = dateA <= todayStr;
     const isDueB = dateB <= todayStr;
-    
+
     if (isDueA && !isDueB) return -1;
     if (!isDueA && isDueB) return 1;
-    
+
     return dateA.localeCompare(dateB);
   });
-  
+
   return {
     ok: true,
     tasks: filtered
@@ -1634,60 +1634,60 @@ function listMyTasks(data) {
 function createTask(data) {
   const spreadsheet = ensureSpreadsheet();
   ensureAllSheets(spreadsheet);
-  
+
   const userContext = data.userContext || null;
   if (!userContext || !userContext.role) {
     return { ok: false, message: "權限不足" };
   }
-  
+
   const inputTask = data.task || {};
-  
+
   // 1. Validate payload
   const title = sanitizeTaskText_(inputTask.title, 100);
   if (!title) {
     return { ok: false, message: "標題為必填且不可為空" };
   }
-  
+
   const type = inputTask.type;
   if (!type || !isValidTaskType_(type)) {
     return { ok: false, message: "任務類別不合法" };
   }
-  
+
   const priority = inputTask.priority || "normal";
   if (!isValidTaskPriority_(priority)) {
     return { ok: false, message: "優先權不合法" };
   }
-  
+
   const assignedRole = inputTask.assignedRole ? sanitizeTaskText_(inputTask.assignedRole, 50) : "";
   if (assignedRole && !isValidAssignedRole_(assignedRole)) {
     return { ok: false, message: "指派角色不合法" };
   }
-  
+
   const assignedTo = inputTask.assignedTo ? sanitizeTaskText_(inputTask.assignedTo, 100) : "";
   if (!assignedRole && !assignedTo) {
     return { ok: false, message: "必須指定指派角色或指派人員" };
   }
-  
+
   const dueDate = inputTask.dueDate ? String(inputTask.dueDate).trim() : "";
   if (dueDate && !isValidDueDate_(dueDate)) {
     return { ok: false, message: "到期日格式應為 YYYY-MM-DD" };
   }
-  
+
   // 2. Validate permissions
   if (!canUserCreateTask_(userContext, assignedRole, assignedTo)) {
     return { ok: false, message: "無權指派給該對象或角色" };
   }
-  
+
   // 3. Assemble task
   const taskId = "task-" + new Date().getTime() + "-" + Math.floor(Math.random() * 1000);
   const operatorName = getTaskOperatorName_(userContext);
-  
+
   const quantity = inputTask.quantity ? sanitizeTaskText_(inputTask.quantity, 50) : "";
   const customerId = inputTask.customerId ? sanitizeTaskText_(inputTask.customerId, 50) : "";
   const customerName = inputTask.customerName ? sanitizeTaskText_(inputTask.customerName, 100) : "";
   const productName = inputTask.productName ? sanitizeTaskText_(inputTask.productName, 100) : "";
   const description = inputTask.description ? sanitizeTaskText_(inputTask.description, 500) : "";
-  
+
   const task = {
     id: taskId,
     type: type,
@@ -1716,7 +1716,7 @@ function createTask(data) {
     startedAt: "",
     updatedBy: operatorName
   };
-  
+
   // 4. Write Audit Log
   appendAuditLog_({
     workId: taskId,
@@ -1727,7 +1727,7 @@ function createTask(data) {
     toStatus: "Created",
     details: "建立任務：" + title
   });
-  
+
   upsertObjects(SHEETS.tasks, HEADERS.tasks, [task]);
   return { ok: true, message: "任務已建立", task };
 }
@@ -1770,7 +1770,7 @@ function canUserCreateTask_(userContext, targetRole, targetAssignee) {
   const username = userContext.username || "";
   const displayName = userContext.displayName || "";
   const salesOwner = userContext.salesOwner || "";
-  
+
   if (role === "admin" || role === "boss") {
     return true;
   }
@@ -1792,30 +1792,30 @@ function canUserCreateTask_(userContext, targetRole, targetAssignee) {
 function updateTaskStatus(data) {
   const spreadsheet = ensureSpreadsheet();
   ensureAllSheets(spreadsheet);
-  
+
   const id = data.id;
   const status = data.status;
   const note = data.note;
   const userContext = data.userContext || null;
-  
+
   if (!id) throw new Error("缺少任務 ID");
   if (!status) throw new Error("缺少狀態代碼");
-  
+
   // 1. 權限檢查
   if (!userContext || !userContext.role) {
     return { ok: false, message: "權限不足" };
   }
-  
+
   const tasks = readObjects(SHEETS.tasks, HEADERS.tasks);
   const taskIndex = tasks.findIndex(t => t.id === id);
   if (taskIndex === -1) throw new Error("找不到該任務");
-  
+
   const task = tasks[taskIndex];
-  
+
   if (!canUserUpdateTask_(task, userContext)) {
     return { ok: false, message: "權限不足" };
   }
-  
+
   // 1.5. 狀態原因白名單校驗
   if (status === "Blocked" || status === "Waiting") {
     const reason = getTaskStatusReason_(data);
@@ -1824,26 +1824,26 @@ function updateTaskStatus(data) {
       return { ok: false, message: errMsg };
     }
   }
-  
+
   // 2. 欄位一致性與狀態更新
   const fromStatus = task.status;
   task.status = status;
   task.updatedAt = new Date().toISOString();
-  
+
   const operatorName = getTaskOperatorName_(userContext);
   task.updatedBy = operatorName;
-  
+
   if (status === "Finished" || status === "done") {
     task.completedAt = new Date().toISOString();
   }
-  
+
   if (status === "Blocked" || status === "Waiting") {
     const reason = getTaskStatusReason_(data);
     if (reason) {
       task.blockedReason = reason;
     }
   }
-  
+
   if (note !== undefined && note !== "") {
     if (task.note) {
       task.note += "\n" + note;
@@ -1851,7 +1851,7 @@ function updateTaskStatus(data) {
       task.note = note;
     }
   }
-  
+
   // 3. 寫入 Audit Log
   const detailsStr = (data.reason || note || "");
   appendAuditLog_({
@@ -1863,7 +1863,7 @@ function updateTaskStatus(data) {
     toStatus: status || "",
     details: detailsStr
   });
-  
+
   upsertObjects(SHEETS.tasks, HEADERS.tasks, [task]);
   return { ok: true, message: "任務狀態已更新", task };
 }
@@ -1871,30 +1871,30 @@ function updateTaskStatus(data) {
 function appendTaskNote(data) {
   const spreadsheet = ensureSpreadsheet();
   ensureAllSheets(spreadsheet);
-  
+
   const id = data.id;
   const note = data.note ? String(data.note).trim() : "";
   const userContext = data.userContext || null;
-  
+
   if (!id) throw new Error("缺少任務 ID");
   if (!note) throw new Error("備註內容不可為空");
-  
+
   // 1. 權限檢查
   if (!userContext || !userContext.role) {
     return { ok: false, message: "權限不足" };
   }
-  
+
   const tasks = readObjects(SHEETS.tasks, HEADERS.tasks);
   const taskIndex = tasks.findIndex(t => t.id === id);
   if (taskIndex === -1) throw new Error("找不到該任務");
-  
+
   const task = tasks[taskIndex];
-  
+
   const role = userContext.role;
   const username = userContext.username || "";
   const displayName = userContext.displayName || "";
   const salesOwner = userContext.salesOwner || "";
-  
+
   // 2. Validate note permissions
   let allowed = false;
   if (role === "admin" || role === "boss") {
@@ -1905,7 +1905,7 @@ function appendTaskNote(data) {
     if (s === "finished" || s === "done" || s === "cancelled") {
       return { ok: false, message: "任務已封存，非主管無法新增備註" };
     }
-    
+
     if (role === "assistant") {
       allowed = (
         task.assignedRole === "assistant" ||
@@ -1927,15 +1927,15 @@ function appendTaskNote(data) {
       );
     }
   }
-  
+
   if (!allowed) {
     return { ok: false, message: "權限不足" };
   }
-  
+
   // 3. Append-only note sanitation
   const sanitizedNote = sanitizeTaskText_(note, 200);
   const operatorName = getTaskOperatorName_(userContext);
-  
+
   // Format: [YYYY-MM-DD HH:mm Operator(Role)] noteContent
   const timestamp = new Date();
   const year = timestamp.getFullYear();
@@ -1944,18 +1944,18 @@ function appendTaskNote(data) {
   const hour = String(timestamp.getHours()).padStart(2, '0');
   const min = String(timestamp.getMinutes()).padStart(2, '0');
   const prefix = "[" + year + "-" + month + "-" + day + " " + hour + ":" + min + " " + operatorName + "(" + (role === "sales" ? "業務" : (role === "assistant" ? "助理" : role)) + ")] ";
-  
+
   const fullNoteText = prefix + sanitizedNote;
-  
+
   if (task.note) {
     task.note += "\n" + fullNoteText;
   } else {
     task.note = fullNoteText;
   }
-  
+
   task.updatedAt = new Date().toISOString();
   task.updatedBy = operatorName;
-  
+
   // 4. Write Audit Log
   appendAuditLog_({
     workId: task.id,
@@ -1966,7 +1966,7 @@ function appendTaskNote(data) {
     toStatus: task.status || "",
     details: sanitizedNote
   });
-  
+
   upsertObjects(SHEETS.tasks, HEADERS.tasks, [task]);
   return { ok: true, message: "備註已新增", task };
 }
@@ -1974,33 +1974,33 @@ function appendTaskNote(data) {
 function updateTaskFields(data) {
   const spreadsheet = ensureSpreadsheet();
   ensureAllSheets(spreadsheet);
-  
+
   const id = data.id;
   const fields = data.fields;
   const payloadUpdatedAt = data.updatedAt;
   const userContext = data.userContext || null;
-  
+
   if (!id) throw new Error("缺少任務 ID");
   if (!fields || typeof fields !== "object") {
     return { ok: false, message: "沒有可更新的欄位" };
   }
-  
+
   // 1. 權限與身分檢查
   if (!userContext || !userContext.role) {
     return { ok: false, message: "權限不足，無法編輯此任務" };
   }
-  
+
   // 2. 檢索任務
   const tasks = readObjects(SHEETS.tasks, HEADERS.tasks);
   const taskIndex = tasks.findIndex(t => t.id === id);
   if (taskIndex === -1) throw new Error("找不到該任務");
   const task = tasks[taskIndex];
-  
+
   // 3. 樂觀鎖校驗
   if (payloadUpdatedAt && String(task.updatedAt || "").trim() !== String(payloadUpdatedAt).trim()) {
     return { ok: false, message: "版本衝突：此任務已被他人更新，請重整畫面再次重試", currentUpdatedAt: task.updatedAt };
   }
-  
+
   // 4. 禁止欄位與白名單校驗
   const forbiddenFields = [
     "id", "type", "status", "source", "createdBy", "createdAt", "updatedAt", "updatedBy",
@@ -2010,12 +2010,12 @@ function updateTaskFields(data) {
   const whitelist = [
     "title", "description", "customerName", "productName", "quantity", "priority", "dueDate", "assignedRole", "assignedTo"
   ];
-  
+
   const inputKeys = Object.keys(fields);
   if (inputKeys.length === 0) {
     return { ok: false, message: "沒有可更新的欄位" };
   }
-  
+
   for (let i = 0; i < inputKeys.length; i++) {
     const k = inputKeys[i];
     if (forbiddenFields.indexOf(k) !== -1) {
@@ -2025,7 +2025,7 @@ function updateTaskFields(data) {
       return { ok: false, message: "包含不允許編輯的欄位：" + k };
     }
   }
-  
+
   const updatePayload = {};
   let hasValidField = false;
   for (let i = 0; i < whitelist.length; i++) {
@@ -2035,11 +2035,11 @@ function updateTaskFields(data) {
       hasValidField = true;
     }
   }
-  
+
   if (!hasValidField) {
     return { ok: false, message: "沒有可更新的欄位" };
   }
-  
+
   // 5. 欄位合法性驗證
   if (updatePayload.title !== undefined) {
     updatePayload.title = sanitizeTaskText_(updatePayload.title, 100);
@@ -2047,29 +2047,29 @@ function updateTaskFields(data) {
       return { ok: false, message: "格式錯誤：標題為必填且不可為空" };
     }
   }
-  
+
   if (updatePayload.description !== undefined) {
     updatePayload.description = sanitizeTaskText_(updatePayload.description, 500);
   }
-  
+
   if (updatePayload.customerName !== undefined) {
     updatePayload.customerName = sanitizeTaskText_(updatePayload.customerName, 50);
   }
-  
+
   if (updatePayload.productName !== undefined) {
     updatePayload.productName = sanitizeTaskText_(updatePayload.productName, 50);
   }
-  
+
   if (updatePayload.quantity !== undefined) {
     updatePayload.quantity = sanitizeTaskText_(updatePayload.quantity, 30);
   }
-  
+
   if (updatePayload.priority !== undefined) {
     if (!isValidTaskPriority_(updatePayload.priority)) {
       return { ok: false, message: "格式錯誤：優先權不合法" };
     }
   }
-  
+
   if (updatePayload.dueDate !== undefined) {
     const d = String(updatePayload.dueDate).trim();
     if (d && !isValidDueDate_(d)) {
@@ -2077,7 +2077,7 @@ function updateTaskFields(data) {
     }
     updatePayload.dueDate = d;
   }
-  
+
   if (updatePayload.assignedRole !== undefined) {
     const r = String(updatePayload.assignedRole).trim();
     if (r && !isValidAssignedRole_(r)) {
@@ -2085,26 +2085,26 @@ function updateTaskFields(data) {
     }
     updatePayload.assignedRole = r;
   }
-  
+
   if (updatePayload.assignedTo !== undefined) {
     updatePayload.assignedTo = sanitizeTaskText_(updatePayload.assignedTo, 50);
   }
-  
+
   const finalRole = updatePayload.assignedRole !== undefined ? updatePayload.assignedRole : task.assignedRole;
   const finalAssignee = updatePayload.assignedTo !== undefined ? updatePayload.assignedTo : task.assignedTo;
   if (!finalRole && !finalAssignee) {
     return { ok: false, message: "格式錯誤：必須指定指派角色或指派人員" };
   }
-  
+
   // 6. 角色權限校驗
   if (!canUserEditTaskFields_(task, userContext, finalRole, finalAssignee)) {
     return { ok: false, message: "權限不足，無法編輯此任務" };
   }
-  
+
   // 7. 應用更新並記錄 Audit Log
   const changedFields = [];
   const newVals = {};
-  
+
   const finalKeys = Object.keys(updatePayload);
   for (let i = 0; i < finalKeys.length; i++) {
     const k = finalKeys[i];
@@ -2116,15 +2116,15 @@ function updateTaskFields(data) {
       task[k] = newVal;
     }
   }
-  
+
   if (changedFields.length === 0) {
     return { ok: true, message: "欄位值未變更", task };
   }
-  
+
   const operatorName = getTaskOperatorName_(userContext);
   task.updatedAt = new Date().toISOString();
   task.updatedBy = operatorName;
-  
+
   // 8. 寫入 Audit Log
   appendAuditLog_({
     workId: task.id,
@@ -2135,7 +2135,7 @@ function updateTaskFields(data) {
     toStatus: task.status || "",
     details: "編輯欄位: " + changedFields.join(", ") + " | 變更: " + JSON.stringify(newVals)
   });
-  
+
   upsertObjects(SHEETS.tasks, HEADERS.tasks, [task]);
   return { ok: true, message: "任務已更新", task };
 }
@@ -2146,17 +2146,17 @@ function canUserEditTaskFields_(task, userContext, targetRole, targetAssignee) {
   const username = userContext.username || "";
   const displayName = userContext.displayName || "";
   const salesOwner = userContext.salesOwner || "";
-  
+
   const isAdmin = (role === "admin" || role === "boss" || role === "manager" || userContext.role === "主管" || userContext.role === "管理員");
-  
+
   const s = String(task.status || "").toLowerCase().trim();
   const isArchived = (s === "finished" || s === "done" || s === "cancelled");
   if (isArchived) {
     return isAdmin;
   }
-  
+
   if (isAdmin) return true;
-  
+
   if (role === "assistant" || userContext.role === "助理") {
     return (
       task.assignedRole === "assistant" ||
@@ -2166,7 +2166,7 @@ function canUserEditTaskFields_(task, userContext, targetRole, targetAssignee) {
       task.assignedTo === salesOwner
     );
   }
-  
+
   if (role === "sales" || role === "retailsales" || role === "showroomsales" || userContext.role === "業務") {
     return (
       task.assignedRole === "sales" ||
@@ -2179,7 +2179,7 @@ function canUserEditTaskFields_(task, userContext, targetRole, targetAssignee) {
       task.createdBy === salesOwner
     );
   }
-  
+
   return false;
 }
 
@@ -2194,11 +2194,11 @@ function canUserUpdateTask_(task, userContext) {
   const username = userContext.username || "";
   const displayName = userContext.displayName || "";
   const salesOwner = userContext.salesOwner || "";
-  
+
   if (role === "admin" || role === "boss") {
     return true;
   }
-  
+
   if (role === "assistant") {
     return (
       task.assignedRole === "assistant" ||
@@ -2207,7 +2207,7 @@ function canUserUpdateTask_(task, userContext) {
       task.assignedTo === salesOwner
     );
   }
-  
+
   if (role === "retailSales" || role === "showroomSales" || role === "sales") {
     const isAssignedToMe = (
       task.assignedTo && (
@@ -2225,14 +2225,14 @@ function canUserUpdateTask_(task, userContext) {
     );
     return isAssignedToMe || isCreatedByMe;
   }
-  
+
   return false;
 }
 
 function replyLineCustomMessage(replyToken, messagesArray) {
   const token = getSetting("lineChannelAccessToken") || DEFAULT_CHANNEL_ACCESS_TOKEN;
   if (!token) return;
-  
+
   const url = "https://api.line.me/v2/bot/message/reply";
   UrlFetchApp.fetch(url, {
     method: "post",
@@ -2251,7 +2251,7 @@ function replyLineCustomMessage(replyToken, messagesArray) {
 function replyRoleMenu(replyToken, user) {
   let text = "📋 您好 " + user.displayName + "，已為您載入工作中心選單。請選擇功能：";
   let items = [];
-  
+
   const role = user.role;
   if (role === "showroomSales") {
     text = "📋 您好 " + user.displayName + "，已為您載入【門市業務】工作選單：";
@@ -2289,13 +2289,13 @@ function replyRoleMenu(replyToken, user) {
       { type: "action", action: { type: "message", label: "問 AI", text: "問 AI" } }
     ];
   }
-  
+
   const message = {
     type: "text",
     text: text,
     quickReply: { items: items }
   };
-  
+
   replyLineCustomMessage(replyToken, [message]);
 }
 
@@ -2305,7 +2305,7 @@ function replyMyTasks(replyToken, userId) {
     replyLineMessage(replyToken, "🎉 您好！目前沒有需要處理的待辦工作任務。工作滿分！");
     return;
   }
-  
+
   const bubbles = result.tasks.slice(0, 10).map(makeFlexTaskBubble);
   const flexMessage = {
     type: "flex",
@@ -2315,7 +2315,7 @@ function replyMyTasks(replyToken, userId) {
       bubbles: bubbles
     }
   };
-  
+
   replyLineCustomMessage(replyToken, [flexMessage]);
 }
 
@@ -2324,18 +2324,18 @@ function replyBossOverview(replyToken) {
   const tasks = readObjects(SHEETS.tasks, HEADERS.tasks);
   const holds = readObjects(SHEETS.holds, HEADERS.holds);
   const complaints = readObjects(SHEETS.complaints, HEADERS.complaints);
-  
+
   const todayTasks = tasks.filter(t => t.dueDate === today);
   const total = todayTasks.length;
   const completed = todayTasks.filter(t => t.status === "done").length;
   const pending = todayTasks.filter(t => ["open", "inProgress"].includes(t.status)).length;
   const delayed = tasks.filter(t => t.status === "delayed").length;
   const blocked = tasks.filter(t => t.status === "blocked").length;
-  
+
   const newHolds = holds.filter(h => h.createdAt && h.createdAt.slice(0, 10) === today).length;
   const openComplaints = complaints.filter(c => c.status !== "已結案").length;
   const openProcessing = tasks.filter(t => t.type === "processing" && t.status !== "done").length;
-  
+
   const text = "📊 【今日業務總覽】(" + today + ")\n\n" +
     "🔹 今日任務統計：\n" +
     "  - 今日任務總數: " + total + " 筆\n" +
@@ -2348,7 +2348,7 @@ function replyBossOverview(replyToken) {
     "  - 客訴待處理: " + openComplaints + " 筆\n" +
     "  - 加工待處理: " + openProcessing + " 筆\n\n" +
     "💡 點選「異常提醒」或「業務進度」可以查看更詳細的清單。";
-    
+
   replyLineMessage(replyToken, text);
 }
 
@@ -2359,7 +2359,7 @@ function replyBlockedTasks(replyToken) {
     replyLineMessage(replyToken, "🎉 太棒了！目前沒有被標記為異常（受阻）的任務。");
     return;
   }
-  
+
   const bubbles = blocked.slice(0, 10).map(makeFlexTaskBubble);
   replyLineCustomMessage(replyToken, [{
     type: "flex",
@@ -2394,7 +2394,7 @@ function makeFlexTaskBubble(task) {
     other: "📋 其他"
   };
   const typeLabel = typeMap[task.type] || "📋 任務";
-  
+
   const priorityColor = task.priority === "urgent" ? "#ff4d4f" : (task.priority === "high" ? "#faad14" : "#1890ff");
   const priorityLabel = task.priority === "urgent" ? "緊急" : (task.priority === "high" ? "重要" : "普通");
 
@@ -2626,18 +2626,18 @@ function buildLineReminderLinkDryRunReport_(options) {
 
   const context = getLineReminderDryRunContext_(options);
   const candidates = getLineReminderCandidates_();
-  
+
   const candidateUserCount = candidates.length;
   let eligibleUserCount = 0;
   let skippedUserCount = 0;
-  
+
   const processedCandidates = [];
   const lineUserIdsSeen = {};
 
   for (let i = 0; i < candidates.length; i++) {
     const candidate = candidates[i];
     const eligibility = isLineReminderCandidateEligible_(candidate, context, lineUserIdsSeen);
-    
+
     let preview = "";
     if (eligibility.eligible) {
       eligibleUserCount++;
@@ -2740,7 +2740,7 @@ function buildLineReminderMessagePreview_(candidate, context) {
 function getLineReminderWorkCenterUrl_() {
   const defaultUrl = "https://brown-phi.vercel.app";
   const productionUrl = PropertiesService.getScriptProperties().getProperty("PWA_PRODUCTION_URL") || defaultUrl;
-  
+
   let baseUrl = productionUrl.trim();
   if (baseUrl.endsWith("/")) {
     baseUrl = baseUrl.slice(0, -1);
@@ -2757,7 +2757,7 @@ function getLineReminderDryRunContext_(options) {
   const min = ("0" + now.getMinutes()).slice(-2);
   const sec = ("0" + now.getSeconds()).slice(-2);
   const runId = "dryrun-" + year + month + date + "-" + hour + min + sec;
-  
+
   const runAt = Utilities.formatDate(now, "GMT+8", "yyyy-MM-dd HH:mm:ss");
 
   return {
@@ -2768,3 +2768,133 @@ function getLineReminderDryRunContext_(options) {
   };
 }
 
+/**
+ * Stage 20-F: LINE Push Single Whitelist Channel Manual Test Entrance
+ */
+function runSingleLinePushWhitelistTest_(options) {
+  options = options || {};
+  const dryRun = options.dryRun !== false;
+  const send = options.send === true;
+  const recipient = options.recipient;
+
+  // Message is strictly hardcoded to the fixed test string.
+  const message = "勁揚業務管家 LINE Push 安全通路測試中。";
+
+  const props = PropertiesService.getScriptProperties();
+  const enabled = (props.getProperty("LINE_PUSH_ENABLED") || "").trim();
+  if (enabled !== "enabled") {
+    return { ok: false, status: "PUSH_DISABLED", message: "LINE Push is disabled on Backend script properties." };
+  }
+
+  const endpoint = (props.getProperty("LINE_BOT_INTERNAL_ENDPOINT") || "").trim();
+  if (!endpoint) {
+    return { ok: false, status: "ENDPOINT_MISSING", message: "LINE Bot internal endpoint (LINE_BOT_INTERNAL_ENDPOINT) is missing." };
+  }
+
+  const sharedSecret = (props.getProperty("LINE_PUSH_SHARED_SECRET") || "").trim();
+  if (!sharedSecret) {
+    return { ok: false, status: "SECRET_MISSING", message: "Shared secret (LINE_PUSH_SHARED_SECRET) is missing." };
+  }
+
+  if (!recipient || typeof recipient !== "string") {
+    return { ok: false, status: "INVALID_RECIPIENT", message: "Recipient lineUserId is invalid or empty." };
+  }
+
+  // Strict regex for LINE User ID format
+  const lineUserIdRegex = /^U[a-fA-F0-9]{32}$/;
+  if (!lineUserIdRegex.test(recipient)) {
+    return { ok: false, status: "INVALID_RECIPIENT_FORMAT", message: "Recipient must be a single valid LINE User ID (starts with U followed by 32 hex chars)." };
+  }
+
+  const maskedRecipient = recipient.substring(0, 4) + "..." + recipient.substring(recipient.length - 4);
+  const timestamp = new Date().getTime().toString();
+  const requestId = "req-" + timestamp + "-" + Math.floor(Math.random() * 1000000);
+
+  // Validate requestId format (only letters, numbers, hyphens, and underscores; length 8 to 100)
+  const requestIdRegex = /^[A-Za-z0-9_-]{8,100}$/;
+  if (!requestIdRegex.test(requestId)) {
+    return { ok: false, status: "INVALID_REQUEST_ID", message: "Generated requestId format is invalid." };
+  }
+
+  const canonical = "jy-line-push-v1|sendPushReminder|" + requestId + "|" + timestamp + "|" + recipient + "|" + message;
+  const signature = computeHmacSha256Hex_(canonical, sharedSecret);
+
+  const payload = {
+    internalRequest: "jy-line-push-v1",
+    action: "sendPushReminder",
+    requestId: requestId,
+    timestamp: timestamp,
+    recipient: recipient,
+    message: message,
+    signature: signature
+  };
+
+  if (dryRun && !send) {
+    return {
+      ok: true,
+      status: "DRY_RUN",
+      message: "Dry run completed successfully. No real HTTP call was made.",
+      requestId: requestId,
+      timestamp: timestamp,
+      recipient: maskedRecipient,
+      canonical: canonical,
+      payloadSize: JSON.stringify(payload).length
+    };
+  }
+
+  // Real HTTP POST call to LINE Bot
+  const fetchOptions = {
+    method: "post",
+    contentType: "application/json",
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  };
+
+  try {
+    const response = UrlFetchApp.fetch(endpoint, fetchOptions);
+    const responseCode = response.getResponseCode();
+    const responseBody = response.getContentText();
+
+    try {
+      const result = JSON.parse(responseBody);
+      return {
+        ok: result.ok,
+        status: result.status,
+        message: result.message,
+        recipient: result.recipient,
+        responseCode: responseCode,
+        rawResponse: responseBody.substring(0, 500)
+      };
+    } catch (e) {
+      return {
+        ok: false,
+        status: "BAD_JSON_RESPONSE",
+        message: "LINE Bot endpoint returned invalid JSON response.",
+        responseCode: responseCode,
+        rawResponse: responseBody.substring(0, 500)
+      };
+    }
+  } catch (err) {
+    return {
+      ok: false,
+      status: "HTTP_FETCH_FAILED",
+      message: err.toString()
+    };
+  }
+}
+
+/**
+ * SHA-256 HMAC helper for Apps Script
+ */
+function computeHmacSha256Hex_(value, key) {
+  const keyBytes = Utilities.newBlob(key).getBytes();
+  const valueBytes = Utilities.newBlob(value).getBytes();
+  const signatureBytes = Utilities.computeHmacSignature(
+    Utilities.MacAlgorithm.HMAC_SHA_256,
+    valueBytes,
+    keyBytes
+  );
+  return signatureBytes.map(function(b) {
+    return ('0' + (b & 0xFF).toString(16)).slice(-2);
+  }).join('');
+}

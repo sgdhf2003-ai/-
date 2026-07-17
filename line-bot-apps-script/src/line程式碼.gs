@@ -43,6 +43,11 @@ function doPost(e) {
     rawContent = e.postData.contents;
     var postData = JSON.parse(rawContent);
 
+    // 0. Intercept secure internal push reminders (Stage 20-F)
+    if (postData && postData.internalRequest === "jy-line-push-v1" && postData.action === "sendPushReminder") {
+      return handleInternalPushReminder_(postData);
+    }
+
     // 1. 處理外部 API 或非 Webhook 請求
     if (postData && (postData.action || !postData.events || !Array.isArray(postData.events))) {
       return ContentService.createTextOutput(JSON.stringify({
@@ -3736,4 +3741,209 @@ function parseQueryString_(str) {
     }
   }
   return params;
+}
+
+/**
+ * Stage 20-F: Secure Internal Push Reminder handler
+ */
+function handleInternalPushReminder_(postData) {
+  var lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000);
+  } catch (e) {
+    return buildStructuredResponse_(false, "LOCK_TIMEOUT", "Could not acquire script lock within timeout.");
+  }
+
+  var recipient = postData.recipient;
+  var maskedRecipient = maskRecipient_(recipient);
+
+  try {
+    var props = PropertiesService.getScriptProperties();
+    var enabled = (props.getProperty("LINE_PUSH_ENABLED") || "").trim();
+    if (enabled !== "enabled") {
+      return buildStructuredResponse_(false, "PUSH_DISABLED", "LINE Push is disabled on LINE Bot side.", maskedRecipient);
+    }
+
+    var sharedSecret = (props.getProperty("LINE_PUSH_SHARED_SECRET") || "").trim();
+    if (!sharedSecret) {
+      return buildStructuredResponse_(false, "SECRET_MISSING", "Shared secret is not configured on LINE Bot side.", maskedRecipient);
+    }
+
+    var allowlistRaw = (props.getProperty("LINE_PUSH_TEST_ALLOWLIST") || "").trim();
+    if (!allowlistRaw) {
+      return buildStructuredResponse_(false, "ALLOWLIST_MISSING", "Test allowlist is empty or missing on LINE Bot side.", maskedRecipient);
+    }
+    var allowlist = allowlistRaw.split(",").map(function(s) { return s.trim(); });
+
+    // Validate request structure
+    if (!postData.requestId || !postData.timestamp || !recipient || !postData.message || !postData.signature) {
+      return buildStructuredResponse_(false, "MALFORMED_REQUEST", "Missing required fields.", maskedRecipient);
+    }
+
+    // Input Validation: requestId format (only letters, numbers, hyphens, and underscores; length 8 to 100)
+    var requestIdRegex = /^[A-Za-z0-9_-]{8,100}$/;
+    if (!requestIdRegex.test(postData.requestId)) {
+      return buildStructuredResponse_(false, "INVALID_REQUEST_ID", "requestId format is invalid or has incorrect length.", maskedRecipient);
+    }
+
+    // Input Validation: recipient format (starts with U, followed by 32 hex chars)
+    var lineUserIdRegex = /^U[a-fA-F0-9]{32}$/;
+    if (!lineUserIdRegex.test(recipient)) {
+      return buildStructuredResponse_(false, "INVALID_RECIPIENT_FORMAT", "Recipient must be a single valid LINE User ID.", maskedRecipient);
+    }
+
+    // Input Validation: message must strictly match the hardcoded test string
+    if (postData.message !== "勁揚業務管家 LINE Push 安全通路測試中。") {
+      return buildStructuredResponse_(false, "MESSAGE_BLOCKED", "Message content is not allowed.", maskedRecipient);
+    }
+
+    // Timestamp check (skew limit: 5 minutes)
+    var timestamp = Number(postData.timestamp);
+    var now = new Date().getTime();
+    if (isNaN(timestamp) || Math.abs(now - timestamp) > 300000) {
+      return buildStructuredResponse_(false, "EXPIRED_REQUEST", "Request timestamp is expired or invalid.", maskedRecipient);
+    }
+
+    // Signature verification
+    var canonical = "jy-line-push-v1|sendPushReminder|" + postData.requestId + "|" + postData.timestamp + "|" + recipient + "|" + postData.message;
+    var computedSignature = computeHmacSha256Hex_(canonical, sharedSecret);
+    if (!constantTimeAreEqual_(postData.signature, computedSignature)) {
+      return buildStructuredResponse_(false, "INVALID_SIGNATURE", "HMAC signature verification failed.", maskedRecipient);
+    }
+
+    // Deduplication check: Check if already processed before calling the API
+    if (isRequestIdProcessed_(postData.requestId)) {
+      return buildStructuredResponse_(false, "DUPLICATE_REQUEST", "Duplicate request detected.", maskedRecipient);
+    }
+
+    // Perform actual push
+    var response = pushMessageToUser(recipient, postData.message);
+    if (!response) {
+      return buildStructuredResponse_(false, "PUSH_API_FAILED", "LINE Push API invocation returned null or empty.", maskedRecipient);
+    }
+
+    var responseCode = response.getResponseCode();
+    var responseBody = response.getContentText();
+
+    if (responseCode === 200) {
+      // Record as completed ONLY after successful API call
+      recordCompletedRequestId_(postData.requestId);
+      return buildStructuredResponse_(true, "SUCCESS", "Push message sent successfully.", maskedRecipient, {
+        responseCode: responseCode
+      });
+    } else {
+      // Non-200 means failure, do not record request ID so it can be retried
+      return buildStructuredResponse_(false, "LINE_API_ERROR", "LINE API returned non-200 status code.", maskedRecipient, {
+        responseCode: responseCode,
+        responseBody: responseBody.substring(0, 500)
+      });
+    }
+  } catch (err) {
+    Logger.log("Internal Push handler error: " + err.toString());
+    return buildStructuredResponse_(false, "SYSTEM_ERROR", err.toString(), maskedRecipient);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/**
+ * Check if requestId has already been marked as completed
+ */
+function isRequestIdProcessed_(requestId) {
+  try {
+    var props = PropertiesService.getScriptProperties();
+    var rawList = props.getProperty("PROCESSED_REQUEST_IDS") || "[]";
+    var list = JSON.parse(rawList);
+    return list.indexOf(requestId) !== -1;
+  } catch (e) {
+    Logger.log("Error checking request ID: " + e.toString());
+    return true; // fail-closed on read failure
+  }
+}
+
+/**
+ * Record completed requestId inside ScriptProperties
+ */
+function recordCompletedRequestId_(requestId) {
+  try {
+    var props = PropertiesService.getScriptProperties();
+    var rawList = props.getProperty("PROCESSED_REQUEST_IDS") || "[]";
+    var list = JSON.parse(rawList);
+    if (list.indexOf(requestId) === -1) {
+      list.push(requestId);
+      if (list.length > 100) {
+        list.shift(); // Keep list size under 100
+      }
+      props.setProperty("PROCESSED_REQUEST_IDS", JSON.stringify(list));
+    }
+    return true;
+  } catch (e) {
+    Logger.log("Error recording completed request ID: " + e.toString());
+    return false;
+  }
+}
+
+/**
+ * Constant-time comparison helper
+ */
+function constantTimeAreEqual_(str1, str2) {
+  if (typeof str1 !== 'string' || typeof str2 !== 'string') {
+    return false;
+  }
+  var len1 = str1.length;
+  var len2 = str2.length;
+  var maxLen = 64; // SHA-256 hex signature is always 64 chars
+  var result = 0;
+  for (var i = 0; i < maxLen; i++) {
+    var char1 = (i < len1) ? str1.charCodeAt(i) : 0;
+    var char2 = (i < len2) ? str2.charCodeAt(i) : 0;
+    result |= char1 ^ char2;
+  }
+  return result === 0 && len1 === len2;
+}
+
+/**
+ * Mask UserId for safety
+ */
+function maskRecipient_(recipient) {
+  if (!recipient || typeof recipient !== "string") return "N/A";
+  if (recipient.length <= 8) return recipient;
+  return recipient.substring(0, 4) + "..." + recipient.substring(recipient.length - 4);
+}
+
+/**
+ * Build clean JSON output response
+ */
+function buildStructuredResponse_(ok, status, message, maskedRecipient, extra) {
+  var responseObj = {
+    ok: ok,
+    status: status,
+    message: message
+  };
+  if (maskedRecipient) {
+    responseObj.recipient = maskedRecipient;
+  }
+  if (extra) {
+    for (var key in extra) {
+      responseObj[key] = extra[key];
+    }
+  }
+  return ContentService.createTextOutput(JSON.stringify(responseObj))
+                       .setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * SHA-256 HMAC helper for Apps Script
+ */
+function computeHmacSha256Hex_(value, key) {
+  var keyBytes = Utilities.newBlob(key).getBytes();
+  var valueBytes = Utilities.newBlob(value).getBytes();
+  var signatureBytes = Utilities.computeHmacSignature(
+    Utilities.MacAlgorithm.HMAC_SHA_256,
+    valueBytes,
+    keyBytes
+  );
+  return signatureBytes.map(function(b) {
+    return ('0' + (b & 0xFF).toString(16)).slice(-2);
+  }).join('');
 }
