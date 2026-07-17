@@ -1100,6 +1100,56 @@ function searchInventory(itemName, senderUserId) {
              "━━━━━━━━━━━━━━━━━━━━";
   }
 
+  // 3-2. 拼接替代商品推薦資訊
+  if ((etaShortageState === "INSUFFICIENT_STOCK" || etaShortageState === "OUT_OF_STOCK") &&
+      substituteResult &&
+      Array.isArray(substituteResult.candidates) &&
+      substituteResult.candidates.length > 0) {
+
+    var validCandidates = [];
+    for (var k = 0; k < substituteResult.candidates.length; k++) {
+      var cand = substituteResult.candidates[k];
+      if (!cand || typeof cand !== "object") continue;
+
+      // model 必須存在且不為空
+      if (!cand.model || typeof cand.model !== "string" || cand.model.trim() === "") continue;
+
+      // stock 必須是有限的且大於零的數字
+      if (typeof cand.stock !== "number" || isNaN(cand.stock) || !isFinite(cand.stock) || cand.stock <= 0) continue;
+
+      validCandidates.push(cand);
+    }
+
+    if (validCandidates.length > 0) {
+      var subText = "\n\n🌸 可替代商品推薦\n" +
+                    "以下商品目前有庫存，可洽詢業務確認是否適合替代：\n";
+
+      var limit = Math.min(validCandidates.length, 3);
+      for (var k = 0; k < limit; k++) {
+        var cand = validCandidates[k];
+        var itemText = "\n• 型號：" + cand.model;
+
+        // size 缺失時不顯示尺寸欄位，排除 undefined / null / NaN
+        if (cand.size && typeof cand.size === "string" && cand.size.trim() !== "" &&
+            cand.size.toLowerCase() !== "undefined" && cand.size.toLowerCase() !== "null" && cand.size.toLowerCase() !== "nan") {
+          itemText += "\n  尺寸：" + cand.size.trim() + "｜庫存：" + cand.stock;
+        } else {
+          itemText += "\n  庫存：" + cand.stock;
+        }
+
+        // reason 缺失時不顯示原因欄位，排除 undefined / null / NaN
+        if (cand.reason && typeof cand.reason === "string" && cand.reason.trim() !== "" &&
+            cand.reason.toLowerCase() !== "undefined" && cand.reason.toLowerCase() !== "null" && cand.reason.toLowerCase() !== "nan") {
+          itemText += "\n  原因：" + cand.reason.trim();
+        }
+
+        subText += itemText;
+      }
+
+      reply += subText;
+    }
+  }
+
   // 取得當前型號編號作為提示範例中的動態提醒
   var modelBase = "";
   var codeMatch = model.match(/^([a-zA-Z0-9\-_/\.]+)/);
