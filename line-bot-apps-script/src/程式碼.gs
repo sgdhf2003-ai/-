@@ -25,20 +25,14 @@ function doGet(e) {
         .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
         .addMetaTag('viewport', 'width=device-width, initial-scale=1');
   }
-  if (e && e.parameter && e.parameter.action === 'readSpreadsheet') {
-    var fileId = e.parameter.fileId;
-    try {
-      var ss = SpreadsheetApp.openById(fileId);
-      var sheets = ss.getSheets();
-      var allData = {};
-      for (var i = 0; i < sheets.length; i++) {
-        var sheet = sheets[i];
-        var name = sheet.getName();
-        allData[name] = sheet.getDataRange().getValues();
-      }
-      return ContentService.createTextOutput(JSON.stringify(allData)).setMimeType(ContentService.MimeType.JSON);
-    } catch (err) {
-      return ContentService.createTextOutput(JSON.stringify({ error: err.toString() })).setMimeType(ContentService.MimeType.JSON);
+  // 安全限制：拒絕外部任意試算表讀取，未知或不可用的 action 統一回傳通用安全錯誤
+  if (e && e.parameter && e.parameter.action) {
+    var allowedActions = ['getLogs', 'inspectRow', 'inspectFormulas', 'getAllRows', 'runConvert', 'getHeaders', 'searchSheet'];
+    if (allowedActions.indexOf(e.parameter.action) === -1 || e.parameter.action === 'readSpreadsheet') {
+      return ContentService.createTextOutput(JSON.stringify({
+        "ok": false,
+        "error": "ACTION_NOT_AVAILABLE"
+      })).setMimeType(ContentService.MimeType.JSON);
     }
   }
   if (e && e.parameter && e.parameter.action === 'getLogs') {

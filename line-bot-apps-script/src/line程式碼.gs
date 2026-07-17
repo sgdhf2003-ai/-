@@ -43,37 +43,12 @@ function doPost(e) {
     rawContent = e.postData.contents;
     var postData = JSON.parse(rawContent);
 
-    // 1. 處理外部試算表寫入 API 請求 (writeSpreadsheet)
-    if (postData && postData.action === 'writeSpreadsheet') {
-      var ssId = postData.spreadsheetId;
-      var sheetsData = postData.sheetsData;
-      var ss = SpreadsheetApp.openById(ssId);
-
-      for (var name in sheetsData) {
-        var sheet = ss.getSheetByName(name);
-        if (!sheet) {
-          sheet = ss.insertSheet(name);
-        }
-        sheet.clear();
-        var rows = sheetsData[name];
-        if (rows && rows.length > 0) {
-          var requiredRows = rows.length;
-          var requiredCols = rows[0].length;
-
-          var maxRows = sheet.getMaxRows();
-          var maxCols = sheet.getMaxColumns();
-
-          if (maxRows < requiredRows) {
-            sheet.insertRowsAfter(maxRows, requiredRows - maxRows);
-          }
-          if (maxCols < requiredCols) {
-            sheet.insertColumnsAfter(maxCols, requiredCols - maxCols);
-          }
-
-          sheet.getRange(1, 1, requiredRows, requiredCols).setValues(rows);
-        }
-      }
-      return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+    // 1. 處理外部 API 或非 Webhook 請求
+    if (postData && (postData.action || !postData.events || !Array.isArray(postData.events))) {
+      return ContentService.createTextOutput(JSON.stringify({
+        "ok": false,
+        "error": "ACTION_NOT_AVAILABLE"
+      })).setMimeType(ContentService.MimeType.JSON);
     }
 
     // 2. 處理 LINE Webhook 訊息
