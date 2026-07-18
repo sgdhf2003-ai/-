@@ -2888,6 +2888,372 @@ function getLineReminderDryRunContext_(options) {
   };
 }
 
+const TASK_DUE_NOTIFICATION_TIMEZONE_ = "Asia/Taipei";
+const TASK_DUE_NOTIFICATION_SCHEMA_VERSION_ = "v1";
+const TASK_DUE_NOTIFICATION_DEFAULT_CAP_ = 50;
+const TASK_DUE_NOTIFICATION_MAX_CAP_ = 100;
+const TASK_DUE_NOTIFICATION_LINE_ID_REGEX_ = /^U[a-fA-F0-9]{32}$/;
+
+function normalizeTaskStatusForNotification_(status) {
+  const raw = String(status === undefined || status === null ? "" : status).trim();
+  const lower = raw.toLowerCase();
+  if (lower === "created") return "CREATED";
+  if (lower === "started") return "STARTED";
+  if (lower === "waiting") return "WAITING";
+  if (lower === "blocked") return "BLOCKED";
+  if (lower === "finished" || lower === "done" || lower === "completed" || raw === "已完成") return "FINISHED";
+  if (lower === "cancelled" || raw === "已取消") return "CANCELLED";
+  return "UNKNOWN";
+}
+
+function normalizeTaskNotificationUsernameKey_(value) {
+  return String(value === undefined || value === null ? "" : value).trim().toLowerCase();
+}
+
+function normalizeTaskNotificationDisplayNameKey_(value) {
+  return String(value === undefined || value === null ? "" : value).trim();
+}
+
+function normalizeTaskNotificationLineUserId_(value) {
+  const raw = String(value === undefined || value === null ? "" : value).trim();
+  if (!raw) return "";
+  return raw.substring(0, 1).toUpperCase() + raw.substring(1);
+}
+
+function isTaskNotificationPlainAssignment_(value) {
+  if (value === undefined || value === null) return true;
+  return typeof value === "string" || typeof value === "number" || typeof value === "boolean";
+}
+
+function isTaskNotificationValidDateKey_(value) {
+  const s = String(value || "").trim();
+  const match = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const d = new Date(Date.UTC(year, month - 1, day));
+  return d.getUTCFullYear() === year && d.getUTCMonth() === month - 1 && d.getUTCDate() === day;
+}
+
+function getTodayKeyTaipei_() {
+  return Utilities.formatDate(new Date(), TASK_DUE_NOTIFICATION_TIMEZONE_, "yyyy-MM-dd");
+}
+
+function normalizeTaskDueDateKeyTaipei_(value) {
+  if (value === undefined || value === null || value === "") return "";
+  if (Object.prototype.toString.call(value) === "[object Date]") {
+    if (isNaN(value.getTime())) return null;
+    return Utilities.formatDate(value, TASK_DUE_NOTIFICATION_TIMEZONE_, "yyyy-MM-dd");
+  }
+  const s = String(value).trim();
+  if (!isTaskNotificationValidDateKey_(s)) return null;
+  return s;
+}
+
+function taskNotificationDateKeyToUtcMs_(dateKey) {
+  if (!isTaskNotificationValidDateKey_(dateKey)) return null;
+  const parts = dateKey.split("-");
+  return Date.UTC(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+}
+
+function calculateTaipeiDateDifferenceDays_(todayKey, dueDateKey) {
+  const todayMs = taskNotificationDateKeyToUtcMs_(todayKey);
+  const dueMs = taskNotificationDateKeyToUtcMs_(dueDateKey);
+  if (todayMs === null || dueMs === null) return null;
+  return Math.round((todayMs - dueMs) / 86400000);
+}
+
+function isTaskNotificationEligible_(task) {
+  if (!task || !String(task.id || "").trim()) {
+    return { eligible: false, reason: "TASK_ID_MISSING", normalizedStatus: "UNKNOWN" };
+  }
+  if (!String(task.title || "").trim()) {
+    return { eligible: false, reason: "TITLE_MISSING", normalizedStatus: "UNKNOWN" };
+  }
+  const normalizedStatus = normalizeTaskStatusForNotification_(task.status);
+  if (normalizedStatus === "FINISHED") {
+    return { eligible: false, reason: "STATUS_FINISHED", normalizedStatus };
+  }
+  if (normalizedStatus === "CANCELLED") {
+    return { eligible: false, reason: "STATUS_CANCELLED", normalizedStatus };
+  }
+  if (normalizedStatus === "UNKNOWN") {
+    return { eligible: false, reason: "UNKNOWN_STATUS", normalizedStatus };
+  }
+  const dueDateKey = normalizeTaskDueDateKeyTaipei_(task.dueDate);
+  if (dueDateKey === "") {
+    return { eligible: false, reason: "DUE_DATE_MISSING", normalizedStatus };
+  }
+  if (dueDateKey === null) {
+    return { eligible: false, reason: "INVALID_DUE_DATE", normalizedStatus };
+  }
+  if (!String(task.assignedTo || "").trim()) {
+    return { eligible: false, reason: "ASSIGNEE_MISSING", normalizedStatus };
+  }
+  return { eligible: true, reason: "ELIGIBLE", normalizedStatus, dueDateKey };
+}
+
+function buildTaskNotificationUsersIndex_(usersRows) {
+  const index = {
+    byUsername: {},
+    activeByDisplayName: {},
+    usernameCounts: {},
+    lineUserIdCounts: {}
+  };
+  const users = Array.isArray(usersRows) ? usersRows : [];
+  users.forEach(function(user) {
+    user = user || {};
+    const usernameKey = normalizeTaskNotificationUsernameKey_(user.username);
+    const displayNameKey = normalizeTaskNotificationDisplayNameKey_(user.displayName);
+    const status = String(user.status || "").trim();
+    const lineUserId = normalizeTaskNotificationLineUserId_(user.lineUserId);
+    if (usernameKey) {
+      index.usernameCounts[usernameKey] = (index.usernameCounts[usernameKey] || 0) + 1;
+    }
+    if (TASK_DUE_NOTIFICATION_LINE_ID_REGEX_.test(lineUserId)) {
+      index.lineUserIdCounts[lineUserId] = (index.lineUserIdCounts[lineUserId] || 0) + 1;
+    }
+    const safeUser = {
+      username: String(user.username || "").trim(),
+      usernameKey: usernameKey,
+      displayName: String(user.displayName || "").trim(),
+      displayNameKey: displayNameKey,
+      status: status,
+      role: String(user.role || "").trim(),
+      lineUserId: lineUserId
+    };
+    if (usernameKey) {
+      if (!index.byUsername[usernameKey]) index.byUsername[usernameKey] = [];
+      index.byUsername[usernameKey].push(safeUser);
+    }
+    if (status === "啟用" && displayNameKey) {
+      if (!index.activeByDisplayName[displayNameKey]) index.activeByDisplayName[displayNameKey] = [];
+      index.activeByDisplayName[displayNameKey].push(safeUser);
+    }
+  });
+  return index;
+}
+
+function resolveTaskNotificationRecipient_(task, usersIndex) {
+  if (!task || !isTaskNotificationPlainAssignment_(task.assignedTo)) {
+    return { ok: false, reason: "ASSIGNMENT_FORMAT_UNSUPPORTED" };
+  }
+  const assignedTo = String(task.assignedTo || "").trim();
+  if (!assignedTo) {
+    if (String(task.assignedRole || "").trim()) return { ok: false, reason: "ROLE_ONLY_ASSIGNMENT" };
+    return { ok: false, reason: "ASSIGNEE_MISSING" };
+  }
+  const usernameKey = normalizeTaskNotificationUsernameKey_(assignedTo);
+  const usernameMatches = usersIndex.byUsername[usernameKey] || [];
+  if (usernameMatches.length > 1 || usersIndex.usernameCounts[usernameKey] > 1) {
+    return { ok: false, reason: "USERNAME_DUPLICATE" };
+  }
+  let user = usernameMatches.length === 1 ? usernameMatches[0] : null;
+  let resolution = "USERNAME";
+  if (!user) {
+    const displayMatches = usersIndex.activeByDisplayName[normalizeTaskNotificationDisplayNameKey_(assignedTo)] || [];
+    if (displayMatches.length > 1) return { ok: false, reason: "USER_AMBIGUOUS" };
+    if (displayMatches.length === 1) {
+      user = displayMatches[0];
+      resolution = "DISPLAY_NAME_UNIQUE";
+    }
+  }
+  if (!user) return { ok: false, reason: "USER_NOT_FOUND" };
+  if (String(user.status || "").trim() !== "啟用") return { ok: false, reason: "USER_INACTIVE" };
+  if (!user.lineUserId) return { ok: false, reason: "LINE_UNBOUND" };
+  if (!TASK_DUE_NOTIFICATION_LINE_ID_REGEX_.test(user.lineUserId)) return { ok: false, reason: "LINE_ID_INVALID" };
+  if ((usersIndex.lineUserIdCounts[user.lineUserId] || 0) > 1) return { ok: false, reason: "LINE_ID_DUPLICATE" };
+  if (!user.usernameKey) return { ok: false, reason: "USER_NOT_FOUND" };
+  return {
+    ok: true,
+    username: user.usernameKey,
+    displayNameSafe: truncateTaskNotificationText_(user.displayName || user.username, 30),
+    lineUserId: user.lineUserId,
+    resolution: resolution
+  };
+}
+
+function buildTaskDueNotificationDedupeKey_(taskId, bucketDate, bucket, username) {
+  const material = [
+    TASK_DUE_NOTIFICATION_SCHEMA_VERSION_,
+    String(taskId || "").trim(),
+    String(bucketDate || "").trim(),
+    String(bucket || "").trim().toUpperCase(),
+    normalizeTaskNotificationUsernameKey_(username)
+  ].join("|");
+  const bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, material);
+  return bytes.map(function(b) {
+    const v = b < 0 ? b + 256 : b;
+    return ("0" + v.toString(16)).slice(-2);
+  }).join("");
+}
+
+function truncateTaskNotificationText_(value, maxLength) {
+  const s = String(value || "").trim().replace(/\s+/g, " ");
+  if (s.length <= maxLength) return s;
+  return s.substring(0, maxLength);
+}
+
+function maskTaskNotificationRecipient_(lineUserId) {
+  const s = normalizeTaskNotificationLineUserId_(lineUserId);
+  if (!TASK_DUE_NOTIFICATION_LINE_ID_REGEX_.test(s)) return "";
+  return s.substring(0, 4) + "..." + s.substring(s.length - 4);
+}
+
+function createTaskDueNotificationEmptySummary_(todayKey) {
+  return {
+    ok: true,
+    mode: "dry-run",
+    timezone: TASK_DUE_NOTIFICATION_TIMEZONE_,
+    todayKey: todayKey,
+    scanned: 0,
+    candidateCount: 0,
+    dueToday: 0,
+    overdue: 0,
+    capped: false,
+    skipped: {
+      completed: 0,
+      cancelled: 0,
+      unknownStatus: 0,
+      noTaskId: 0,
+      noTitle: 0,
+      noDueDate: 0,
+      invalidDueDate: 0,
+      future: 0,
+      noAssignee: 0,
+      recipientFailure: 0
+    },
+    recipientFailureReasons: {},
+    candidates: []
+  };
+}
+
+function incrementTaskDueRecipientFailure_(summary, reason) {
+  summary.skipped.recipientFailure++;
+  summary.recipientFailureReasons[reason] = (summary.recipientFailureReasons[reason] || 0) + 1;
+}
+
+function buildTaskDueNotificationDryRunCandidates_(tasksRows, usersRows, options) {
+  options = options || {};
+  const todayKey = options.todayKey && isTaskNotificationValidDateKey_(options.todayKey) ? options.todayKey : getTodayKeyTaipei_();
+  let cap = Number(options.candidateCap || TASK_DUE_NOTIFICATION_DEFAULT_CAP_);
+  if (!isFinite(cap) || cap <= 0) cap = TASK_DUE_NOTIFICATION_DEFAULT_CAP_;
+  cap = Math.min(Math.floor(cap), TASK_DUE_NOTIFICATION_MAX_CAP_);
+  const summary = createTaskDueNotificationEmptySummary_(todayKey);
+  const usersIndex = buildTaskNotificationUsersIndex_(usersRows);
+  const tasks = Array.isArray(tasksRows) ? tasksRows : [];
+  tasks.forEach(function(task) {
+    task = task || {};
+    summary.scanned++;
+    const eligibility = isTaskNotificationEligible_(task);
+    if (!eligibility.eligible) {
+      if (eligibility.reason === "TASK_ID_MISSING") summary.skipped.noTaskId++;
+      else if (eligibility.reason === "TITLE_MISSING") summary.skipped.noTitle++;
+      else if (eligibility.reason === "STATUS_FINISHED") summary.skipped.completed++;
+      else if (eligibility.reason === "STATUS_CANCELLED") summary.skipped.cancelled++;
+      else if (eligibility.reason === "UNKNOWN_STATUS") summary.skipped.unknownStatus++;
+      else if (eligibility.reason === "DUE_DATE_MISSING") summary.skipped.noDueDate++;
+      else if (eligibility.reason === "INVALID_DUE_DATE") summary.skipped.invalidDueDate++;
+      else if (eligibility.reason === "ASSIGNEE_MISSING") {
+        if (String(task.assignedRole || "").trim()) incrementTaskDueRecipientFailure_(summary, "ROLE_ONLY_ASSIGNMENT");
+        else summary.skipped.noAssignee++;
+      }
+      return;
+    }
+    const dueDateKey = eligibility.dueDateKey;
+    let bucket = "";
+    let daysOverdue = 0;
+    if (dueDateKey === todayKey) {
+      bucket = "DUE_TODAY";
+      daysOverdue = 0;
+    } else if (dueDateKey < todayKey) {
+      bucket = "OVERDUE";
+      daysOverdue = calculateTaipeiDateDifferenceDays_(todayKey, dueDateKey);
+    } else {
+      summary.skipped.future++;
+      return;
+    }
+    const recipient = resolveTaskNotificationRecipient_(task, usersIndex);
+    if (!recipient.ok) {
+      incrementTaskDueRecipientFailure_(summary, recipient.reason);
+      return;
+    }
+    const dedupeKey = buildTaskDueNotificationDedupeKey_(task.id, todayKey, bucket, recipient.username);
+    summary.candidates.push({
+      taskId: String(task.id || "").trim(),
+      titleSafe: truncateTaskNotificationText_(task.title, 40),
+      bucket: bucket,
+      dueDateKey: dueDateKey,
+      daysOverdue: daysOverdue,
+      assigneeUsername: recipient.username,
+      assigneeDisplayNameSafe: recipient.displayNameSafe,
+      maskedRecipient: maskTaskNotificationRecipient_(recipient.lineUserId),
+      dedupeKeyShort: dedupeKey.substring(0, 12),
+      eligible: true
+    });
+    if (bucket === "DUE_TODAY") summary.dueToday++;
+    if (bucket === "OVERDUE") summary.overdue++;
+  });
+  summary.candidates.sort(function(a, b) {
+    if (a.bucket !== b.bucket) return a.bucket === "OVERDUE" ? -1 : 1;
+    if (a.dueDateKey !== b.dueDateKey) return a.dueDateKey.localeCompare(b.dueDateKey);
+    if (a.taskId !== b.taskId) return a.taskId.localeCompare(b.taskId);
+    return a.assigneeUsername.localeCompare(b.assigneeUsername);
+  });
+  if (summary.candidates.length > cap) {
+    summary.capped = true;
+    summary.candidates = summary.candidates.slice(0, cap);
+  }
+  summary.candidateCount = summary.candidates.length;
+  return summary;
+}
+
+function readTaskDueNotificationExistingObjects_(sheetName, headers) {
+  const sheet = ensureSpreadsheet().getSheetByName(sheetName);
+  if (!sheet) return [];
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return [];
+  const values = sheet.getRange(2, 1, lastRow - 1, headers.length).getValues();
+  return values
+    .map(function(row) {
+      return headers.reduce(function(object, header, index) {
+        object[header] = row[index];
+        return object;
+      }, {});
+    })
+    .filter(function(object) { return object.id || object.key; });
+}
+
+function buildTaskDueNotificationSafeLogSummary_(result) {
+  return {
+    ok: result.ok === true,
+    mode: "dry-run",
+    timezone: result.timezone || TASK_DUE_NOTIFICATION_TIMEZONE_,
+    todayKey: result.todayKey || "",
+    scanned: result.scanned || 0,
+    candidateCount: result.candidateCount || 0,
+    dueToday: result.dueToday || 0,
+    overdue: result.overdue || 0,
+    capped: result.capped === true,
+    skipped: result.skipped || {},
+    recipientFailureReasons: result.recipientFailureReasons || {}
+  };
+}
+
+function triggerTaskDueNotificationDryRun() {
+  try {
+    const tasks = readTaskDueNotificationExistingObjects_(SHEETS.tasks, HEADERS.tasks);
+    const users = readTaskDueNotificationExistingObjects_(SHEETS.users, HEADERS.users);
+    const result = buildTaskDueNotificationDryRunCandidates_(tasks, users, {});
+    Logger.log("Task Due Notification Dry Run Safe Summary: " + JSON.stringify(buildTaskDueNotificationSafeLogSummary_(result)));
+    return result;
+  } catch (e) {
+    Logger.log("Task Due Notification Dry Run Safe Summary: " + JSON.stringify({ ok: false, mode: "dry-run", status: "FAILED" }));
+    return { ok: false, mode: "dry-run", status: "FAILED" };
+  }
+}
+
 /**
  * Stage 20-F: LINE Push Single Whitelist Channel Manual Test Entrance
  */
