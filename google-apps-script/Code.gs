@@ -2780,22 +2780,6 @@ function runSingleLinePushWhitelistTest_(options) {
   // Message is strictly hardcoded to the fixed test string.
   const message = "勁揚業務管家 LINE Push 安全通路測試中。";
 
-  const props = PropertiesService.getScriptProperties();
-  const enabled = (props.getProperty("LINE_PUSH_ENABLED") || "").trim();
-  if (enabled !== "enabled") {
-    return { ok: false, status: "PUSH_DISABLED", message: "LINE Push is disabled on Backend script properties." };
-  }
-
-  const endpoint = (props.getProperty("LINE_BOT_INTERNAL_ENDPOINT") || "").trim();
-  if (!endpoint) {
-    return { ok: false, status: "ENDPOINT_MISSING", message: "LINE Bot internal endpoint (LINE_BOT_INTERNAL_ENDPOINT) is missing." };
-  }
-
-  const sharedSecret = (props.getProperty("LINE_PUSH_SHARED_SECRET") || "").trim();
-  if (!sharedSecret) {
-    return { ok: false, status: "SECRET_MISSING", message: "Shared secret (LINE_PUSH_SHARED_SECRET) is missing." };
-  }
-
   if (!recipient || typeof recipient !== "string") {
     return { ok: false, status: "INVALID_RECIPIENT", message: "Recipient lineUserId is invalid or empty." };
   }
@@ -2816,6 +2800,50 @@ function runSingleLinePushWhitelistTest_(options) {
     return { ok: false, status: "INVALID_REQUEST_ID", message: "Generated requestId format is invalid." };
   }
 
+  // Dry run check executes BEFORE properties checks to allow safe previews when disabled
+  if (dryRun && !send) {
+    const props = PropertiesService.getScriptProperties();
+    const sharedSecret = (props.getProperty("LINE_PUSH_SHARED_SECRET") || "").trim() || "dummy_secret_for_dry_run";
+    const canonical = "jy-line-push-v1|sendPushReminder|" + requestId + "|" + timestamp + "|" + recipient + "|" + message;
+    const signature = computeHmacSha256Hex_(canonical, sharedSecret);
+    const payload = {
+      internalRequest: "jy-line-push-v1",
+      action: "sendPushReminder",
+      requestId: requestId,
+      timestamp: timestamp,
+      recipient: recipient,
+      message: message,
+      signature: signature
+    };
+
+    return {
+      ok: true,
+      status: "DRY_RUN",
+      mode: "dry-run",
+      recipient: maskedRecipient,
+      requestId: requestId,
+      timestamp: timestamp,
+      payloadSize: JSON.stringify(payload).length
+    };
+  }
+
+  // Properties checks only happen for real send (send === true)
+  const props = PropertiesService.getScriptProperties();
+  const enabled = (props.getProperty("LINE_PUSH_ENABLED") || "").trim();
+  if (enabled !== "enabled") {
+    return { ok: false, status: "PUSH_DISABLED", message: "LINE Push is disabled on Backend script properties." };
+  }
+
+  const endpoint = (props.getProperty("LINE_BOT_INTERNAL_ENDPOINT") || "").trim();
+  if (!endpoint) {
+    return { ok: false, status: "ENDPOINT_MISSING", message: "LINE Bot internal endpoint (LINE_BOT_INTERNAL_ENDPOINT) is missing." };
+  }
+
+  const sharedSecret = (props.getProperty("LINE_PUSH_SHARED_SECRET") || "").trim();
+  if (!sharedSecret) {
+    return { ok: false, status: "SECRET_MISSING", message: "Shared secret (LINE_PUSH_SHARED_SECRET) is missing." };
+  }
+
   const canonical = "jy-line-push-v1|sendPushReminder|" + requestId + "|" + timestamp + "|" + recipient + "|" + message;
   const signature = computeHmacSha256Hex_(canonical, sharedSecret);
 
@@ -2828,19 +2856,6 @@ function runSingleLinePushWhitelistTest_(options) {
     message: message,
     signature: signature
   };
-
-  if (dryRun && !send) {
-    return {
-      ok: true,
-      status: "DRY_RUN",
-      message: "Dry run completed successfully. No real HTTP call was made.",
-      requestId: requestId,
-      timestamp: timestamp,
-      recipient: maskedRecipient,
-      canonical: canonical,
-      payloadSize: JSON.stringify(payload).length
-    };
-  }
 
   // Real HTTP POST call to LINE Bot
   const fetchOptions = {
@@ -2897,4 +2912,31 @@ function computeHmacSha256Hex_(value, key) {
   return signatureBytes.map(function(b) {
     return ('0' + (b & 0xFF).toString(16)).slice(-2);
   }).join('');
+}
+
+/**
+ * Stage 20-I-B: LINE Push Dry Run Wrapper
+ * This wrapper reads LINE_PUSH_TEST_RECIPIENT from Backend Script Properties
+ * and invokes runSingleLinePushWhitelistTest_ with dryRun: true, send: false.
+ */
+function triggerSingleLinePushDryRun() {
+  const props = PropertiesService.getScriptProperties();
+  const recipient = (props.getProperty("LINE_PUSH_TEST_RECIPIENT") || "").trim();
+
+  const result = runSingleLinePushWhitelistTest_({
+    dryRun: true,
+    send: false,
+    recipient: recipient
+  });
+
+  // Strict safe summary object with strict type enforcement and fallback defaults
+  const safeSummary = {
+    ok: result.ok === true,
+    status: typeof result.status === "string" ? result.status : (result.status ? String(result.status) : "UNKNOWN"),
+    mode: "dry-run",
+    maskedRecipient: typeof result.recipient === "string" ? result.recipient : ""
+  };
+
+  Logger.log("Dry Run Safe Summary: " + JSON.stringify(safeSummary));
+  return safeSummary;
 }
