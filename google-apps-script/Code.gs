@@ -3267,6 +3267,364 @@ function triggerTaskDueNotificationDryRun() {
   }
 }
 
+const TASK_NOTIFICATION_LOG_SHEET_ = "TaskNotificationLog";
+const TASK_NOTIFICATION_LOG_SCHEMA_VERSION_ = "v1";
+const TASK_NOTIFICATION_LOG_HEADERS_ = [
+  "id",
+  "dedupeKey",
+  "schemaVersion",
+  "taskId",
+  "recipientUsername",
+  "recipientMasked",
+  "bucket",
+  "bucketDate",
+  "dueDateKey",
+  "status",
+  "createdAt",
+  "reservedAt",
+  "sentAt",
+  "updatedAt",
+  "requestIdShort",
+  "attemptCount",
+  "errorCode",
+  "source",
+  "noteSafe",
+  "parentLogId",
+  "resolution",
+  "resolvedAt",
+  "resolvedBy"
+];
+const TASK_NOTIFICATION_LOG_STATUSES_ = [
+  "CANDIDATE",
+  "RESERVED",
+  "SENT",
+  "FAILED",
+  "UNKNOWN_OUTCOME",
+  "SKIPPED",
+  "CANCELLED_RESERVATION",
+  "RESOLVED_SENT",
+  "RESOLVED_NOT_SENT"
+];
+const TASK_NOTIFICATION_LOG_BUCKETS_ = ["DUE_TODAY", "OVERDUE"];
+const TASK_NOTIFICATION_LOG_SOURCES_ = ["TASK_DUE_REMINDER", "MANUAL_RETRY", "SETUP_TEST"];
+const TASK_NOTIFICATION_LOG_RESOLUTIONS_ = ["CONFIRMED_SENT", "CONFIRMED_NOT_SENT"];
+const TASK_NOTIFICATION_LOG_ERROR_CODES_ = [
+  "LOG_SHEET_MISSING",
+  "LOG_SCHEMA_INVALID",
+  "LOG_LOCK_TIMEOUT",
+  "LOG_CREATE_FAILED",
+  "LOG_ROW_INVALID",
+  "LOG_STATUS_INVALID",
+  "LOG_VERSION_UNSUPPORTED",
+  "UNKNOWN_OUTCOME"
+];
+const TASK_NOTIFICATION_LOG_NOTE_SAFE_ALLOWLIST_ = [
+  "",
+  "DO_NOT_RETRY",
+  "OPERATOR_REVIEW_REQUIRED",
+  "SCHEMA_CHECK",
+  "SETUP_CREATED",
+  "SETUP_EXISTS"
+];
+const TASK_NOTIFICATION_LOG_FORBIDDEN_ROW_FIELDS_ = {
+  lineUserId: true,
+  customerName: true,
+  description: true,
+  messageBody: true,
+  token: true,
+  secret: true,
+  endpoint: true,
+  rawResponse: true,
+  stack: true
+};
+const TASK_NOTIFICATION_LOG_FIELD_CONTRACT_ = {
+  id: { immutable: true, required: "reservation", sensitive: false },
+  dedupeKey: { immutable: true, required: "reservation", sensitive: false },
+  schemaVersion: { immutable: true, required: "all", sensitive: false },
+  taskId: { immutable: true, required: "reservation", sensitive: false },
+  recipientUsername: { immutable: true, required: "reservation", sensitive: false },
+  recipientMasked: { immutable: true, required: "reservation", sensitive: "masked-only" },
+  bucket: { immutable: true, required: "reservation", allowlist: "bucket", sensitive: false },
+  bucketDate: { immutable: true, required: "reservation", sensitive: false },
+  dueDateKey: { immutable: true, required: "reservation", sensitive: false },
+  status: { immutable: false, required: "all", allowlist: "status", sensitive: false },
+  createdAt: { immutable: true, required: "reservation", sensitive: false },
+  reservedAt: { immutable: true, required: "reserved", sensitive: false },
+  sentAt: { immutable: false, required: "sent", sensitive: false },
+  updatedAt: { immutable: false, required: "all", sensitive: false },
+  requestIdShort: { immutable: false, required: "outbound-attempt", sensitive: false },
+  attemptCount: { immutable: false, required: "all", sensitive: false },
+  errorCode: { immutable: false, required: "failure", allowlist: "errorCode", sensitive: false },
+  source: { immutable: true, required: "reservation", allowlist: "source", sensitive: false },
+  noteSafe: { immutable: false, required: "optional", allowlist: "noteSafe", sensitive: false },
+  parentLogId: { immutable: true, required: "resolution", sensitive: false },
+  resolution: { immutable: false, required: "resolution", allowlist: "resolution", sensitive: false },
+  resolvedAt: { immutable: false, required: "resolution", sensitive: false },
+  resolvedBy: { immutable: false, required: "resolution", sensitive: "canonical-username-only" }
+};
+
+function isTaskNotificationLogAllowlisted_(value, allowedValues, allowBlank) {
+  const raw = String(value === undefined || value === null ? "" : value).trim();
+  if (!raw) return allowBlank === true;
+  return allowedValues.indexOf(raw) !== -1;
+}
+
+function isTaskNotificationLogTimestamp_(value, allowBlank) {
+  const raw = String(value === undefined || value === null ? "" : value).trim();
+  if (!raw) return allowBlank === true;
+  const parsed = Date.parse(raw);
+  return isFinite(parsed) && raw.indexOf("T") !== -1;
+}
+
+function isTaskNotificationLogNonNegativeInteger_(value) {
+  if (value === "" || value === undefined || value === null) return false;
+  const n = Number(value);
+  return isFinite(n) && Math.floor(n) === n && n >= 0;
+}
+
+function buildTaskNotificationLogResult_(ok, status, errorCode, extra) {
+  const result = {
+    ok: ok === true,
+    status: status || (ok ? "VALID" : "INVALID"),
+    schemaVersion: TASK_NOTIFICATION_LOG_SCHEMA_VERSION_
+  };
+  if (errorCode) result.errorCode = errorCode;
+  if (extra && typeof extra === "object") {
+    Object.keys(extra).forEach(function(key) {
+      result[key] = extra[key];
+    });
+  }
+  return result;
+}
+
+function validateTaskNotificationLogSchema_(sheet) {
+  if (!sheet) {
+    return buildTaskNotificationLogResult_(false, "MISSING", "LOG_SHEET_MISSING", {
+      columnCount: TASK_NOTIFICATION_LOG_HEADERS_.length
+    });
+  }
+  const expected = TASK_NOTIFICATION_LOG_HEADERS_;
+  const lastColumn = Number(sheet.getLastColumn ? sheet.getLastColumn() : 0);
+  if (lastColumn !== expected.length) {
+    return buildTaskNotificationLogResult_(false, "INVALID", "LOG_SCHEMA_INVALID", {
+      columnCount: lastColumn
+    });
+  }
+  if (lastColumn < 1) {
+    return buildTaskNotificationLogResult_(false, "INVALID", "LOG_SCHEMA_INVALID", {
+      columnCount: lastColumn
+    });
+  }
+  const headers = sheet.getRange(1, 1, 1, lastColumn).getValues()[0].map(function(header) {
+    return String(header === undefined || header === null ? "" : header).trim();
+  });
+  const seen = {};
+  for (let i = 0; i < headers.length; i++) {
+    if (!headers[i]) {
+      return buildTaskNotificationLogResult_(false, "INVALID", "LOG_SCHEMA_INVALID", {
+        columnCount: lastColumn
+      });
+    }
+    if (seen[headers[i]]) {
+      return buildTaskNotificationLogResult_(false, "INVALID", "LOG_SCHEMA_INVALID", {
+        columnCount: lastColumn
+      });
+    }
+    seen[headers[i]] = true;
+    if (headers[i] !== expected[i]) {
+      return buildTaskNotificationLogResult_(false, "INVALID", "LOG_SCHEMA_INVALID", {
+        columnCount: lastColumn
+      });
+    }
+  }
+  if (TASK_NOTIFICATION_LOG_SCHEMA_VERSION_ !== "v1") {
+    return buildTaskNotificationLogResult_(false, "INVALID", "LOG_VERSION_UNSUPPORTED", {
+      columnCount: lastColumn
+    });
+  }
+  return buildTaskNotificationLogResult_(true, "VALID", "", {
+    columnCount: expected.length
+  });
+}
+
+function validateTaskNotificationLogRow_(rowObject) {
+  const row = rowObject || {};
+  const allowedFields = {};
+  TASK_NOTIFICATION_LOG_HEADERS_.forEach(function(header) {
+    allowedFields[header] = true;
+  });
+  const keys = Object.keys(row);
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+    if (!allowedFields[key] || TASK_NOTIFICATION_LOG_FORBIDDEN_ROW_FIELDS_[key]) {
+      return buildTaskNotificationLogResult_(false, "INVALID", "LOG_ROW_INVALID");
+    }
+  }
+
+  const schemaVersion = String(row.schemaVersion || "").trim();
+  if (schemaVersion !== TASK_NOTIFICATION_LOG_SCHEMA_VERSION_) {
+    return buildTaskNotificationLogResult_(false, "INVALID", "LOG_VERSION_UNSUPPORTED");
+  }
+
+  const status = String(row.status || "").trim();
+  if (!isTaskNotificationLogAllowlisted_(status, TASK_NOTIFICATION_LOG_STATUSES_, false)) {
+    return buildTaskNotificationLogResult_(false, "INVALID", "LOG_STATUS_INVALID");
+  }
+  if (!isTaskNotificationLogAllowlisted_(row.bucket, TASK_NOTIFICATION_LOG_BUCKETS_, false)) {
+    return buildTaskNotificationLogResult_(false, "INVALID", "LOG_ROW_INVALID");
+  }
+  if (!isTaskNotificationLogAllowlisted_(row.source, TASK_NOTIFICATION_LOG_SOURCES_, false)) {
+    return buildTaskNotificationLogResult_(false, "INVALID", "LOG_ROW_INVALID");
+  }
+  if (!isTaskNotificationLogAllowlisted_(row.resolution, TASK_NOTIFICATION_LOG_RESOLUTIONS_, true)) {
+    return buildTaskNotificationLogResult_(false, "INVALID", "LOG_ROW_INVALID");
+  }
+  if (!/^[a-f0-9]{64}$/.test(String(row.dedupeKey || "").trim())) {
+    return buildTaskNotificationLogResult_(false, "INVALID", "LOG_ROW_INVALID");
+  }
+  const username = String(row.recipientUsername || "").trim();
+  if (!username || username !== username.toLowerCase() || String(row.recipientUsername || "") !== username) {
+    return buildTaskNotificationLogResult_(false, "INVALID", "LOG_ROW_INVALID");
+  }
+  if (!isTaskNotificationValidDateKey_(row.bucketDate) || !isTaskNotificationValidDateKey_(row.dueDateKey)) {
+    return buildTaskNotificationLogResult_(false, "INVALID", "LOG_ROW_INVALID");
+  }
+  if (!isTaskNotificationLogTimestamp_(row.createdAt, false) || !isTaskNotificationLogTimestamp_(row.updatedAt, false)) {
+    return buildTaskNotificationLogResult_(false, "INVALID", "LOG_ROW_INVALID");
+  }
+  if (row.reservedAt && !isTaskNotificationLogTimestamp_(row.reservedAt, true)) {
+    return buildTaskNotificationLogResult_(false, "INVALID", "LOG_ROW_INVALID");
+  }
+  if (row.sentAt && !isTaskNotificationLogTimestamp_(row.sentAt, true)) {
+    return buildTaskNotificationLogResult_(false, "INVALID", "LOG_ROW_INVALID");
+  }
+  if (row.resolvedAt && !isTaskNotificationLogTimestamp_(row.resolvedAt, true)) {
+    return buildTaskNotificationLogResult_(false, "INVALID", "LOG_ROW_INVALID");
+  }
+  if (!isTaskNotificationLogNonNegativeInteger_(row.attemptCount)) {
+    return buildTaskNotificationLogResult_(false, "INVALID", "LOG_ROW_INVALID");
+  }
+  if (row.errorCode && !isTaskNotificationLogAllowlisted_(row.errorCode, TASK_NOTIFICATION_LOG_ERROR_CODES_, true)) {
+    return buildTaskNotificationLogResult_(false, "INVALID", "LOG_ROW_INVALID");
+  }
+  if (!isTaskNotificationLogAllowlisted_(row.noteSafe, TASK_NOTIFICATION_LOG_NOTE_SAFE_ALLOWLIST_, true)) {
+    return buildTaskNotificationLogResult_(false, "INVALID", "LOG_ROW_INVALID");
+  }
+
+  if (status === "RESERVED") {
+    if (!isTaskNotificationLogTimestamp_(row.reservedAt, false) || String(row.sentAt || "").trim()) {
+      return buildTaskNotificationLogResult_(false, "INVALID", "LOG_ROW_INVALID");
+    }
+  }
+  if (status === "SENT") {
+    if (!isTaskNotificationLogTimestamp_(row.sentAt, false) || String(row.errorCode || "").trim() || String(row.resolution || "").trim()) {
+      return buildTaskNotificationLogResult_(false, "INVALID", "LOG_ROW_INVALID");
+    }
+  }
+  if (status === "UNKNOWN_OUTCOME") {
+    if (!String(row.requestIdShort || "").trim() || String(row.errorCode || "").trim() !== "UNKNOWN_OUTCOME") {
+      return buildTaskNotificationLogResult_(false, "INVALID", "LOG_ROW_INVALID");
+    }
+  }
+  if (status === "RESOLVED_SENT" || status === "RESOLVED_NOT_SENT") {
+    const expectedResolution = status === "RESOLVED_SENT" ? "CONFIRMED_SENT" : "CONFIRMED_NOT_SENT";
+    if (!String(row.parentLogId || "").trim() ||
+        String(row.resolution || "").trim() !== expectedResolution ||
+        !isTaskNotificationLogTimestamp_(row.resolvedAt, false) ||
+        !String(row.resolvedBy || "").trim() ||
+        String(row.resolvedBy || "").trim() !== String(row.resolvedBy || "").trim().toLowerCase()) {
+      return buildTaskNotificationLogResult_(false, "INVALID", "LOG_ROW_INVALID");
+    }
+  }
+
+  return buildTaskNotificationLogResult_(true, "VALID", "");
+}
+
+function openTaskNotificationLogSpreadsheetReadOnly_() {
+  const spreadsheetId = (PropertiesService.getScriptProperties().getProperty("SPREADSHEET_ID") || "").trim();
+  if (!spreadsheetId) return null;
+  return SpreadsheetApp.openById(spreadsheetId);
+}
+
+function buildTaskNotificationLogSafeSummary_(result) {
+  return {
+    ok: result && result.ok === true,
+    status: result && result.status ? result.status : "INVALID",
+    schemaVersion: TASK_NOTIFICATION_LOG_SCHEMA_VERSION_,
+    columnCount: result && result.columnCount ? result.columnCount : TASK_NOTIFICATION_LOG_HEADERS_.length,
+    errorCode: result && result.errorCode ? result.errorCode : ""
+  };
+}
+
+function triggerTaskNotificationLogSchemaCheck() {
+  try {
+    const spreadsheet = openTaskNotificationLogSpreadsheetReadOnly_();
+    if (!spreadsheet) {
+      const missing = buildTaskNotificationLogResult_(false, "MISSING", "LOG_SHEET_MISSING", {
+        columnCount: TASK_NOTIFICATION_LOG_HEADERS_.length
+      });
+      Logger.log("Task Notification Log Schema Check Safe Summary: " + JSON.stringify(buildTaskNotificationLogSafeSummary_(missing)));
+      return missing;
+    }
+    const sheet = spreadsheet.getSheetByName(TASK_NOTIFICATION_LOG_SHEET_);
+    const result = validateTaskNotificationLogSchema_(sheet);
+    Logger.log("Task Notification Log Schema Check Safe Summary: " + JSON.stringify(buildTaskNotificationLogSafeSummary_(result)));
+    return result;
+  } catch (e) {
+    const failed = buildTaskNotificationLogResult_(false, "INVALID", "LOG_SCHEMA_INVALID", {
+      columnCount: TASK_NOTIFICATION_LOG_HEADERS_.length
+    });
+    Logger.log("Task Notification Log Schema Check Safe Summary: " + JSON.stringify(buildTaskNotificationLogSafeSummary_(failed)));
+    return failed;
+  }
+}
+
+function setupTaskNotificationLogSheet() {
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(10000)) {
+    return buildTaskNotificationLogResult_(false, "FAILED", "LOG_LOCK_TIMEOUT", {
+      columnCount: TASK_NOTIFICATION_LOG_HEADERS_.length
+    });
+  }
+  try {
+    const spreadsheet = openTaskNotificationLogSpreadsheetReadOnly_();
+    if (!spreadsheet) {
+      return buildTaskNotificationLogResult_(false, "MISSING", "LOG_SHEET_MISSING", {
+        columnCount: TASK_NOTIFICATION_LOG_HEADERS_.length
+      });
+    }
+    let sheet = spreadsheet.getSheetByName(TASK_NOTIFICATION_LOG_SHEET_);
+    if (sheet) {
+      const existing = validateTaskNotificationLogSchema_(sheet);
+      if (existing.ok) {
+        return buildTaskNotificationLogResult_(true, "ALREADY_EXISTS", "", {
+          columnCount: TASK_NOTIFICATION_LOG_HEADERS_.length
+        });
+      }
+      return existing;
+    }
+    sheet = spreadsheet.insertSheet(TASK_NOTIFICATION_LOG_SHEET_);
+    sheet.getRange(1, 1, 1, TASK_NOTIFICATION_LOG_HEADERS_.length).setValues([TASK_NOTIFICATION_LOG_HEADERS_]);
+    if (sheet.freezeRows) sheet.freezeRows(1);
+    SpreadsheetApp.flush();
+    const created = validateTaskNotificationLogSchema_(sheet);
+    if (!created.ok) return created;
+    return buildTaskNotificationLogResult_(true, "CREATED", "", {
+      columnCount: TASK_NOTIFICATION_LOG_HEADERS_.length
+    });
+  } catch (e) {
+    return buildTaskNotificationLogResult_(false, "FAILED", "LOG_CREATE_FAILED", {
+      columnCount: TASK_NOTIFICATION_LOG_HEADERS_.length
+    });
+  } finally {
+    try {
+      lock.releaseLock();
+    } catch (e) {
+      // Lock release failures do not change the safe setup result.
+    }
+  }
+}
+
 /**
  * Stage 20-F: LINE Push Single Whitelist Channel Manual Test Entrance
  */
