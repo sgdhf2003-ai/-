@@ -3209,9 +3209,22 @@ function buildTaskDueNotificationDryRunCandidates_(tasksRows, usersRows, options
   return summary;
 }
 
+function openTaskDueNotificationSpreadsheetReadOnly_() {
+  const spreadsheetId = (PropertiesService.getScriptProperties().getProperty("SPREADSHEET_ID") || "").trim();
+  if (!spreadsheetId) return null;
+  return SpreadsheetApp.openById(spreadsheetId);
+}
+
 function readTaskDueNotificationExistingObjects_(sheetName, headers) {
-  const sheet = ensureSpreadsheet().getSheetByName(sheetName);
-  if (!sheet) return [];
+  const spreadsheet = openTaskDueNotificationSpreadsheetReadOnly_();
+  if (!spreadsheet) throw new Error("TASK_DUE_SPREADSHEET_UNAVAILABLE");
+  const sheet = spreadsheet.getSheetByName(sheetName);
+  if (!sheet) throw new Error("TASK_DUE_SHEET_UNAVAILABLE");
+  const actualHeaders = sheet.getRange(1, 1, 1, headers.length).getValues()[0];
+  const headerMatches = headers.every(function(header, index) {
+    return actualHeaders[index] === header;
+  });
+  if (!headerMatches) throw new Error("TASK_DUE_HEADER_MISMATCH");
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return [];
   const values = sheet.getRange(2, 1, lastRow - 1, headers.length).getValues();
