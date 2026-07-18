@@ -3486,6 +3486,10 @@ function validateTaskNotificationLogRow_(rowObject) {
   if (!username || username !== username.toLowerCase() || String(row.recipientUsername || "") !== username) {
     return buildTaskNotificationLogResult_(false, "INVALID", "LOG_ROW_INVALID");
   }
+  const recipientMasked = String(row.recipientMasked || "").trim();
+  if (recipientMasked && !/^U[a-fA-F0-9]{3}\.\.\.[a-fA-F0-9]{4}$/.test(recipientMasked)) {
+    return buildTaskNotificationLogResult_(false, "INVALID", "LOG_ROW_INVALID");
+  }
   if (!isTaskNotificationValidDateKey_(row.bucketDate) || !isTaskNotificationValidDateKey_(row.dueDateKey)) {
     return buildTaskNotificationLogResult_(false, "INVALID", "LOG_ROW_INVALID");
   }
