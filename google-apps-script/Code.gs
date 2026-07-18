@@ -3074,7 +3074,7 @@ function triggerSingleLinePushLiveTest() {
     const props = PropertiesService.getScriptProperties();
     recipient = (props.getProperty("LINE_PUSH_TEST_RECIPIENT") || "").trim();
   } catch (e) {
-    console.error("Failed to read script properties:", e);
+    console.error("Failed to read script properties.");
     return {
       ok: false,
       status: "CONFIG_MISSING",
@@ -3092,12 +3092,19 @@ function triggerSingleLinePushLiveTest() {
     };
   }
 
-  // Construct masked recipient locally for absolute safety
-  if (recipient.length >= 8) {
-    maskedRecipient = recipient.substring(0, 4) + "..." + recipient.substring(recipient.length - 4);
-  } else {
-    maskedRecipient = "...";
+  // Pre-validate format to prevent invalid recipients from going into the core
+  const lineUserIdRegex = /^U[a-fA-F0-9]{32}$/;
+  if (!lineUserIdRegex.test(recipient)) {
+    return {
+      ok: false,
+      status: "INVALID_RECIPIENT_FORMAT",
+      mode: "live-send",
+      maskedRecipient: ""
+    };
   }
+
+  // Construct masked recipient locally based on validated recipient
+  maskedRecipient = recipient.substring(0, 4) + "..." + recipient.substring(recipient.length - 4);
 
   try {
     const result = runSingleLinePushWhitelistTest_({
@@ -3109,34 +3116,70 @@ function triggerSingleLinePushLiveTest() {
     const isOk = result.ok === true;
     let status = typeof result.status === "string" ? result.status : "FAILED";
 
+    // Map internal core status values to allowed status list
+    if (status === "PUSH_DISABLED") {
+      status = "DISABLED";
+    } else if (status === "ENDPOINT_MISSING" || status === "SECRET_MISSING") {
+      status = "CONFIG_MISSING";
+    }
+
+    // Strict status allowlist mapping
+    const ALLOWED_STATUSES = [
+      "SENT",
+      "SUCCESS",
+      "REJECTED",
+      "DISABLED",
+      "CONFIG_MISSING",
+      "INVALID_RECIPIENT",
+      "INVALID_RECIPIENT_FORMAT",
+      "HTTP_ERROR",
+      "HTTP_FETCH_FAILED",
+      "UNKNOWN_OUTCOME",
+      "FAILED"
+    ];
+    if (ALLOWED_STATUSES.indexOf(status) === -1) {
+      status = "FAILED";
+    }
+
     // Handle uncertain outcome on network fetch failures (like timeouts)
     if (status === "HTTP_FETCH_FAILED") {
-      const msg = typeof result.message === "string" ? result.message : "";
-      if (msg.indexOf("timeout") !== -1 || msg.indexOf("Timeout") !== -1 || msg.indexOf("exceeded") !== -1 || msg.indexOf("Exceeded") !== -1) {
-        return {
+      const msg = (typeof result.message === "string" ? result.message : "").toLowerCase();
+      const isTimeout = msg.indexOf("timeout") !== -1 ||
+                        msg.indexOf("timed out") !== -1 ||
+                        msg.indexOf("time limit") !== -1 ||
+                        msg.indexOf("exceeded maximum execution time") !== -1 ||
+                        msg.indexOf("execution time exceeded") !== -1;
+      if (isTimeout) {
+        const safeTimeoutSummary = {
           ok: false,
           status: "UNKNOWN_OUTCOME",
           mode: "live-send",
           maskedRecipient: maskedRecipient,
           warning: "DO_NOT_RETRY"
         };
+        Logger.log("Live Send Safe Summary: " + JSON.stringify(safeTimeoutSummary));
+        return safeTimeoutSummary;
       }
     }
 
-    return {
+    const safeSummary = {
       ok: isOk,
       status: status,
       mode: "live-send",
       maskedRecipient: maskedRecipient
     };
+    Logger.log("Live Send Safe Summary: " + JSON.stringify(safeSummary));
+    return safeSummary;
 
   } catch (err) {
-    console.error("Live test wrapper caught exception:", err);
-    return {
+    console.error("Live test wrapper caught error.");
+    const safeErrorSummary = {
       ok: false,
       status: "FAILED",
       mode: "live-send",
       maskedRecipient: maskedRecipient
     };
+    Logger.log("Live Send Safe Summary: " + JSON.stringify(safeErrorSummary));
+    return safeErrorSummary;
   }
 }
