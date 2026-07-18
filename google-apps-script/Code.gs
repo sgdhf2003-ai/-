@@ -3060,3 +3060,83 @@ function triggerSingleLinePushDryRun() {
   Logger.log("Dry Run Safe Summary: " + JSON.stringify(safeSummary));
   return safeSummary;
 }
+
+
+/**
+ * Stage 20-K: LINE Push Single Allowlist Live Test
+ * This wrapper reads LINE_PUSH_TEST_RECIPIENT from Backend Script Properties
+ * and invokes runSingleLinePushWhitelistTest_ with dryRun: false, send: true.
+ */
+function triggerSingleLinePushLiveTest() {
+  let recipient = "";
+  let maskedRecipient = "";
+  try {
+    const props = PropertiesService.getScriptProperties();
+    recipient = (props.getProperty("LINE_PUSH_TEST_RECIPIENT") || "").trim();
+  } catch (e) {
+    console.error("Failed to read script properties:", e);
+    return {
+      ok: false,
+      status: "CONFIG_MISSING",
+      mode: "live-send",
+      maskedRecipient: ""
+    };
+  }
+
+  if (!recipient) {
+    return {
+      ok: false,
+      status: "INVALID_RECIPIENT",
+      mode: "live-send",
+      maskedRecipient: ""
+    };
+  }
+
+  // Construct masked recipient locally for absolute safety
+  if (recipient.length >= 8) {
+    maskedRecipient = recipient.substring(0, 4) + "..." + recipient.substring(recipient.length - 4);
+  } else {
+    maskedRecipient = "...";
+  }
+
+  try {
+    const result = runSingleLinePushWhitelistTest_({
+      dryRun: false,
+      send: true,
+      recipient: recipient
+    });
+
+    const isOk = result.ok === true;
+    let status = typeof result.status === "string" ? result.status : "FAILED";
+
+    // Handle uncertain outcome on network fetch failures (like timeouts)
+    if (status === "HTTP_FETCH_FAILED") {
+      const msg = typeof result.message === "string" ? result.message : "";
+      if (msg.indexOf("timeout") !== -1 || msg.indexOf("Timeout") !== -1 || msg.indexOf("exceeded") !== -1 || msg.indexOf("Exceeded") !== -1) {
+        return {
+          ok: false,
+          status: "UNKNOWN_OUTCOME",
+          mode: "live-send",
+          maskedRecipient: maskedRecipient,
+          warning: "DO_NOT_RETRY"
+        };
+      }
+    }
+
+    return {
+      ok: isOk,
+      status: status,
+      mode: "live-send",
+      maskedRecipient: maskedRecipient
+    };
+
+  } catch (err) {
+    console.error("Live test wrapper caught exception:", err);
+    return {
+      ok: false,
+      status: "FAILED",
+      mode: "live-send",
+      maskedRecipient: maskedRecipient
+    };
+  }
+}
