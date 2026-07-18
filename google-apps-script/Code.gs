@@ -158,10 +158,10 @@ function loginUser(data) {
   if (!username || !password) throw new Error("請輸入帳號與密碼");
 
   const usersSheet = ensureSheet(ensureSpreadsheet(), SHEETS.users, HEADERS.users);
-  const users = readObjects(SHEETS.users, HEADERS.users);
+  let users = readObjects(SHEETS.users, HEADERS.users);
 
   let userIndex = -1;
-  const user = users.find((item, index) => {
+  let user = users.find((item, index) => {
     const match = normalizeLoginValue(item.username) === username || normalizeLoginValue(item.displayName) === username;
     if (match) userIndex = index;
     return match;
@@ -170,21 +170,131 @@ function loginUser(data) {
   if (String(user.status || "").trim() !== "啟用") throw new Error("此帳號已停用，請聯絡管理員");
   if (String(user.password || "") !== password) throw new Error("帳號或密碼錯誤");
 
-  // Save lineUserId to the user row in the spreadsheet if provided
-  if (data.lineUserId && String(data.lineUserId).trim().startsWith("U")) {
-    const lineUserId = String(data.lineUserId).trim();
-    user.lineUserId = lineUserId;
-    const rowNum = userIndex + 2;
-    const colIndex = HEADERS.users.indexOf("lineUserId") + 1;
-    if (colIndex > 0) {
-      usersSheet.getRange(rowNum, colIndex).setValue(lineUserId);
+  // Validate and normalize lineUserId if provided
+  let inputLineUserId = data.lineUserId;
+  let hasValidLineUserId = false;
+  if (inputLineUserId !== undefined && inputLineUserId !== null && String(inputLineUserId).trim() !== "") {
+    let normalized = String(inputLineUserId).trim();
+    if (normalized.length > 0 && (normalized[0] === 'u' || normalized[0] === 'U')) {
+      normalized = 'U' + normalized.substring(1);
+    }
+    const lineUserIdRegex = /^U[a-fA-F0-9]{32}$/;
+    if (!lineUserIdRegex.test(normalized)) {
+      throw new Error("LINE 登入資訊無效，請重新從 LINE 機器人開啟登入連結");
+    }
+    inputLineUserId = normalized;
+    hasValidLineUserId = true;
+  }
+
+  let bindActionCompleted = false;
+  let alreadyBound = false;
+  let apiDeferredActions = null;
+
+  if (hasValidLineUserId) {
+    const lock = LockService.getScriptLock();
+    const lockAcquired = lock.tryLock(10000); // 10 seconds timeout
+    if (!lockAcquired) {
+      throw new Error("系統繁忙，請稍後再試");
     }
 
-    // Bind the LINE Salesperson Rich Menu dynamically
-    linkLineRichMenu(lineUserId, user.role);
+    try {
+      // Re-read users inside lock to avoid race conditions
+      users = readObjects(SHEETS.users, HEADERS.users);
+      userIndex = -1;
+      user = users.find((item, index) => {
+        const match = normalizeLoginValue(item.username) === username || normalizeLoginValue(item.displayName) === username;
+        if (match) userIndex = index;
+        return match;
+      });
 
-    // Send a push confirmation message via the LINE bot
-    sendLinePushMessage(lineUserId, "🎉 帳號綁定成功！\n您的 LINE 帳號已成功綁定為業務「" + user.displayName + "」，選單已切換為業務專用選單。");
+      if (!user) throw new Error("帳號不存在或已被刪除");
+      if (String(user.status || "").trim() !== "啟用") throw new Error("此帳號已停用，請聯絡管理員");
+      if (String(user.password || "") !== password) throw new Error("帳號或密碼錯誤");
+
+      const existingLineUserId = String(user.lineUserId || "").trim();
+
+      // Case B: Same LINE ID already bound to this account
+      if (existingLineUserId === inputLineUserId) {
+        alreadyBound = true;
+      } else {
+        // Case C: Target account already bound to a different LINE ID
+        if (existingLineUserId !== "") {
+          throw new Error("此帳號已綁定其他 LINE，請聯絡管理員協助更換");
+        }
+
+        // Scan full sheet for inputLineUserId duplicates
+        let matchCount = 0;
+        for (let i = 0; i < users.length; i++) {
+          const u = users[i];
+          const uLineId = String(u.lineUserId || "").trim();
+          if (uLineId === inputLineUserId) {
+            matchCount++;
+          }
+        }
+
+        // Case E: Existing data conflict (multiple rows share the same LINE ID)
+        if (matchCount > 1) {
+          console.error("DATA_CONFLICT: lineUserId matches multiple rows: " + matchCount);
+          throw new Error("LINE 綁定資料異常，請聯絡管理員");
+        }
+
+        // Case D: LINE ID already bound to another employee account
+        if (matchCount === 1) {
+          throw new Error("此 LINE 帳號已綁定其他員工帳號，請聯絡管理員");
+        }
+
+        // Case A: Normal first-time binding
+        const rowNum = userIndex + 2;
+        const colIndex = HEADERS.users.indexOf("lineUserId") + 1;
+        if (colIndex > 0) {
+          usersSheet.getRange(rowNum, colIndex).setValue(inputLineUserId);
+        }
+        user.lineUserId = inputLineUserId;
+        bindActionCompleted = true;
+      }
+
+      // Defer external network operations
+      apiDeferredActions = {
+        lineUserId: inputLineUserId,
+        role: user.role,
+        displayName: user.displayName,
+        isNewBind: bindActionCompleted
+      };
+
+    } finally {
+      lock.releaseLock();
+    }
+  }
+
+  let richMenuSuccess = true;
+  let pushNotificationSuccess = true;
+
+  if (apiDeferredActions) {
+    const targetLineId = apiDeferredActions.lineUserId;
+    const targetRole = apiDeferredActions.role;
+    const targetDisplayName = apiDeferredActions.displayName;
+
+    try {
+      linkLineRichMenu(targetLineId, targetRole);
+    } catch (e) {
+      richMenuSuccess = false;
+      console.warn("Deferred rich menu link failed: " + e.toString());
+    }
+
+    if (apiDeferredActions.isNewBind) {
+      try {
+        const pushOk = sendLinePushMessage(
+          targetLineId,
+          "🎉 帳號綁定成功！\n您的 LINE 帳號已成功綁定為業務「" + targetDisplayName + "」，選單已切換為業務專用選單。"
+        );
+        if (!pushOk) {
+          pushNotificationSuccess = false;
+        }
+      } catch (e) {
+        pushNotificationSuccess = false;
+        console.warn("Deferred push notification failed: " + e.toString());
+      }
+    }
   }
 
   const safeUser = sanitizeUser(user);
@@ -193,8 +303,16 @@ function loginUser(data) {
     message: "登入成功",
     user: safeUser,
     permissions: getUserPermissions(safeUser),
+    bindSuccess: bindActionCompleted,
+    alreadyBound: alreadyBound,
+    richMenuSuccess: richMenuSuccess,
+    pushNotificationSuccess: pushNotificationSuccess
   };
 }
+
+
+
+
 
 function uploadPhoto(data) {
   const spreadsheet = ensureSpreadsheet();
@@ -680,9 +798,9 @@ const DEFAULT_CHANNEL_ACCESS_TOKEN = PropertiesService.getScriptProperties().get
 
 function sendLinePushMessage(targetId, message) {
   logDebug("sendLinePushMessage called. targetId: " + targetId + ", message: " + message);
-  if (!targetId) return;
+  if (!targetId) return false;
   const token = getSetting("lineChannelAccessToken") || DEFAULT_CHANNEL_ACCESS_TOKEN;
-  if (!token) return;
+  if (!token) return false;
 
   const url = "https://api.line.me/v2/bot/message/push";
   const options = {
@@ -700,9 +818,11 @@ function sendLinePushMessage(targetId, message) {
   try {
     const res = UrlFetchApp.fetch(url, options);
     logDebug("LINE Push Response: " + res.getResponseCode() + " - " + res.getContentText());
+    return res.getResponseCode() === 200;
   } catch (e) {
     logDebug("LINE Messaging API push failed: " + e.toString());
     console.error("LINE Messaging API push failed:", e);
+    return false;
   }
 }
 
