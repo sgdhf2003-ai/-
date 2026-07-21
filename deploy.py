@@ -5,7 +5,7 @@ import re
 import subprocess
 from pathlib import Path
 
-OFFICIAL_PATH = Path("/Users/chenhaoan/Documents/jingyang-sales-app").resolve()
+OFFICIAL_PATH = Path(__file__).resolve().parent
 
 DEFAULT_CLASP_EXTENSIONS = {".gs", ".js", ".html", ".json"}
 SECRET_SCAN_EXTENSIONS = {
@@ -39,13 +39,33 @@ def mask_secret(value):
 
 def check_env():
     cwd = Path.cwd().resolve()
+
+    # 1. Block Google Drive sync directories
+    if any(keyword in str(OFFICIAL_PATH) for keyword in ["CloudStorage", "GoogleDrive", "Google Drive"]):
+        fail(
+            f"Running deploy script from cloud-synchronized folder (Google Drive) is blocked for safety: {OFFICIAL_PATH}",
+            "GOOGLE_DRIVE_PATH_BLOCKED"
+        )
+
+    # 2. Cross-project safeguard: cwd must reside within OFFICIAL_PATH
     try:
         cwd.relative_to(OFFICIAL_PATH)
     except ValueError:
         fail(
-            f"Current directory {cwd} is not within the official path {OFFICIAL_PATH}",
+            f"Current directory {cwd} is not within the repository root {OFFICIAL_PATH}",
             "CROSS_PROJECT_SOURCE_BLOCKED"
         )
+
+    # 3. Repository markers validation
+    backend_marker = OFFICIAL_PATH / "google-apps-script" / "Code.gs"
+    bot_marker = OFFICIAL_PATH / "line-bot-apps-script" / "src" / "line程式碼.gs"
+    if not backend_marker.exists() or not bot_marker.exists():
+        fail(
+            f"Repository markers not found under {OFFICIAL_PATH}. Please ensure this is the correct repository root.",
+            "INVALID_REPOSITORY_ROOT"
+        )
+
+
 
 def get_upload_candidates(target_dir, clasp_conf):
     root_dir = Path(target_dir, clasp_conf.get("rootDir", ".")).resolve()
