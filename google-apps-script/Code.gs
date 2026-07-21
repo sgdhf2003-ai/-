@@ -3783,13 +3783,40 @@ function buildTaskNotificationLogLookupIndex_(rows) {
 
     if (!index.byDedupeKey[dedupeKey]) index.byDedupeKey[dedupeKey] = [];
     index.byDedupeKey[dedupeKey].push(row);
-    if (index.byDedupeKey[dedupeKey].length === 2) index.duplicateDedupeKeys.push(dedupeKey);
 
     if (!index.byTaskDayGuardKey[taskDayGuardKey]) index.byTaskDayGuardKey[taskDayGuardKey] = [];
     index.byTaskDayGuardKey[taskDayGuardKey].push(row);
 
     const status = String(row.status || "").trim();
     index.statusCounts[status] = (index.statusCounts[status] || 0) + 1;
+  }
+
+  const dedupeKeys = Object.keys(index.byDedupeKey);
+  for (let i = 0; i < dedupeKeys.length; i++) {
+    const key = dedupeKeys[i];
+    const groupRows = index.byDedupeKey[key];
+    if (groupRows.length < 2) continue;
+    if (groupRows.length === 2 && isTaskNotificationLogLineagePair_(groupRows, rowsById)) {
+      continue;
+    }
+    // Check if this is a lineage conflict (1 parent + multiple children)
+    let parentCount = 0;
+    let childCount = 0;
+    let otherCount = 0;
+    for (let j = 0; j < groupRows.length; j++) {
+      const status = String(groupRows[j].status || "").trim();
+      if (status === "UNKNOWN_OUTCOME") {
+        parentCount++;
+      } else if (status === "RESOLVED_SENT" || status === "RESOLVED_NOT_SENT") {
+        childCount++;
+      } else {
+        otherCount++;
+      }
+    }
+    if (parentCount === 1 && childCount > 1 && otherCount === 0) {
+      continue;
+    }
+    index.duplicateDedupeKeys.push(key);
   }
 
   if (index.duplicateDedupeKeys.length) {
@@ -3826,6 +3853,7 @@ function buildTaskNotificationLogLookupIndex_(rows) {
     });
   }
 
+  index.rowsById = rowsById;
   return index;
 }
 
@@ -3880,7 +3908,21 @@ function evaluateTaskNotificationReservation_(candidate, lookupIndex) {
   }
 
   const exactRows = lookupIndex.byDedupeKey[dedupeKey] || [];
-  if (exactRows.length > 1) return buildTaskNotificationReservationError_("LOG_DUPLICATE_KEY");
+  if (exactRows.length > 1) {
+    if (exactRows.length === 2 && isTaskNotificationLogLineagePair_(exactRows, lookupIndex.rowsById || {})) {
+      let childRow = null;
+      exactRows.forEach(function(r) {
+        if (isTaskNotificationLogResolutionStatus_(String(r.status || "").trim())) {
+          childRow = r;
+        }
+      });
+      if (childRow) {
+        const childStatus = String(childRow.status || "").trim();
+        return buildTaskNotificationReservationDecision_("BLOCK_RESERVATION", TASK_NOTIFICATION_LOG_EXACT_BLOCK_REASONS_[childStatus] || "LOG_NONRESERVABLE_STATE");
+      }
+    }
+    return buildTaskNotificationReservationError_("LOG_DUPLICATE_KEY");
+  }
   if (exactRows.length === 1) {
     const exactStatus = String(exactRows[0].status || "").trim();
     return buildTaskNotificationReservationDecision_("BLOCK_RESERVATION", TASK_NOTIFICATION_LOG_EXACT_BLOCK_REASONS_[exactStatus] || "LOG_NONRESERVABLE_STATE");
