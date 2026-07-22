@@ -14,7 +14,8 @@ const LOG_STATUSES = [
   "CANCELLED_RESERVATION", "RESOLVED_SENT", "RESOLVED_NOT_SENT"
 ];
 const LOG_BUCKETS = ["DUE_TODAY", "OVERDUE"];
-const LOG_SOURCES = ["TASK_DUE_REMINDER", "MANUAL_RETRY", "SETUP_TEST"];
+const LOG_SOURCES = ["TASK_DUE_REMINDER", "MANUAL_RETRY", "SETUP_TEST", "CONTROLLED_LIVE_TEST"];
+const LOG_NOTE_SAFE_VALUES = ["", "DO_NOT_RETRY", "OPERATOR_REVIEW_REQUIRED", "SCHEMA_CHECK", "SETUP_CREATED", "SETUP_EXISTS", "CONTROLLED_TEST", "CONTROLLED_LIVE_TEST"];
 const LOG_EXACT_BLOCK_REASONS = {
   RESERVED: "DUPLICATE_RESERVED",
   SENT: "DUPLICATE_SENT",
@@ -132,6 +133,7 @@ function validateLogRow(row) {
   if (!isDateKey(item.bucketDate) || !isDateKey(item.dueDateKey)) return { ok: false, errorCode: "LOG_ROW_INVALID" };
   if (!validTimestamp(item.createdAt, false) || !validTimestamp(item.updatedAt, false)) return { ok: false, errorCode: "LOG_ROW_INVALID" };
   if (!Number.isInteger(Number(item.attemptCount)) || Number(item.attemptCount) < 0) return { ok: false, errorCode: "LOG_ROW_INVALID" };
+  if (!LOG_NOTE_SAFE_VALUES.includes(String(item.noteSafe || ""))) return { ok: false, errorCode: "LOG_ROW_INVALID" };
   if (item.status === "RESERVED" && !validTimestamp(item.reservedAt, false)) return { ok: false, errorCode: "LOG_ROW_INVALID" };
   if (item.status === "SENT" && (!validTimestamp(item.sentAt, false) || item.errorCode || item.resolution)) return { ok: false, errorCode: "LOG_ROW_INVALID" };
   return { ok: true, status: "VALID" };
@@ -187,6 +189,79 @@ function evaluateReservation(candidate, lookupIndex) {
   const guardRows = lookupIndex.byTaskDayGuardKey[buildTaskDayGuardKey(item.taskId, item.bucketDate, username)] || [];
   if (guardRows.length) return { ok: true, decision: "BLOCK_RESERVATION", reason: LOG_TASK_DAY_BLOCK_REASONS[guardRows[0].status] || "LOG_NONRESERVABLE_STATE" };
   return { ok: true, decision: "ALLOW_RESERVATION", reason: "NO_CONFLICT" };
+}
+
+function cloneRows(rows) {
+  return (Array.isArray(rows) ? rows : []).map(row => Object.assign({}, row));
+}
+
+function makeReservedRowFromCandidate(candidate, nowIso, id) {
+  const item = Object.assign({}, candidate || {});
+  const username = normalizeUsername(item.recipientUsername);
+  item.recipientUsername = username;
+  item.bucket = String(item.bucket || "").trim().toUpperCase();
+  item.dedupeKey = buildDedupeKey(item.taskId, item.bucketDate, item.bucket, username);
+  return Object.assign({
+    id: id || "generated-id-1",
+    schemaVersion: LOG_SCHEMA_VERSION,
+    status: "RESERVED",
+    createdAt: nowIso || "2026-07-22T01:00:00.000Z",
+    reservedAt: nowIso || "2026-07-22T01:00:00.000Z",
+    sentAt: "",
+    updatedAt: nowIso || "2026-07-22T01:00:00.000Z",
+    requestIdShort: "",
+    attemptCount: 0,
+    errorCode: "",
+    parentLogId: "",
+    resolution: "",
+    resolvedAt: "",
+    resolvedBy: ""
+  }, item);
+}
+
+function reserveInMemory(candidate, store, options = {}) {
+  const rows = cloneRows(store && store.rows);
+  const item = Object.assign({}, candidate || {});
+  item.recipientUsername = normalizeUsername(item.recipientUsername);
+  item.bucket = String(item.bucket || "").trim().toUpperCase();
+  item.dedupeKey = buildDedupeKey(item.taskId, item.bucketDate, item.bucket, item.recipientUsername);
+  const tempDecision = evaluateReservation(item, { ok: true, byDedupeKey: {}, byTaskDayGuardKey: {} });
+  if (tempDecision.decision === "ERROR") return { ok: false, status: "INVALID", errorCode: tempDecision.errorCode };
+  if (options.lockAvailable === false) return { ok: false, status: "INVALID", errorCode: "LOG_LOCK_TIMEOUT" };
+  const index = buildLookupIndex(rows);
+  if (!index.ok) return { ok: false, status: "INVALID", errorCode: index.errorCode || "LOG_SCHEMA_INVALID" };
+  const decision = evaluateReservation(item, index);
+  if (decision.decision === "BLOCK_RESERVATION") {
+    return { ok: true, mode: options.mode || "controlled-write-test", status: "BLOCKED", created: false, duplicateBlocked: true, reason: decision.reason };
+  }
+  if (decision.decision === "ERROR") return { ok: false, status: "INVALID", errorCode: decision.errorCode || "LOG_SCHEMA_INVALID" };
+  if (options.dryRun === true) {
+    return { ok: true, mode: "dry-run", status: "WOULD_RESERVE", created: false, dryRun: true, dedupeKey: item.dedupeKey };
+  }
+  const newRow = makeReservedRowFromCandidate(item, options.nowIso, options.id);
+  const validation = validateLogRow(newRow);
+  if (!validation.ok) return { ok: false, status: "INVALID", errorCode: validation.errorCode || "LOG_ROW_INVALID" };
+  const nextRows = rows.concat([newRow]);
+  if (options.reReadConflict === true) return { ok: false, status: "INVALID", errorCode: "LOG_UPDATE_CONFLICT" };
+  const reIndex = buildLookupIndex(nextRows);
+  if (!reIndex.ok || !reIndex.byDedupeKey[item.dedupeKey] || reIndex.byDedupeKey[item.dedupeKey].status !== "RESERVED") {
+    return { ok: false, status: "INVALID", errorCode: "LOG_UPDATE_CONFLICT" };
+  }
+  if (store && Array.isArray(store.rows)) store.rows = nextRows;
+  return {
+    ok: true,
+    mode: options.mode || "controlled-write-test",
+    status: "RESERVED",
+    created: true,
+    duplicateBlocked: false,
+    schemaVersion: LOG_SCHEMA_VERSION,
+    rowCountBefore: rows.length,
+    rowCountAfter: nextRows.length,
+    dedupeKey: item.dedupeKey,
+    row: reIndex.byDedupeKey[item.dedupeKey],
+    dedupeKeyShort: item.dedupeKey.substring(0, 12),
+    taskDayGuardKeyShort: buildTaskDayGuardKey(item.taskId, item.bucketDate, item.recipientUsername).substring(0, 12)
+  };
 }
 
 function makeCandidate(overrides = {}) {
@@ -245,6 +320,7 @@ module.exports = {
   lineUserId,
   makeCandidate,
   makeLogRow,
+  reserveInMemory,
   normalizeUsername,
   runSuite,
   sha256,

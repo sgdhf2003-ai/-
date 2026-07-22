@@ -3315,7 +3315,7 @@ const TASK_NOTIFICATION_LOG_STATUSES_ = [
   "RESOLVED_NOT_SENT"
 ];
 const TASK_NOTIFICATION_LOG_BUCKETS_ = ["DUE_TODAY", "OVERDUE"];
-const TASK_NOTIFICATION_LOG_SOURCES_ = ["TASK_DUE_REMINDER", "MANUAL_RETRY", "SETUP_TEST"];
+const TASK_NOTIFICATION_LOG_SOURCES_ = ["TASK_DUE_REMINDER", "MANUAL_RETRY", "SETUP_TEST", "CONTROLLED_LIVE_TEST"];
 const TASK_NOTIFICATION_LOG_RESOLUTIONS_ = ["CONFIRMED_SENT", "CONFIRMED_NOT_SENT", "CANCELLED"];
 const TASK_NOTIFICATION_LOG_ERROR_CODES_ = [
   "LOG_SHEET_MISSING",
@@ -3338,7 +3338,8 @@ const TASK_NOTIFICATION_LOG_NOTE_SAFE_ALLOWLIST_ = [
   "SCHEMA_CHECK",
   "SETUP_CREATED",
   "SETUP_EXISTS",
-  "CONTROLLED_TEST"
+  "CONTROLLED_TEST",
+  "CONTROLLED_LIVE_TEST"
 ];
 const TASK_NOTIFICATION_LOG_FORBIDDEN_ROW_FIELDS_ = {
   lineUserId: true,
@@ -3975,28 +3976,38 @@ function openTaskNotificationLogSpreadsheet_() {
 
 function reserveTaskNotificationLogEntry_(candidate, options) {
   options = options || {};
+  candidate = candidate || {};
+  const mode = options.mode || "controlled-write-test";
   const taskId = String(candidate.taskId || "").trim();
   const bucketDate = String(candidate.bucketDate || "").trim();
   const bucket = String(candidate.bucket || "").trim().toUpperCase();
-  const username = String(candidate.recipientUsername || "").trim();
+  const username = String(candidate.recipientUsername || "").trim().toLowerCase();
 
-  if (!taskId || !bucketDate || !bucket || !username) {
+  if (!taskId || !bucketDate || !bucket || !username || String(candidate.recipientUsername || "").trim() !== username) {
     return { ok: false, status: "INVALID", errorCode: "RESERVATION_CANDIDATE_INVALID" };
   }
 
   const dedupeKey = buildTaskDueNotificationDedupeKey_(taskId, bucketDate, bucket, username);
-  candidate.dedupeKey = dedupeKey;
+  const normalizedCandidate = Object.assign({}, candidate, {
+    taskId: taskId,
+    recipientUsername: username,
+    bucket: bucket,
+    bucketDate: bucketDate,
+    dueDateKey: String(candidate.dueDateKey || "").trim(),
+    dedupeKey: dedupeKey
+  });
 
-  // Pre-validate candidate format
   const tempIndex = { ok: true, byDedupeKey: {}, byTaskDayGuardKey: {} };
-  const evalCheck = evaluateTaskNotificationReservation_(candidate, tempIndex);
+  const evalCheck = evaluateTaskNotificationReservation_(normalizedCandidate, tempIndex);
   if (evalCheck.decision === "ERROR") {
     return { ok: false, status: "INVALID", errorCode: evalCheck.errorCode || "RESERVATION_CANDIDATE_INVALID" };
   }
 
   const lock = LockService.getScriptLock();
+  let locked = false;
   try {
     lock.waitLock(10000);
+    locked = true;
   } catch (e) {
     return { ok: false, status: "INVALID", errorCode: "LOG_LOCK_TIMEOUT" };
   }
@@ -4018,11 +4029,11 @@ function reserveTaskNotificationLogEntry_(candidate, options) {
       return { ok: false, status: "INVALID", errorCode: index.errorCode || "LOG_SCHEMA_INVALID" };
     }
 
-    const reservation = evaluateTaskNotificationReservation_(candidate, index);
+    const reservation = evaluateTaskNotificationReservation_(normalizedCandidate, index);
     if (reservation.decision === "BLOCK_RESERVATION") {
       return {
         ok: true,
-        mode: "controlled-write-test",
+        mode: mode,
         status: "BLOCKED",
         created: false,
         duplicateBlocked: true,
@@ -4032,40 +4043,61 @@ function reserveTaskNotificationLogEntry_(candidate, options) {
     if (reservation.decision === "ERROR") {
       return { ok: false, status: "INVALID", errorCode: reservation.errorCode || "LOG_SCHEMA_INVALID" };
     }
+    if (options.dryRun === true) {
+      return {
+        ok: true,
+        mode: "dry-run",
+        status: "WOULD_RESERVE",
+        created: false,
+        duplicateBlocked: false,
+        dryRun: true,
+        dedupeKey: dedupeKey,
+        dedupeKeyShort: dedupeKey.substring(0, 12),
+        taskDayGuardKeyShort: buildTaskNotificationTaskDayGuardKey_(taskId, bucketDate, username).substring(0, 12)
+      };
+    }
 
     const id = Utilities.getUuid();
     const nowIso = new Date().toISOString();
-    const newRow = [
-      id,
-      dedupeKey,
-      "v1",
-      taskId,
-      username,
-      candidate.recipientMasked || "",
-      bucket,
-      candidate.bucketDate,
-      candidate.dueDateKey,
-      "RESERVED",
-      nowIso,
-      nowIso,
-      "",
-      nowIso,
-      "",
-      0,
-      "",
-      candidate.source,
-      candidate.noteSafe,
-      "",
-      "",
-      "",
-      ""
-    ];
+    const newRowObject = {
+      id: id,
+      dedupeKey: dedupeKey,
+      schemaVersion: TASK_NOTIFICATION_LOG_SCHEMA_VERSION_,
+      taskId: taskId,
+      recipientUsername: username,
+      recipientMasked: normalizedCandidate.recipientMasked || "",
+      bucket: bucket,
+      bucketDate: bucketDate,
+      dueDateKey: normalizedCandidate.dueDateKey,
+      status: "RESERVED",
+      createdAt: nowIso,
+      reservedAt: nowIso,
+      sentAt: "",
+      updatedAt: nowIso,
+      requestIdShort: "",
+      attemptCount: 0,
+      errorCode: "",
+      source: normalizedCandidate.source,
+      noteSafe: normalizedCandidate.noteSafe,
+      parentLogId: "",
+      resolution: "",
+      resolvedAt: "",
+      resolvedBy: ""
+    };
+    const rowValidation = validateTaskNotificationLogRow_(newRowObject);
+    if (!rowValidation.ok) {
+      return { ok: false, status: "INVALID", errorCode: rowValidation.errorCode || "LOG_ROW_INVALID" };
+    }
+
+    const newRow = TASK_NOTIFICATION_LOG_HEADERS_.map(function(header) {
+      return newRowObject[header] === undefined ? "" : newRowObject[header];
+    });
 
     sheet.appendRow(newRow);
     SpreadsheetApp.flush();
 
     const reLoaded = readTaskNotificationLogRows_(sheet);
-    if (!reLoaded.ok) {
+    if (!reLoaded.ok || (reLoaded.rowCount || 0) !== (loaded.rowCount || 0) + 1) {
       return { ok: false, status: "INVALID", errorCode: "LOG_UPDATE_CONFLICT" };
     }
 
@@ -4075,24 +4107,32 @@ function reserveTaskNotificationLogEntry_(candidate, options) {
     }
 
     const exactRow = reIndex.byDedupeKey[dedupeKey];
-    if (!exactRow || exactRow.status !== "RESERVED") {
+    if (!exactRow || exactRow.status !== "RESERVED" || exactRow.id !== id) {
       return { ok: false, status: "INVALID", errorCode: "LOG_UPDATE_CONFLICT" };
     }
 
     return {
       ok: true,
-      mode: "controlled-write-test",
+      mode: mode,
       status: "RESERVED",
       created: true,
       duplicateBlocked: false,
-      schemaVersion: "v1",
+      schemaVersion: TASK_NOTIFICATION_LOG_SCHEMA_VERSION_,
       rowCountBefore: loaded.rowCount || 0,
       rowCountAfter: reLoaded.rowCount || 0,
+      dedupeKey: dedupeKey,
+      row: exactRow,
       dedupeKeyShort: dedupeKey.substring(0, 12),
       taskDayGuardKeyShort: buildTaskNotificationTaskDayGuardKey_(taskId, bucketDate, username).substring(0, 12)
     };
   } finally {
-    lock.releaseLock();
+    if (locked) {
+      try {
+        lock.releaseLock();
+      } catch (e) {
+        // Lock release failures do not change the reservation result.
+      }
+    }
   }
 }
 
@@ -4927,18 +4967,11 @@ function triggerControlledTaskDueReminderLiveTest() {
       noteSafe: "CONTROLLED_LIVE_TEST"
     };
 
-    // Phase 1: Reservation under ScriptLock
-    let reservationRes = null;
-    const lock1 = LockService.getScriptLock();
-    try {
-      lock1.waitLock(10000);
-      reservationRes = reserveTaskNotificationLogEntry_(candidate, {
-        mode: mode,
-        operator: "controlled-live-test"
-      });
-    } finally {
-      try { lock1.releaseLock(); } catch (e) {}
-    }
+    // Phase 1: Reservation. The helper owns ScriptLock; transport remains outside it.
+    const reservationRes = reserveTaskNotificationLogEntry_(candidate, {
+      mode: mode,
+      operator: "controlled-live-test"
+    });
 
     if (!reservationRes || !reservationRes.ok || !reservationRes.created) {
       return logTaskDueReminderE2EDryRunSummary_({
