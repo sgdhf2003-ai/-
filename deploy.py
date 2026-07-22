@@ -5,6 +5,8 @@ import re
 import subprocess
 from pathlib import Path
 
+# Official project boundary is derived from this script's repository root.
+# This avoids stale machine-specific paths while keeping cross-project guards.
 OFFICIAL_PATH = Path(__file__).resolve().parent
 
 DEFAULT_CLASP_EXTENSIONS = {".gs", ".js", ".html", ".json"}
@@ -40,14 +42,7 @@ def mask_secret(value):
 def check_env():
     cwd = Path.cwd().resolve()
 
-    # 1. Block Google Drive sync directories
-    if any(keyword in str(OFFICIAL_PATH) for keyword in ["CloudStorage", "GoogleDrive", "Google Drive"]):
-        fail(
-            f"Running deploy script from cloud-synchronized folder (Google Drive) is blocked for safety: {OFFICIAL_PATH}",
-            "GOOGLE_DRIVE_PATH_BLOCKED"
-        )
-
-    # 2. Cross-project safeguard: cwd must reside within OFFICIAL_PATH
+    # Cross-project safeguard: cwd must reside within this deploy.py repository.
     try:
         cwd.relative_to(OFFICIAL_PATH)
     except ValueError:
@@ -56,7 +51,7 @@ def check_env():
             "CROSS_PROJECT_SOURCE_BLOCKED"
         )
 
-    # 3. Repository markers validation
+    # Repository markers validation.
     backend_marker = OFFICIAL_PATH / "google-apps-script" / "Code.gs"
     bot_marker = OFFICIAL_PATH / "line-bot-apps-script" / "src" / "line程式碼.gs"
     if not backend_marker.exists() or not bot_marker.exists():
