@@ -2926,7 +2926,16 @@ function isTaskNotificationPlainAssignment_(value) {
 }
 
 function isTaskNotificationValidDateKey_(value) {
-  const s = String(value || "").trim();
+  if (value === undefined || value === null) return false;
+  let s = "";
+  if (Object.prototype.toString.call(value) === "[object Date]") {
+    if (isNaN(value.getTime())) return false;
+    s = Utilities.formatDate(value, TASK_DUE_NOTIFICATION_TIMEZONE_, "yyyy-MM-dd");
+  } else if (typeof value === "string") {
+    s = value.trim();
+  } else {
+    return false;
+  }
   const match = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!match) return false;
   const year = Number(match[1]);
@@ -3375,7 +3384,12 @@ function isTaskNotificationLogAllowlisted_(value, allowedValues, allowBlank) {
 }
 
 function isTaskNotificationLogTimestamp_(value, allowBlank) {
-  const raw = String(value === undefined || value === null ? "" : value).trim();
+  if (value === undefined || value === null) return allowBlank === true;
+  if (Object.prototype.toString.call(value) === "[object Date]") {
+    return isFinite(value.getTime());
+  }
+  if (typeof value !== "string") return false;
+  const raw = value.trim();
   if (!raw) return allowBlank === true;
   const parsed = Date.parse(raw);
   return isFinite(parsed) && raw.indexOf("T") !== -1;
@@ -3675,7 +3689,14 @@ function hashTaskNotificationMaterial_(material) {
 
 function buildTaskNotificationTaskDayGuardKey_(taskId, bucketDate, username) {
   const taskIdKey = String(taskId || "").trim();
-  const dateKey = String(bucketDate || "").trim();
+  let dateKey = "";
+  if (Object.prototype.toString.call(bucketDate) === "[object Date]") {
+    if (!isNaN(bucketDate.getTime())) {
+      dateKey = Utilities.formatDate(bucketDate, TASK_DUE_NOTIFICATION_TIMEZONE_, "yyyy-MM-dd");
+    }
+  } else if (typeof bucketDate === "string") {
+    dateKey = bucketDate.trim();
+  }
   const usernameKey = normalizeTaskNotificationUsernameKey_(username);
   if (!taskIdKey || !isTaskNotificationValidDateKey_(dateKey) || !usernameKey) return "";
   return hashTaskNotificationMaterial_([
@@ -3701,7 +3722,17 @@ function readTaskNotificationLogRows_(sheet) {
   for (let i = 0; i < values.length; i++) {
     const row = {};
     TASK_NOTIFICATION_LOG_HEADERS_.forEach(function(header, index) {
-      row[header] = values[i][index];
+      let val = values[i][index];
+      if (Object.prototype.toString.call(val) === "[object Date]") {
+        if (!isNaN(val.getTime())) {
+          if (header === "bucketDate" || header === "dueDateKey") {
+            val = Utilities.formatDate(val, TASK_DUE_NOTIFICATION_TIMEZONE_, "yyyy-MM-dd");
+          } else if (header === "createdAt" || header === "reservedAt" || header === "sentAt" || header === "updatedAt" || header === "resolvedAt") {
+            val = val.toISOString();
+          }
+        }
+      }
+      row[header] = val;
     });
     const validation = validateTaskNotificationLogRow_(row);
     if (!validation.ok) {
