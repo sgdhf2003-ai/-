@@ -42,7 +42,22 @@ def mask_secret(value):
 def check_env():
     cwd = Path.cwd().resolve()
 
-    # Cross-project safeguard: cwd must reside within this deploy.py repository.
+    # 1. Enforce canonical repository path boundary
+    expected_canonical_path = Path("/Users/chenhaoan/Developer/JYAI-Independent-Repos/jingyang-sales-app").resolve()
+    if OFFICIAL_PATH != expected_canonical_path:
+        fail(
+            f"deploy.py MUST reside inside canonical repository {expected_canonical_path}, got {OFFICIAL_PATH}",
+            "NON_CANONICAL_REPOSITORY_ROOT"
+        )
+
+    # 2. Block Google Drive / CloudStorage sync directories
+    if any(keyword in str(OFFICIAL_PATH) for keyword in ["CloudStorage", "GoogleDrive", "Google Drive"]):
+        fail(
+            f"Running deploy script from cloud-synchronized folder (Google Drive / CloudStorage) is blocked for safety: {OFFICIAL_PATH}",
+            "GOOGLE_DRIVE_PATH_BLOCKED"
+        )
+
+    # 3. Cross-project safeguard: cwd must reside within OFFICIAL_PATH
     try:
         cwd.relative_to(OFFICIAL_PATH)
     except ValueError:
@@ -51,7 +66,7 @@ def check_env():
             "CROSS_PROJECT_SOURCE_BLOCKED"
         )
 
-    # Repository markers validation.
+    # 4. Repository markers validation.
     backend_marker = OFFICIAL_PATH / "google-apps-script" / "Code.gs"
     bot_marker = OFFICIAL_PATH / "line-bot-apps-script" / "src" / "line程式碼.gs"
     if not backend_marker.exists() or not bot_marker.exists():

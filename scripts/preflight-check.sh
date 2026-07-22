@@ -1,20 +1,23 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-EXPECTED_ROOT="/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app"
+EXPECTED_ROOT="/Users/chenhaoan/Developer/JYAI-Independent-Repos/jingyang-sales-app"
 
+PWD_REAL="$(pwd -P)"
 echo "[preflight] pwd=$(pwd)"
+echo "[preflight] pwd -P=${PWD_REAL}"
 ROOT="$(git rev-parse --show-toplevel)"
 echo "[preflight] root=${ROOT}"
-if [[ "${ROOT}" != "${EXPECTED_ROOT}" ]]; then
-  echo "[preflight] ERROR: unexpected repo root" >&2
+
+if [[ "${ROOT}" != "${EXPECTED_ROOT}" || "${PWD_REAL}" != "${EXPECTED_ROOT}" ]]; then
+  echo "[preflight] ERROR: repo root must be canonical Developer repo ${EXPECTED_ROOT}" >&2
   exit 1
 fi
 
 BRANCH="$(git branch --show-current)"
 echo "[preflight] branch=${BRANCH}"
-if [[ "${BRANCH}" != "main" ]]; then
-  echo "[preflight] ERROR: expected main branch" >&2
+if [[ "${BRANCH}" != "main" && "${BRANCH}" != repair/* ]]; then
+  echo "[preflight] ERROR: expected main or repair/* branch, got ${BRANCH}" >&2
   exit 1
 fi
 

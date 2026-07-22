@@ -2,10 +2,11 @@
 
 ## Repo Location
 
-- Use the CloudStorage `jingyang-sales-app` repo as the current canonical workspace.
+- Use `/Users/chenhaoan/Developer/JYAI-Independent-Repos/jingyang-sales-app` as the sole canonical workspace.
+- CloudStorage / Google Drive paths are strictly backup copies and blocked from deployment.
 - Do not assume the legacy local path `/Users/chenhaoan/Documents/jingyang-sales-app`.
-- If multiple matching repos are found, stop and ask the user to choose.
-- `deploy.py` must derive its official boundary from the current repository root, not from a machine-specific Documents path.
+- If multiple matching repos are found, stop and reject non-canonical locations.
+- `deploy.py` must enforce the canonical repository root `/Users/chenhaoan/Developer/JYAI-Independent-Repos/jingyang-sales-app` and block execution from cloud sync folders.
 
 ## TaskNotificationLog Safety
 
