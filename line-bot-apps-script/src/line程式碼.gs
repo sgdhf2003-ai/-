@@ -43,12 +43,12 @@ function doPost(e) {
     rawContent = e.postData.contents;
     var postData = JSON.parse(rawContent);
 
-    // 0. Intercept secure internal push reminders (Stage 20-F & Stage 21-E)
-    if (postData && postData.internalRequest === "jy-line-push-v1") {
-      if (postData.action === "sendPushReminder") {
+    // 0. Intercept secure internal push reminders (Stage 20-F & Stage 21-E/F)
+    if (postData && (postData.internalRequest === "jy-line-push-v1" || postData.internalRequest === "jy-line-push-v2")) {
+      if (postData.internalRequest === "jy-line-push-v1" && postData.action === "sendPushReminder") {
         return handleInternalPushReminder_(postData);
       }
-      if (postData.action === "TASK_DUE_REMINDER") {
+      if (postData.internalRequest === "jy-line-push-v2" && postData.action === "TASK_DUE_REMINDER") {
         return handleTaskDueReminderPush_(postData);
       }
     }
@@ -3989,7 +3989,7 @@ function validateTaskDueReminderPayload_(postData) {
     }
   }
 
-  if (postData.internalRequest !== "jy-line-push-v1") {
+  if (postData.internalRequest !== "jy-line-push-v2") {
     return { ok: false, errorCode: "INVALID_PAYLOAD" };
   }
   if (postData.action !== "TASK_DUE_REMINDER") {
@@ -4115,12 +4115,21 @@ function handleTaskDueReminderPush_(postData) {
       })).setMimeType(ContentService.MimeType.JSON);
     }
 
-    var canonical = "jy-line-push-v1|TASK_DUE_REMINDER|" + postData.requestId + "|" + postData.timestamp + "|" + String(postData.recipientUsername || "").trim().toLowerCase();
+    var dryRunBool = postData.dryRun === true;
+    var canonical = "jy-line-push-v2|TASK_DUE_REMINDER|" + postData.requestId + "|" + postData.timestamp + "|" +
+      String(postData.recipientUsername || "").trim().toLowerCase() + "|" +
+      String(postData.taskIdSafe || "").trim() + "|" +
+      String(postData.taskTitleSafe || "").trim() + "|" +
+      String(postData.dueDateKey || "").trim() + "|" +
+      String(postData.bucket || "").trim().toUpperCase() + "|" +
+      String(postData.reservationIdShort || "").trim().toLowerCase() + "|" +
+      (dryRunBool ? "true" : "false");
+
     var computedSignature = computeHmacSha256Hex_(canonical, sharedSecret);
     if (!constantTimeAreEqual_(postData.signature, computedSignature)) {
       return ContentService.createTextOutput(JSON.stringify({
         ok: false,
-        mode: "task-reminder-dry-run",
+        mode: dryRunBool ? "task-reminder-dry-run" : "task-reminder-live",
         action: "TASK_DUE_REMINDER",
         payloadValid: false,
         lineCalled: false,
@@ -4131,7 +4140,7 @@ function handleTaskDueReminderPush_(postData) {
     if (isRequestIdProcessed_(postData.requestId)) {
       return ContentService.createTextOutput(JSON.stringify({
         ok: false,
-        mode: "task-reminder-dry-run",
+        mode: dryRunBool ? "task-reminder-dry-run" : "task-reminder-live",
         action: "TASK_DUE_REMINDER",
         payloadValid: false,
         lineCalled: false,
@@ -4143,7 +4152,7 @@ function handleTaskDueReminderPush_(postData) {
     if (!validation.ok) {
       return ContentService.createTextOutput(JSON.stringify({
         ok: false,
-        mode: "task-reminder-dry-run",
+        mode: dryRunBool ? "task-reminder-dry-run" : "task-reminder-live",
         action: "TASK_DUE_REMINDER",
         payloadValid: false,
         lineCalled: false,
@@ -4156,7 +4165,7 @@ function handleTaskDueReminderPush_(postData) {
     if (!msgObj || !msgObj.text) {
       return ContentService.createTextOutput(JSON.stringify({
         ok: false,
-        mode: "task-reminder-dry-run",
+        mode: dryRunBool ? "task-reminder-dry-run" : "task-reminder-live",
         action: "TASK_DUE_REMINDER",
         payloadValid: false,
         lineCalled: false,
@@ -4179,13 +4188,72 @@ function handleTaskDueReminderPush_(postData) {
       })).setMimeType(ContentService.MimeType.JSON);
     }
 
+    // Live mode handling
+    var props = PropertiesService.getScriptProperties();
+    var liveEnabled = (props.getProperty("LINE_PUSH_ENABLED") || "").trim().toLowerCase();
+    if (liveEnabled !== "enabled") {
+      return ContentService.createTextOutput(JSON.stringify({
+        ok: false,
+        mode: "task-reminder-live",
+        action: "TASK_DUE_REMINDER",
+        payloadValid: true,
+        lineCalled: false,
+        errorCode: "LIVE_MODE_FORBIDDEN"
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    var allowedRecipientUsername = (props.getProperty("LINE_PUSH_TEST_RECIPIENT_USERNAME") || "").trim().toLowerCase();
+    if (allowedRecipientUsername && validPayload.recipientUsername !== allowedRecipientUsername) {
+      return ContentService.createTextOutput(JSON.stringify({
+        ok: false,
+        mode: "task-reminder-live",
+        action: "TASK_DUE_REMINDER",
+        payloadValid: true,
+        lineCalled: false,
+        errorCode: "RECIPIENT_NOT_ALLOWED"
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    var allowedLineUserId = (props.getProperty("LINE_PUSH_TEST_ALLOWLIST") || "").trim();
+    if (!allowedLineUserId || !/^U[a-f0-9]{32}$/i.test(allowedLineUserId)) {
+      return ContentService.createTextOutput(JSON.stringify({
+        ok: false,
+        mode: "task-reminder-live",
+        action: "TASK_DUE_REMINDER",
+        payloadValid: true,
+        lineCalled: false,
+        errorCode: "ALLOWLIST_MISSING"
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    var pushRes = pushMessageToUser(allowedLineUserId, msgObj.text);
+    if (!pushRes || pushRes.getResponseCode() !== 200) {
+      return ContentService.createTextOutput(JSON.stringify({
+        ok: false,
+        mode: "task-reminder-live",
+        action: "TASK_DUE_REMINDER",
+        payloadValid: true,
+        lineCalled: true,
+        notificationSent: false,
+        deliveryOutcome: "UNKNOWN_OUTCOME",
+        errorCode: "LINE_API_ERROR"
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    recordCompletedRequestId_(postData.requestId);
+
     return ContentService.createTextOutput(JSON.stringify({
-      ok: false,
-      mode: "task-reminder-dry-run",
+      ok: true,
+      mode: "task-reminder-live",
       action: "TASK_DUE_REMINDER",
-      payloadValid: true,
-      lineCalled: false,
-      errorCode: "LIVE_MODE_FORBIDDEN"
+      recipientCount: 1,
+      templateId: "TASK_DUE_REMINDER_V1",
+      messageType: "text",
+      bucket: validPayload.bucket,
+      lineCalled: true,
+      notificationSent: true,
+      deliveryOutcome: "CONFIRMED_SENT",
+      errorCode: ""
     })).setMimeType(ContentService.MimeType.JSON);
 
   } catch (err) {
