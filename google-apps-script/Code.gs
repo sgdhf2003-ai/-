@@ -4399,6 +4399,100 @@ function triggerTaskNotificationReservationCancellationTest() {
   }
 }
 
+function sanitizeTaskTitleSafe_(rawTitle) {
+  let s = String(rawTitle || "").trim();
+  s = s.replace(/[\r\n\t]/g, " ");
+  s = s.replace(/[\x00-\x1F\x7F]/g, "");
+  s = s.trim();
+  if (s.length > 80) {
+    s = s.substring(0, 80);
+  }
+  return s;
+}
+
+function buildTaskDueReminderSecurePayload_(input) {
+  const item = input || {};
+  const recipientUsername = String(item.recipientUsername || "").trim().toLowerCase();
+  const taskIdSafe = String(item.taskIdSafe || "").trim();
+  const rawTitle = String(item.taskTitleSafe || "").trim();
+  const dueDateKey = String(item.dueDateKey || "").trim();
+  const bucket = String(item.bucket || "").trim().toUpperCase();
+  const reservationIdShort = String(item.reservationIdShort || "").trim();
+
+  if (!recipientUsername || !/^[a-z0-9_.-]{1,64}$/.test(recipientUsername)) return null;
+  if (!taskIdSafe || !/^[A-Za-z0-9_-]{1,64}$/.test(taskIdSafe)) return null;
+  const taskTitleSafe = sanitizeTaskTitleSafe_(rawTitle);
+  if (!taskTitleSafe) return null;
+  if (!isTaskNotificationValidDateKey_(dueDateKey)) return null;
+  if (bucket !== "DUE_TODAY" && bucket !== "OVERDUE") return null;
+  if (!reservationIdShort || !/^[a-f0-9]{8,16}$/i.test(reservationIdShort)) return null;
+
+  return {
+    internalRequest: "jy-line-push-v1",
+    action: "TASK_DUE_REMINDER",
+    recipientUsername: recipientUsername,
+    taskIdSafe: taskIdSafe,
+    taskTitleSafe: taskTitleSafe,
+    dueDateKey: dueDateKey,
+    bucket: bucket,
+    reservationIdShort: reservationIdShort,
+    dryRun: true
+  };
+}
+
+function triggerTaskDueReminderSecureTunnelDryRun() {
+  try {
+    const todayStr = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd");
+    const input = {
+      recipientUsername: "controlled-test",
+      taskIdSafe: "CONTROLLED_TASK_REMINDER_TEST",
+      taskTitleSafe: "受控任務到期提醒測試",
+      dueDateKey: todayStr,
+      bucket: "DUE_TODAY",
+      reservationIdShort: "c1a2b3c4e5f6",
+      dryRun: true
+    };
+    const payload = buildTaskDueReminderSecurePayload_(input);
+    if (!payload) {
+      const failed = {
+        ok: false,
+        mode: "task-reminder-secure-tunnel-dry-run",
+        action: "TASK_DUE_REMINDER",
+        payloadValid: false,
+        errorCode: "INVALID_PAYLOAD"
+      };
+      Logger.log("Task Reminder Secure Tunnel Dry Run Summary: " + JSON.stringify(failed));
+      return failed;
+    }
+    const result = {
+      ok: true,
+      mode: "task-reminder-secure-tunnel-dry-run",
+      action: "TASK_DUE_REMINDER",
+      payloadValid: true,
+      recipientCount: 1,
+      templateId: "TASK_DUE_REMINDER_V1",
+      bucket: payload.bucket,
+      dueDateKeyValid: true,
+      titleLength: payload.taskTitleSafe.length,
+      transportCalled: false,
+      lineCalled: false,
+      errorCode: ""
+    };
+    Logger.log("Task Reminder Secure Tunnel Dry Run Summary: " + JSON.stringify(result));
+    return result;
+  } catch (e) {
+    const failed = {
+      ok: false,
+      mode: "task-reminder-secure-tunnel-dry-run",
+      action: "TASK_DUE_REMINDER",
+      payloadValid: false,
+      errorCode: "INVALID_PAYLOAD"
+    };
+    Logger.log("Task Reminder Secure Tunnel Dry Run Summary: " + JSON.stringify(failed));
+    return failed;
+  }
+}
+
 /**
  * Stage 20-F: LINE Push Single Whitelist Channel Manual Test Entrance
  */
