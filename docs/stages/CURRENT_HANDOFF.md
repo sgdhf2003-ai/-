@@ -8,15 +8,13 @@
 
 ## Current Stage
 
-- active stage: Stage 21-D2A Repo Boundary Relocation Fix
-- latest observed commit before this handoff: `8feafb5 docs: close controlled task reminder live validation`
-- Stage 21-D2 implementation commit observed: `515075a feat: add task notification reservation lookup`
-- follow-up hardening commits observed:
-  - `09f260d fix: harden task notification reservation lookup`
-  - `9b7d308 fix: enforce unique task notification dedupe keys`
-- repo sync observed:
-  - local main fast-forwarded to `8feafb5`
-  - ahead / behind after sync: `0 / 0`
+- current stage closed: Stage 21-D3 Backend Deploy
+- latest pushed implementation/simulation commit: `df4054e test: restore read-only simulation harness`
+- backend deployed version: `73`
+- post-deploy read-only validation: PASS
+- LINE Bot deployed in Stage 21-D3: no
+- production write test executed: no
+- repo relation before closure note: `0 ahead / 0 behind`
 
 ## Safety State
 
@@ -29,4 +27,4 @@
 
 ## Required Next Step
 
-Commit Stage 21-D2A boundary relocation first, then run Stage 21-D2 Review + Push.
+Stage 21-D3G Closure Note Review + Push.
