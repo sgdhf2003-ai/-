@@ -3316,7 +3316,7 @@ const TASK_NOTIFICATION_LOG_STATUSES_ = [
 ];
 const TASK_NOTIFICATION_LOG_BUCKETS_ = ["DUE_TODAY", "OVERDUE"];
 const TASK_NOTIFICATION_LOG_SOURCES_ = ["TASK_DUE_REMINDER", "MANUAL_RETRY", "SETUP_TEST"];
-const TASK_NOTIFICATION_LOG_RESOLUTIONS_ = ["CONFIRMED_SENT", "CONFIRMED_NOT_SENT"];
+const TASK_NOTIFICATION_LOG_RESOLUTIONS_ = ["CONFIRMED_SENT", "CONFIRMED_NOT_SENT", "CANCELLED"];
 const TASK_NOTIFICATION_LOG_ERROR_CODES_ = [
   "LOG_SHEET_MISSING",
   "LOG_SCHEMA_INVALID",
@@ -3564,6 +3564,14 @@ function validateTaskNotificationLogRow_(rowObject) {
         String(row.resolvedBy || "").trim() !== String(row.resolvedBy || "").trim().toLowerCase() ||
         !String(row.requestIdShort || "").trim() ||
         String(row.errorCode || "").trim() !== "UNKNOWN_OUTCOME") {
+      return buildTaskNotificationLogResult_(false, "INVALID", "LOG_ROW_INVALID");
+    }
+  }
+  if (status === "CANCELLED_RESERVATION") {
+    if (String(row.sentAt || "").trim() !== "" ||
+        !isTaskNotificationLogTimestamp_(row.resolvedAt, false) ||
+        !String(row.resolvedBy || "").trim() ||
+        String(row.resolvedBy || "").trim() !== String(row.resolvedBy || "").trim().toLowerCase()) {
       return buildTaskNotificationLogResult_(false, "INVALID", "LOG_ROW_INVALID");
     }
   }
@@ -4114,6 +4122,279 @@ function triggerTaskNotificationReservationWriteTest() {
       errorCode: "LOG_SCHEMA_INVALID"
     };
     Logger.log("Task Notification Reservation Write Test Summary: " + JSON.stringify(failed));
+    return failed;
+  }
+}
+
+function cancelTaskNotificationReservation_(candidate, options) {
+  const mode = (options && options.mode) || "controlled-cancellation-test";
+  const operator = (options && options.operator) || "controlled-test";
+
+  const item = candidate || {};
+  const taskId = String(item.taskId || "").trim();
+  const username = String(item.recipientUsername || "").trim().toLowerCase();
+  const bucket = String(item.bucket || "").trim().toUpperCase();
+  const bucketDate = String(item.bucketDate || "").trim();
+  const dueDateKey = String(item.dueDateKey || "").trim();
+
+  if (taskId !== "CONTROLLED_RESERVATION_TEST" ||
+      username !== "controlled-test" ||
+      bucket !== "DUE_TODAY" ||
+      !isTaskNotificationValidDateKey_(bucketDate) ||
+      !isTaskNotificationValidDateKey_(dueDateKey)) {
+    const errorResult = buildTaskNotificationLogResult_(false, "INVALID", "RESERVATION_CANDIDATE_INVALID", {
+      mode: mode,
+      status: "INVALID",
+      updated: false
+    });
+    Logger.log("Task Notification Reservation Cancellation Safe Summary: " + JSON.stringify(buildTaskNotificationLogSafeSummary_(errorResult)));
+    return errorResult;
+  }
+
+  const expectedDedupeKey = buildTaskDueNotificationDedupeKey_(taskId, bucketDate, bucket, username);
+  const taskDayGuardKey = buildTaskNotificationTaskDayGuardKey_(taskId, bucketDate, username);
+
+  const spreadsheet = openTaskNotificationLogSpreadsheet_();
+  if (!spreadsheet) {
+    const missing = buildTaskNotificationLogResult_(false, "MISSING", "LOG_SHEET_MISSING", {
+      mode: mode,
+      status: "INVALID",
+      updated: false
+    });
+    Logger.log("Task Notification Reservation Cancellation Safe Summary: " + JSON.stringify(buildTaskNotificationLogSafeSummary_(missing)));
+    return missing;
+  }
+  const sheet = spreadsheet.getSheetByName(TASK_NOTIFICATION_LOG_SHEET_);
+  if (!sheet) {
+    const missing = buildTaskNotificationLogResult_(false, "MISSING", "LOG_SHEET_MISSING", {
+      mode: mode,
+      status: "INVALID",
+      updated: false
+    });
+    Logger.log("Task Notification Reservation Cancellation Safe Summary: " + JSON.stringify(buildTaskNotificationLogSafeSummary_(missing)));
+    return missing;
+  }
+
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000);
+  } catch (e) {
+    const timeout = buildTaskNotificationLogResult_(false, "TIMEOUT", "LOG_LOCK_TIMEOUT", {
+      mode: mode,
+      status: "INVALID",
+      updated: false
+    });
+    Logger.log("Task Notification Reservation Cancellation Safe Summary: " + JSON.stringify(buildTaskNotificationLogSafeSummary_(timeout)));
+    return timeout;
+  }
+
+  try {
+    const loaded = readTaskNotificationLogRows_(sheet);
+    if (!loaded.ok) {
+      const failed = buildTaskNotificationLogResult_(false, "INVALID", loaded.errorCode || "LOG_SCHEMA_INVALID", {
+        mode: mode,
+        status: "INVALID",
+        updated: false
+      });
+      Logger.log("Task Notification Reservation Cancellation Safe Summary: " + JSON.stringify(buildTaskNotificationLogSafeSummary_(failed)));
+      return failed;
+    }
+
+    const rows = loaded.rows || [];
+    const rowCountBefore = rows.length;
+
+    const index = buildTaskNotificationLogLookupIndex_(rows);
+    if (!index.ok) {
+      const failed = buildTaskNotificationLogResult_(false, "INVALID", index.errorCode || "LOG_SCHEMA_INVALID", {
+        mode: mode,
+        status: "INVALID",
+        updated: false
+      });
+      Logger.log("Task Notification Reservation Cancellation Safe Summary: " + JSON.stringify(buildTaskNotificationLogSafeSummary_(failed)));
+      return failed;
+    }
+
+    const targetRow = index.byDedupeKey[expectedDedupeKey] || null;
+    if (!targetRow) {
+      const notFound = buildTaskNotificationLogResult_(false, "INVALID", "LOG_TARGET_NOT_FOUND", {
+        mode: mode,
+        status: "INVALID",
+        updated: false
+      });
+      Logger.log("Task Notification Reservation Cancellation Safe Summary: " + JSON.stringify(buildTaskNotificationLogSafeSummary_(notFound)));
+      return notFound;
+    }
+
+    const currentStatus = String(targetRow.status || "").trim();
+    if (currentStatus === "CANCELLED_RESERVATION") {
+      const alreadyCancelled = buildTaskNotificationLogResult_(true, "BLOCKED", "", {
+        mode: mode,
+        status: "BLOCKED",
+        updated: false,
+        reason: "ALREADY_CANCELLED",
+        rowCountBefore: rowCountBefore,
+        rowCountAfter: rowCountBefore,
+        dedupeKeyShort: expectedDedupeKey.substring(0, 12),
+        taskDayGuardKeyShort: taskDayGuardKey.substring(0, 12)
+      });
+      Logger.log("Task Notification Reservation Cancellation Safe Summary: " + JSON.stringify(buildTaskNotificationLogSafeSummary_(alreadyCancelled)));
+      return alreadyCancelled;
+    }
+
+    if (currentStatus !== "RESERVED") {
+      const statusConflict = buildTaskNotificationLogResult_(false, "INVALID", "LOG_STATUS_CONFLICT", {
+        mode: mode,
+        status: "INVALID",
+        updated: false
+      });
+      Logger.log("Task Notification Reservation Cancellation Safe Summary: " + JSON.stringify(buildTaskNotificationLogSafeSummary_(statusConflict)));
+      return statusConflict;
+    }
+
+    if (!isTaskNotificationLogTransitionAllowed_("RESERVED", "CANCELLED_RESERVATION")) {
+      const transitionBlocked = buildTaskNotificationLogResult_(false, "INVALID", "LOG_STATUS_CONFLICT", {
+        mode: mode,
+        status: "INVALID",
+        updated: false
+      });
+      Logger.log("Task Notification Reservation Cancellation Safe Summary: " + JSON.stringify(buildTaskNotificationLogSafeSummary_(transitionBlocked)));
+      return transitionBlocked;
+    }
+
+    let targetRowIndex = -1;
+    for (let r = 0; r < rows.length; r++) {
+      if (rows[r].dedupeKey === expectedDedupeKey) {
+        targetRowIndex = r + 2;
+        break;
+      }
+    }
+    if (targetRowIndex < 2) {
+      const notFoundIndex = buildTaskNotificationLogResult_(false, "INVALID", "LOG_TARGET_NOT_FOUND", {
+        mode: mode,
+        status: "INVALID",
+        updated: false
+      });
+      Logger.log("Task Notification Reservation Cancellation Safe Summary: " + JSON.stringify(buildTaskNotificationLogSafeSummary_(notFoundIndex)));
+      return notFoundIndex;
+    }
+
+    const nowIso = new Date().toISOString();
+    const updatedRowObj = Object.assign({}, targetRow, {
+      status: "CANCELLED_RESERVATION",
+      updatedAt: nowIso,
+      resolution: "CANCELLED",
+      resolvedAt: nowIso,
+      resolvedBy: operator
+    });
+
+    const rowValidation = validateTaskNotificationLogRow_(updatedRowObj);
+    if (!rowValidation.ok) {
+      const invalidUpdate = buildTaskNotificationLogResult_(false, "INVALID", rowValidation.errorCode || "LOG_ROW_INVALID", {
+        mode: mode,
+        status: "INVALID",
+        updated: false
+      });
+      Logger.log("Task Notification Reservation Cancellation Safe Summary: " + JSON.stringify(buildTaskNotificationLogSafeSummary_(invalidUpdate)));
+      return invalidUpdate;
+    }
+
+    const updatedRowArray = TASK_NOTIFICATION_LOG_HEADERS_.map(function(h) {
+      return updatedRowObj[h] === undefined ? "" : updatedRowObj[h];
+    });
+
+    sheet.getRange(targetRowIndex, 1, 1, TASK_NOTIFICATION_LOG_HEADERS_.length).setValues([updatedRowArray]);
+    SpreadsheetApp.flush();
+
+    const reLoaded = readTaskNotificationLogRows_(sheet);
+    if (!reLoaded.ok) {
+      const conflict = buildTaskNotificationLogResult_(false, "INVALID", "LOG_UPDATE_CONFLICT", {
+        mode: mode,
+        status: "INVALID",
+        updated: false
+      });
+      Logger.log("Task Notification Reservation Cancellation Safe Summary: " + JSON.stringify(buildTaskNotificationLogSafeSummary_(conflict)));
+      return conflict;
+    }
+
+    const reRows = reLoaded.rows || [];
+    const rowCountAfter = reRows.length;
+    if (rowCountAfter !== rowCountBefore) {
+      const conflictCount = buildTaskNotificationLogResult_(false, "INVALID", "LOG_UPDATE_CONFLICT", {
+        mode: mode,
+        status: "INVALID",
+        updated: false
+      });
+      Logger.log("Task Notification Reservation Cancellation Safe Summary: " + JSON.stringify(buildTaskNotificationLogSafeSummary_(conflictCount)));
+      return conflictCount;
+    }
+
+    const reIndex = buildTaskNotificationLogLookupIndex_(reRows);
+    if (!reIndex.ok) {
+      const conflictIndex = buildTaskNotificationLogResult_(false, "INVALID", "LOG_UPDATE_CONFLICT", {
+        mode: mode,
+        status: "INVALID",
+        updated: false
+      });
+      Logger.log("Task Notification Reservation Cancellation Safe Summary: " + JSON.stringify(buildTaskNotificationLogSafeSummary_(conflictIndex)));
+      return conflictIndex;
+    }
+
+    const verifyRow = reIndex.byDedupeKey[expectedDedupeKey];
+    if (!verifyRow ||
+        verifyRow.id !== targetRow.id ||
+        verifyRow.dedupeKey !== expectedDedupeKey ||
+        verifyRow.status !== "CANCELLED_RESERVATION") {
+      const conflictVerify = buildTaskNotificationLogResult_(false, "INVALID", "LOG_UPDATE_CONFLICT", {
+        mode: mode,
+        status: "INVALID",
+        updated: false
+      });
+      Logger.log("Task Notification Reservation Cancellation Safe Summary: " + JSON.stringify(buildTaskNotificationLogSafeSummary_(conflictVerify)));
+      return conflictVerify;
+    }
+
+    const successResult = buildTaskNotificationLogResult_(true, "CANCELLED_RESERVATION", "", {
+      mode: mode,
+      updated: true,
+      rowCountBefore: rowCountBefore,
+      rowCountAfter: rowCountAfter,
+      dedupeKeyShort: expectedDedupeKey.substring(0, 12),
+      taskDayGuardKeyShort: taskDayGuardKey.substring(0, 12)
+    });
+    Logger.log("Task Notification Reservation Cancellation Safe Summary: " + JSON.stringify(buildTaskNotificationLogSafeSummary_(successResult)));
+    return successResult;
+  } finally {
+    try {
+      lock.releaseLock();
+    } catch (e) {
+      // Lock release failure ignored
+    }
+  }
+}
+
+function triggerTaskNotificationReservationCancellationTest() {
+  try {
+    const todayStr = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd");
+    const candidate = {
+      taskId: "CONTROLLED_RESERVATION_TEST",
+      recipientUsername: "controlled-test",
+      bucket: "DUE_TODAY",
+      bucketDate: todayStr,
+      dueDateKey: todayStr,
+      source: "SETUP_TEST",
+      noteSafe: "CONTROLLED_TEST"
+    };
+    return cancelTaskNotificationReservation_(candidate, {
+      mode: "controlled-cancellation-test",
+      operator: "controlled-test"
+    });
+  } catch (e) {
+    const failed = buildTaskNotificationLogResult_(false, "INVALID", "LOG_SCHEMA_INVALID", {
+      mode: "controlled-cancellation-test",
+      status: "INVALID",
+      updated: false
+    });
+    Logger.log("Task Notification Reservation Cancellation Safe Summary: " + JSON.stringify(buildTaskNotificationLogSafeSummary_(failed)));
     return failed;
   }
 }
