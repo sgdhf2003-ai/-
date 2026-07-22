@@ -4519,8 +4519,11 @@ function logTaskDueReminderE2EDryRunSummary_(summary) {
   return summary;
 }
 
-function sendSignedTaskDueReminderSecureTunnelRequest_(payload) {
-  const mode = "task-reminder-e2e-signed-dry-run";
+function sendSignedTaskDueReminderSecureTunnelRequest_(payload, options) {
+  const opts = options || {};
+  const dryRunBool = opts.dryRun === false ? false : true;
+  const mode = dryRunBool ? "task-reminder-e2e-signed-dry-run" : "task-reminder-e2e-signed-live";
+
   if (!payload || payload.action !== "TASK_DUE_REMINDER") {
     return logTaskDueReminderE2EDryRunSummary_({
       ok: false,
@@ -4571,13 +4574,24 @@ function sendSignedTaskDueReminderSecureTunnelRequest_(payload) {
 
   const timestamp = new Date().getTime().toString();
   const requestId = "req-" + timestamp + "-" + Math.floor(Math.random() * 1000000);
-  const canonical = "jy-line-push-v1|TASK_DUE_REMINDER|" + requestId + "|" + timestamp + "|" + payload.recipientUsername;
+
+  const canonical = "jy-line-push-v2|TASK_DUE_REMINDER|" + requestId + "|" + timestamp + "|" +
+    String(payload.recipientUsername || "").trim().toLowerCase() + "|" +
+    String(payload.taskIdSafe || "").trim() + "|" +
+    String(payload.taskTitleSafe || "").trim() + "|" +
+    String(payload.dueDateKey || "").trim() + "|" +
+    String(payload.bucket || "").trim().toUpperCase() + "|" +
+    String(payload.reservationIdShort || "").trim().toLowerCase() + "|" +
+    (dryRunBool ? "true" : "false");
+
   const signature = computeHmacSha256Hex_(canonical, sharedSecret);
 
   const fullPayload = Object.assign({}, payload, {
+    internalRequest: "jy-line-push-v2",
     requestId: requestId,
     timestamp: timestamp,
-    signature: signature
+    signature: signature,
+    dryRun: dryRunBool
   });
 
   let response = null;
@@ -4601,6 +4615,7 @@ function sendSignedTaskDueReminderSecureTunnelRequest_(payload) {
       remotePayloadValid: false,
       lineCalled: false,
       notificationSent: false,
+      deliveryOutcome: "UNKNOWN_OUTCOME",
       errorCode: "UNKNOWN_OUTCOME"
     });
   }
@@ -4616,6 +4631,7 @@ function sendSignedTaskDueReminderSecureTunnelRequest_(payload) {
       remotePayloadValid: false,
       lineCalled: false,
       notificationSent: false,
+      deliveryOutcome: "CONFIRMED_NOT_SENT",
       errorCode: "REMOTE_HTTP_ERROR"
     });
   }
@@ -4634,6 +4650,7 @@ function sendSignedTaskDueReminderSecureTunnelRequest_(payload) {
       remotePayloadValid: false,
       lineCalled: false,
       notificationSent: false,
+      deliveryOutcome: "UNKNOWN_OUTCOME",
       errorCode: "INVALID_REMOTE_JSON"
     });
   }
@@ -4649,50 +4666,95 @@ function sendSignedTaskDueReminderSecureTunnelRequest_(payload) {
       remotePayloadValid: false,
       lineCalled: false,
       notificationSent: false,
+      deliveryOutcome: "UNKNOWN_OUTCOME",
       errorCode: "INVALID_REMOTE_DRY_RUN_RESPONSE"
     });
   }
 
-  if (remoteRes.ok !== true ||
-      remoteRes.mode !== "task-reminder-dry-run" ||
-      remoteRes.action !== "TASK_DUE_REMINDER" ||
-      remoteRes.payloadValid !== true ||
-      remoteRes.recipientCount !== 1 ||
-      remoteRes.messageType !== "text" ||
-      remoteRes.templateId !== "TASK_DUE_REMINDER_V1" ||
-      remoteRes.bucket !== payload.bucket ||
-      remoteRes.lineCalled !== false ||
-      (remoteRes.errorCode || "") !== "") {
+  if (dryRunBool) {
+    if (remoteRes.ok !== true ||
+        remoteRes.mode !== "task-reminder-dry-run" ||
+        remoteRes.action !== "TASK_DUE_REMINDER" ||
+        remoteRes.payloadValid !== true ||
+        remoteRes.recipientCount !== 1 ||
+        remoteRes.messageType !== "text" ||
+        remoteRes.templateId !== "TASK_DUE_REMINDER_V1" ||
+        remoteRes.bucket !== payload.bucket ||
+        remoteRes.lineCalled !== false ||
+        (remoteRes.errorCode || "") !== "") {
+      return logTaskDueReminderE2EDryRunSummary_({
+        ok: false,
+        mode: mode,
+        action: "TASK_DUE_REMINDER",
+        signedRequest: true,
+        transportCalled: true,
+        remoteAuthenticated: remoteRes.errorCode !== "INVALID_SIGNATURE" && remoteRes.errorCode !== "EXPIRED_REQUEST",
+        remotePayloadValid: remoteRes.payloadValid === true,
+        lineCalled: remoteRes.lineCalled === true,
+        notificationSent: false,
+        deliveryOutcome: remoteRes.lineCalled === true ? "UNKNOWN_OUTCOME" : "CONFIRMED_NOT_SENT",
+        errorCode: remoteRes.errorCode || "INVALID_REMOTE_DRY_RUN_RESPONSE"
+      });
+    }
+
     return logTaskDueReminderE2EDryRunSummary_({
-      ok: false,
+      ok: true,
       mode: mode,
       action: "TASK_DUE_REMINDER",
       signedRequest: true,
       transportCalled: true,
-      remoteAuthenticated: remoteRes.errorCode !== "INVALID_SIGNATURE" && remoteRes.errorCode !== "EXPIRED_REQUEST",
-      remotePayloadValid: remoteRes.payloadValid === true,
-      lineCalled: remoteRes.lineCalled === true,
+      remoteAuthenticated: true,
+      remotePayloadValid: true,
+      recipientCount: 1,
+      templateId: "TASK_DUE_REMINDER_V1",
+      messageType: "text",
+      bucket: payload.bucket,
+      lineCalled: false,
       notificationSent: false,
-      errorCode: remoteRes.errorCode || "INVALID_REMOTE_DRY_RUN_RESPONSE"
+      deliveryOutcome: "CONFIRMED_NOT_SENT",
+      errorCode: ""
+    });
+  } else {
+    if (remoteRes.ok !== true ||
+        remoteRes.mode !== "task-reminder-live" ||
+        remoteRes.action !== "TASK_DUE_REMINDER" ||
+        remoteRes.recipientCount !== 1 ||
+        remoteRes.lineCalled !== true ||
+        remoteRes.notificationSent !== true ||
+        remoteRes.deliveryOutcome !== "CONFIRMED_SENT") {
+      return logTaskDueReminderE2EDryRunSummary_({
+        ok: false,
+        mode: mode,
+        action: "TASK_DUE_REMINDER",
+        signedRequest: true,
+        transportCalled: true,
+        remoteAuthenticated: remoteRes.errorCode !== "INVALID_SIGNATURE" && remoteRes.errorCode !== "EXPIRED_REQUEST",
+        remotePayloadValid: remoteRes.payloadValid !== false,
+        lineCalled: remoteRes.lineCalled === true,
+        notificationSent: remoteRes.notificationSent === true,
+        deliveryOutcome: remoteRes.lineCalled === true ? "UNKNOWN_OUTCOME" : "CONFIRMED_NOT_SENT",
+        errorCode: remoteRes.errorCode || "LIVE_PUSH_FAILED"
+      });
+    }
+
+    return logTaskDueReminderE2EDryRunSummary_({
+      ok: true,
+      mode: mode,
+      action: "TASK_DUE_REMINDER",
+      signedRequest: true,
+      transportCalled: true,
+      remoteAuthenticated: true,
+      remotePayloadValid: true,
+      recipientCount: 1,
+      templateId: "TASK_DUE_REMINDER_V1",
+      messageType: "text",
+      bucket: payload.bucket,
+      lineCalled: true,
+      notificationSent: true,
+      deliveryOutcome: "CONFIRMED_SENT",
+      errorCode: ""
     });
   }
-
-  return logTaskDueReminderE2EDryRunSummary_({
-    ok: true,
-    mode: mode,
-    action: "TASK_DUE_REMINDER",
-    signedRequest: true,
-    transportCalled: true,
-    remoteAuthenticated: true,
-    remotePayloadValid: true,
-    recipientCount: 1,
-    templateId: "TASK_DUE_REMINDER_V1",
-    messageType: "text",
-    bucket: payload.bucket,
-    lineCalled: false,
-    notificationSent: false,
-    errorCode: ""
-  });
 }
 
 function triggerTaskDueReminderSecureTunnelEndToEndDryRun() {
@@ -4722,7 +4784,7 @@ function triggerTaskDueReminderSecureTunnelEndToEndDryRun() {
         errorCode: "INVALID_PAYLOAD"
       });
     }
-    return sendSignedTaskDueReminderSecureTunnelRequest_(payload);
+    return sendSignedTaskDueReminderSecureTunnelRequest_(payload, { dryRun: true });
   } catch (e) {
     return logTaskDueReminderE2EDryRunSummary_({
       ok: false,
@@ -4735,6 +4797,208 @@ function triggerTaskDueReminderSecureTunnelEndToEndDryRun() {
       lineCalled: false,
       notificationSent: false,
       errorCode: "INVALID_PAYLOAD"
+    });
+  }
+}
+
+function buildControlledTaskReminderLiveCandidate_() {
+  const todayStr = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd");
+  return {
+    taskId: "CONTROLLED_TASK_REMINDER_LIVE_TEST",
+    recipientUsername: "controlled-test",
+    bucket: "DUE_TODAY",
+    bucketDate: todayStr,
+    dueDateKey: todayStr,
+    source: "CONTROLLED_LIVE_TEST",
+    noteSafe: "CONTROLLED_LIVE_TEST"
+  };
+}
+
+function triggerControlledTaskDueReminderLiveTest() {
+  const mode = "controlled-live-orchestration";
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const liveEnabled = (props.getProperty("LINE_PUSH_ENABLED") || "").trim().toLowerCase();
+    if (liveEnabled !== "enabled") {
+      return logTaskDueReminderE2EDryRunSummary_({
+        ok: false,
+        mode: mode,
+        action: "TASK_DUE_REMINDER",
+        signedRequest: false,
+        transportCalled: false,
+        remoteAuthenticated: false,
+        remotePayloadValid: false,
+        lineCalled: false,
+        notificationSent: false,
+        errorCode: "LIVE_PUSH_DISABLED"
+      });
+    }
+
+    const testRecipientUsername = (props.getProperty("LINE_PUSH_TEST_RECIPIENT_USERNAME") || "").trim().toLowerCase();
+    if (!testRecipientUsername || !/^[a-z0-9_.-]{1,64}$/.test(testRecipientUsername)) {
+      return logTaskDueReminderE2EDryRunSummary_({
+        ok: false,
+        mode: mode,
+        action: "TASK_DUE_REMINDER",
+        signedRequest: false,
+        transportCalled: false,
+        remoteAuthenticated: false,
+        remotePayloadValid: false,
+        lineCalled: false,
+        notificationSent: false,
+        errorCode: "RECIPIENT_NOT_ALLOWED"
+      });
+    }
+
+    const todayStr = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd");
+    const candidate = {
+      taskId: "CONTROLLED_TASK_REMINDER_LIVE_TEST",
+      recipientUsername: testRecipientUsername,
+      bucket: "DUE_TODAY",
+      bucketDate: todayStr,
+      dueDateKey: todayStr,
+      source: "CONTROLLED_LIVE_TEST",
+      noteSafe: "CONTROLLED_LIVE_TEST"
+    };
+
+    // Phase 1: Reservation under ScriptLock
+    let reservationRes = null;
+    const lock1 = LockService.getScriptLock();
+    try {
+      lock1.waitLock(10000);
+      reservationRes = reserveTaskNotificationLogEntry_(candidate, {
+        mode: mode,
+        operator: "controlled-live-test"
+      });
+    } finally {
+      try { lock1.releaseLock(); } catch (e) {}
+    }
+
+    if (!reservationRes || !reservationRes.ok || !reservationRes.created) {
+      return logTaskDueReminderE2EDryRunSummary_({
+        ok: false,
+        mode: mode,
+        action: "TASK_DUE_REMINDER",
+        status: reservationRes ? reservationRes.status : "INVALID",
+        reservationCreated: false,
+        duplicateBlocked: reservationRes && reservationRes.duplicateBlocked === true,
+        signedRequest: false,
+        transportCalled: false,
+        remoteAuthenticated: false,
+        remotePayloadValid: false,
+        lineCalled: false,
+        notificationSent: false,
+        errorCode: reservationRes && reservationRes.errorCode ? reservationRes.errorCode : "RESERVATION_FAILED"
+      });
+    }
+
+    const reservedRow = reservationRes.row;
+    const dedupeKey = reservationRes.dedupeKey;
+    const reservationIdShort = reservedRow.reservationIdShort || reservedRow.id.substring(0, 12);
+
+    // Phase 2: Transport (OUTSIDE ScriptLock)
+    const payloadInput = {
+      recipientUsername: testRecipientUsername,
+      taskIdSafe: "CONTROLLED_TASK_REMINDER_LIVE_TEST",
+      taskTitleSafe: "受控任務提醒正式測試",
+      dueDateKey: todayStr,
+      bucket: "DUE_TODAY",
+      reservationIdShort: reservationIdShort,
+      dryRun: false
+    };
+
+    const payload = buildTaskDueReminderSecurePayload_(payloadInput);
+    if (!payload) {
+      return logTaskDueReminderE2EDryRunSummary_({
+        ok: false,
+        mode: mode,
+        action: "TASK_DUE_REMINDER",
+        reservationCreated: true,
+        signedRequest: false,
+        transportCalled: false,
+        remoteAuthenticated: false,
+        remotePayloadValid: false,
+        lineCalled: false,
+        notificationSent: false,
+        errorCode: "INVALID_PAYLOAD"
+      });
+    }
+
+    const transportRes = sendSignedTaskDueReminderSecureTunnelRequest_(payload, { dryRun: false });
+
+    // Phase 3: Post-transport State Update under ScriptLock
+    let finalStatus = "CONFIRMED_NOT_SENT";
+    if (transportRes.ok === true && transportRes.deliveryOutcome === "CONFIRMED_SENT") {
+      finalStatus = "SENT";
+    } else if (transportRes.deliveryOutcome === "UNKNOWN_OUTCOME" || transportRes.errorCode === "UNKNOWN_OUTCOME") {
+      finalStatus = "UNKNOWN_OUTCOME";
+    }
+
+    const lock2 = LockService.getScriptLock();
+    try {
+      lock2.waitLock(10000);
+      const sheet = openTaskNotificationLogSpreadsheet_();
+      const readRes = readTaskNotificationLogRows_(sheet);
+      if (readRes.ok) {
+        const rows = readRes.rows || [];
+        const indexRes = buildTaskNotificationLogLookupIndex_(rows);
+        if (indexRes.ok && indexRes.byDedupeKey[dedupeKey]) {
+          const targetRow = indexRes.byDedupeKey[dedupeKey];
+          if (targetRow.status === "RESERVED") {
+            const nowIso = new Date().toISOString();
+            const updatedRowObj = Object.assign({}, targetRow, {
+              status: finalStatus,
+              sentAt: finalStatus === "SENT" ? nowIso : targetRow.sentAt,
+              updatedAt: nowIso,
+              attemptCount: 1,
+              errorCode: transportRes.errorCode || "",
+              requestIdShort: (transportRes.requestId || "").substring(0, 12)
+            });
+            const updatedRowArray = TASK_NOTIFICATION_LOG_HEADERS_.map(function(h) {
+              return updatedRowObj[h] === undefined ? "" : updatedRowObj[h];
+            });
+            sheet.getRange(targetRow.id, 1, 1, TASK_NOTIFICATION_LOG_HEADERS_.length).setValues([updatedRowArray]);
+            SpreadsheetApp.flush();
+          }
+        }
+      }
+    } finally {
+      try { lock2.releaseLock(); } catch (e) {}
+    }
+
+    return logTaskDueReminderE2EDryRunSummary_({
+      ok: transportRes.ok === true,
+      mode: mode,
+      action: "TASK_DUE_REMINDER",
+      status: finalStatus,
+      reservationCreated: true,
+      signedRequest: transportRes.signedRequest === true,
+      transportCalled: transportRes.transportCalled === true,
+      remoteAuthenticated: transportRes.remoteAuthenticated === true,
+      remotePayloadValid: transportRes.remotePayloadValid === true,
+      recipientCount: transportRes.recipientCount || 0,
+      templateId: transportRes.templateId || "TASK_DUE_REMINDER_V1",
+      messageType: transportRes.messageType || "text",
+      bucket: candidate.bucket,
+      lineCalled: transportRes.lineCalled === true,
+      notificationSent: transportRes.notificationSent === true,
+      deliveryOutcome: transportRes.deliveryOutcome || finalStatus,
+      errorCode: transportRes.errorCode || ""
+    });
+
+  } catch (e) {
+    return logTaskDueReminderE2EDryRunSummary_({
+      ok: false,
+      mode: mode,
+      action: "TASK_DUE_REMINDER",
+      reservationCreated: false,
+      signedRequest: false,
+      transportCalled: false,
+      remoteAuthenticated: false,
+      remotePayloadValid: false,
+      lineCalled: false,
+      notificationSent: false,
+      errorCode: "LIVE_ORCHESTRATION_FAILED"
     });
   }
 }
