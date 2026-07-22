@@ -4493,10 +4493,36 @@ function triggerTaskDueReminderSecureTunnelDryRun() {
   }
 }
 
+function logTaskDueReminderE2EDryRunSummary_(summary) {
+  const s = summary || {};
+  const safe = {
+    ok: s.ok === true,
+    mode: String(s.mode || "task-reminder-e2e-signed-dry-run"),
+    action: String(s.action || "TASK_DUE_REMINDER"),
+    signedRequest: s.signedRequest === true,
+    transportCalled: s.transportCalled === true,
+    remoteAuthenticated: s.remoteAuthenticated === true,
+    remotePayloadValid: s.remotePayloadValid === true,
+    recipientCount: typeof s.recipientCount === "number" ? s.recipientCount : 0,
+    templateId: String(s.templateId || ""),
+    messageType: String(s.messageType || ""),
+    bucket: String(s.bucket || ""),
+    lineCalled: false,
+    notificationSent: false,
+    errorCode: String(s.errorCode || "")
+  };
+
+  try {
+    Logger.log("Task Reminder E2E Signed Dry Run Safe Summary: " + JSON.stringify(safe));
+  } catch (e) {}
+
+  return summary;
+}
+
 function sendSignedTaskDueReminderSecureTunnelRequest_(payload) {
   const mode = "task-reminder-e2e-signed-dry-run";
   if (!payload || payload.action !== "TASK_DUE_REMINDER") {
-    return {
+    return logTaskDueReminderE2EDryRunSummary_({
       ok: false,
       mode: mode,
       action: "TASK_DUE_REMINDER",
@@ -4507,13 +4533,13 @@ function sendSignedTaskDueReminderSecureTunnelRequest_(payload) {
       lineCalled: false,
       notificationSent: false,
       errorCode: "INVALID_PAYLOAD"
-    };
+    });
   }
 
   const props = PropertiesService.getScriptProperties();
   const endpoint = (props.getProperty("LINE_BOT_INTERNAL_ENDPOINT") || "").trim();
   if (!endpoint) {
-    return {
+    return logTaskDueReminderE2EDryRunSummary_({
       ok: false,
       mode: mode,
       action: "TASK_DUE_REMINDER",
@@ -4524,12 +4550,12 @@ function sendSignedTaskDueReminderSecureTunnelRequest_(payload) {
       lineCalled: false,
       notificationSent: false,
       errorCode: "SECURE_ENDPOINT_NOT_CONFIGURED"
-    };
+    });
   }
 
   const sharedSecret = (props.getProperty("LINE_PUSH_SHARED_SECRET") || "").trim();
   if (!sharedSecret) {
-    return {
+    return logTaskDueReminderE2EDryRunSummary_({
       ok: false,
       mode: mode,
       action: "TASK_DUE_REMINDER",
@@ -4540,7 +4566,7 @@ function sendSignedTaskDueReminderSecureTunnelRequest_(payload) {
       lineCalled: false,
       notificationSent: false,
       errorCode: "SHARED_SECRET_NOT_CONFIGURED"
-    };
+    });
   }
 
   const timestamp = new Date().getTime().toString();
@@ -4565,7 +4591,7 @@ function sendSignedTaskDueReminderSecureTunnelRequest_(payload) {
     };
     response = UrlFetchApp.fetch(endpoint, fetchOptions);
   } catch (e) {
-    return {
+    return logTaskDueReminderE2EDryRunSummary_({
       ok: false,
       mode: mode,
       action: "TASK_DUE_REMINDER",
@@ -4576,11 +4602,11 @@ function sendSignedTaskDueReminderSecureTunnelRequest_(payload) {
       lineCalled: false,
       notificationSent: false,
       errorCode: "UNKNOWN_OUTCOME"
-    };
+    });
   }
 
   if (!response || response.getResponseCode() !== 200) {
-    return {
+    return logTaskDueReminderE2EDryRunSummary_({
       ok: false,
       mode: mode,
       action: "TASK_DUE_REMINDER",
@@ -4591,14 +4617,14 @@ function sendSignedTaskDueReminderSecureTunnelRequest_(payload) {
       lineCalled: false,
       notificationSent: false,
       errorCode: "REMOTE_HTTP_ERROR"
-    };
+    });
   }
 
   let remoteRes = null;
   try {
     remoteRes = JSON.parse(response.getContentText());
   } catch (e) {
-    return {
+    return logTaskDueReminderE2EDryRunSummary_({
       ok: false,
       mode: mode,
       action: "TASK_DUE_REMINDER",
@@ -4609,11 +4635,11 @@ function sendSignedTaskDueReminderSecureTunnelRequest_(payload) {
       lineCalled: false,
       notificationSent: false,
       errorCode: "INVALID_REMOTE_JSON"
-    };
+    });
   }
 
   if (!remoteRes || typeof remoteRes !== "object" || Array.isArray(remoteRes)) {
-    return {
+    return logTaskDueReminderE2EDryRunSummary_({
       ok: false,
       mode: mode,
       action: "TASK_DUE_REMINDER",
@@ -4624,7 +4650,7 @@ function sendSignedTaskDueReminderSecureTunnelRequest_(payload) {
       lineCalled: false,
       notificationSent: false,
       errorCode: "INVALID_REMOTE_DRY_RUN_RESPONSE"
-    };
+    });
   }
 
   if (remoteRes.ok !== true ||
@@ -4637,7 +4663,7 @@ function sendSignedTaskDueReminderSecureTunnelRequest_(payload) {
       remoteRes.bucket !== payload.bucket ||
       remoteRes.lineCalled !== false ||
       (remoteRes.errorCode || "") !== "") {
-    return {
+    return logTaskDueReminderE2EDryRunSummary_({
       ok: false,
       mode: mode,
       action: "TASK_DUE_REMINDER",
@@ -4648,10 +4674,10 @@ function sendSignedTaskDueReminderSecureTunnelRequest_(payload) {
       lineCalled: remoteRes.lineCalled === true,
       notificationSent: false,
       errorCode: remoteRes.errorCode || "INVALID_REMOTE_DRY_RUN_RESPONSE"
-    };
+    });
   }
 
-  const result = {
+  return logTaskDueReminderE2EDryRunSummary_({
     ok: true,
     mode: mode,
     action: "TASK_DUE_REMINDER",
@@ -4666,9 +4692,7 @@ function sendSignedTaskDueReminderSecureTunnelRequest_(payload) {
     lineCalled: false,
     notificationSent: false,
     errorCode: ""
-  };
-  Logger.log("Task Reminder E2E Signed Dry Run Summary: " + JSON.stringify(result));
-  return result;
+  });
 }
 
 function triggerTaskDueReminderSecureTunnelEndToEndDryRun() {
@@ -4685,7 +4709,7 @@ function triggerTaskDueReminderSecureTunnelEndToEndDryRun() {
     };
     const payload = buildTaskDueReminderSecurePayload_(input);
     if (!payload) {
-      const failed = {
+      return logTaskDueReminderE2EDryRunSummary_({
         ok: false,
         mode: "task-reminder-e2e-signed-dry-run",
         action: "TASK_DUE_REMINDER",
@@ -4696,13 +4720,11 @@ function triggerTaskDueReminderSecureTunnelEndToEndDryRun() {
         lineCalled: false,
         notificationSent: false,
         errorCode: "INVALID_PAYLOAD"
-      };
-      Logger.log("Task Reminder E2E Signed Dry Run Summary: " + JSON.stringify(failed));
-      return failed;
+      });
     }
     return sendSignedTaskDueReminderSecureTunnelRequest_(payload);
   } catch (e) {
-    const failed = {
+    return logTaskDueReminderE2EDryRunSummary_({
       ok: false,
       mode: "task-reminder-e2e-signed-dry-run",
       action: "TASK_DUE_REMINDER",
@@ -4713,9 +4735,7 @@ function triggerTaskDueReminderSecureTunnelEndToEndDryRun() {
       lineCalled: false,
       notificationSent: false,
       errorCode: "INVALID_PAYLOAD"
-    };
-    Logger.log("Task Reminder E2E Signed Dry Run Summary: " + JSON.stringify(failed));
-    return failed;
+    });
   }
 }
 
