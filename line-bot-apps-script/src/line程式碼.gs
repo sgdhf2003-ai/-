@@ -3975,6 +3975,7 @@ function validateTaskDueReminderPayload_(postData) {
     "timestamp": true,
     "signature": true,
     "recipientUsername": true,
+    "recipientLineId": true,
     "taskIdSafe": true,
     "taskTitleSafe": true,
     "dueDateKey": true,
@@ -3999,6 +4000,11 @@ function validateTaskDueReminderPayload_(postData) {
   var recipientUsername = String(postData.recipientUsername || "").trim().toLowerCase();
   if (!recipientUsername || !/^[a-z0-9_.-]{1,64}$/.test(recipientUsername) || /^u[a-f0-9]{32}$/i.test(recipientUsername)) {
     return { ok: false, errorCode: "INVALID_RECIPIENT" };
+  }
+
+  var recipientLineId = String(postData.recipientLineId || "").trim();
+  if (!recipientLineId || !/^U[a-f0-9]{32}$/i.test(recipientLineId)) {
+    return { ok: false, errorCode: "INVALID_RECIPIENT_ID" };
   }
 
   var taskIdSafe = String(postData.taskIdSafe || "").trim();
@@ -4036,6 +4042,7 @@ function validateTaskDueReminderPayload_(postData) {
     value: {
       action: "TASK_DUE_REMINDER",
       recipientUsername: recipientUsername,
+      recipientLineId: recipientLineId,
       taskIdSafe: taskIdSafe,
       taskTitleSafe: rawTitle,
       dueDateKey: dueDateKey,
@@ -4118,6 +4125,7 @@ function handleTaskDueReminderPush_(postData) {
     var dryRunBool = postData.dryRun === true;
     var canonical = "jy-line-push-v2|TASK_DUE_REMINDER|" + postData.requestId + "|" + postData.timestamp + "|" +
       String(postData.recipientUsername || "").trim().toLowerCase() + "|" +
+      String(postData.recipientLineId || "").trim() + "|" +
       String(postData.taskIdSafe || "").trim() + "|" +
       String(postData.taskTitleSafe || "").trim() + "|" +
       String(postData.dueDateKey || "").trim() + "|" +
@@ -4202,20 +4210,8 @@ function handleTaskDueReminderPush_(postData) {
       })).setMimeType(ContentService.MimeType.JSON);
     }
 
-    var allowedRecipientUsername = (props.getProperty("LINE_PUSH_TEST_RECIPIENT_USERNAME") || "").trim().toLowerCase();
-    if (allowedRecipientUsername && validPayload.recipientUsername !== allowedRecipientUsername) {
-      return ContentService.createTextOutput(JSON.stringify({
-        ok: false,
-        mode: "task-reminder-live",
-        action: "TASK_DUE_REMINDER",
-        payloadValid: true,
-        lineCalled: false,
-        errorCode: "RECIPIENT_NOT_ALLOWED"
-      })).setMimeType(ContentService.MimeType.JSON);
-    }
-
-    var allowedLineUserId = (props.getProperty("LINE_PUSH_TEST_ALLOWLIST") || "").trim();
-    if (!allowedLineUserId || !/^U[a-f0-9]{32}$/i.test(allowedLineUserId)) {
+    var allowlistRaw = (props.getProperty("LINE_PUSH_TEST_ALLOWLIST") || "").trim();
+    if (!allowlistRaw) {
       return ContentService.createTextOutput(JSON.stringify({
         ok: false,
         mode: "task-reminder-live",
@@ -4226,7 +4222,19 @@ function handleTaskDueReminderPush_(postData) {
       })).setMimeType(ContentService.MimeType.JSON);
     }
 
-    var pushRes = pushMessageToUser(allowedLineUserId, msgObj.text);
+    var allowlist = allowlistRaw.split(",").map(function(s) { return s.trim(); }).filter(function(s) { return s !== ""; });
+    if (allowlist.length === 0 || allowlist.indexOf(validPayload.recipientLineId) === -1) {
+      return ContentService.createTextOutput(JSON.stringify({
+        ok: false,
+        mode: "task-reminder-live",
+        action: "TASK_DUE_REMINDER",
+        payloadValid: true,
+        lineCalled: false,
+        errorCode: "RECIPIENT_NOT_ALLOWED"
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    var pushRes = pushMessageToUser(validPayload.recipientLineId, msgObj.text);
     if (!pushRes || pushRes.getResponseCode() !== 200) {
       return ContentService.createTextOutput(JSON.stringify({
         ok: false,

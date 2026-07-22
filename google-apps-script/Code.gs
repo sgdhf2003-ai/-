@@ -4413,6 +4413,7 @@ function sanitizeTaskTitleSafe_(rawTitle) {
 function buildTaskDueReminderSecurePayload_(input) {
   const item = input || {};
   const recipientUsername = String(item.recipientUsername || "").trim().toLowerCase();
+  const recipientLineId = String(item.recipientLineId || "").trim();
   const taskIdSafe = String(item.taskIdSafe || "").trim();
   const rawTitle = String(item.taskTitleSafe || "").trim();
   const dueDateKey = String(item.dueDateKey || "").trim();
@@ -4420,6 +4421,7 @@ function buildTaskDueReminderSecurePayload_(input) {
   const reservationIdShort = String(item.reservationIdShort || "").trim();
 
   if (!recipientUsername || !/^[a-z0-9_.-]{1,64}$/.test(recipientUsername)) return null;
+  if (!recipientLineId || !/^U[a-fA-F0-9]{32}$/i.test(recipientLineId)) return null;
   if (!taskIdSafe || !/^[A-Za-z0-9_-]{1,64}$/.test(taskIdSafe)) return null;
   const taskTitleSafe = sanitizeTaskTitleSafe_(rawTitle);
   if (!taskTitleSafe) return null;
@@ -4428,9 +4430,10 @@ function buildTaskDueReminderSecurePayload_(input) {
   if (!reservationIdShort || !/^[a-f0-9]{8,16}$/i.test(reservationIdShort)) return null;
 
   return {
-    internalRequest: "jy-line-push-v1",
+    internalRequest: "jy-line-push-v2",
     action: "TASK_DUE_REMINDER",
     recipientUsername: recipientUsername,
+    recipientLineId: recipientLineId,
     taskIdSafe: taskIdSafe,
     taskTitleSafe: taskTitleSafe,
     dueDateKey: dueDateKey,
@@ -4442,9 +4445,14 @@ function buildTaskDueReminderSecurePayload_(input) {
 
 function triggerTaskDueReminderSecureTunnelDryRun() {
   try {
+    const resolved = resolveControlledTaskReminderRecipient_();
+    const testUsername = resolved.ok ? resolved.recipientUsername : "controlled-test";
+    const testLineId = resolved.ok ? resolved.recipientLineId : "U1234567890abcdef1234567890abcdef";
+
     const todayStr = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd");
     const input = {
-      recipientUsername: "controlled-test",
+      recipientUsername: testUsername,
+      recipientLineId: testLineId,
       taskIdSafe: "CONTROLLED_TASK_REMINDER_TEST",
       taskTitleSafe: "受控任務到期提醒測試",
       dueDateKey: todayStr,
@@ -4577,6 +4585,7 @@ function sendSignedTaskDueReminderSecureTunnelRequest_(payload, options) {
 
   const canonical = "jy-line-push-v2|TASK_DUE_REMINDER|" + requestId + "|" + timestamp + "|" +
     String(payload.recipientUsername || "").trim().toLowerCase() + "|" +
+    String(payload.recipientLineId || "").trim() + "|" +
     String(payload.taskIdSafe || "").trim() + "|" +
     String(payload.taskTitleSafe || "").trim() + "|" +
     String(payload.dueDateKey || "").trim() + "|" +
@@ -4759,9 +4768,14 @@ function sendSignedTaskDueReminderSecureTunnelRequest_(payload, options) {
 
 function triggerTaskDueReminderSecureTunnelEndToEndDryRun() {
   try {
+    const resolvedRecipient = resolveControlledTaskReminderRecipient_();
+    const testUsername = resolvedRecipient.ok ? resolvedRecipient.recipientUsername : "controlled-test";
+    const testLineId = resolvedRecipient.ok ? resolvedRecipient.recipientLineId : "U1234567890abcdef1234567890abcdef";
+
     const todayStr = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd");
     const input = {
-      recipientUsername: "controlled-test",
+      recipientUsername: testUsername,
+      recipientLineId: testLineId,
       taskIdSafe: "CONTROLLED_TASK_REMINDER_E2E_TEST",
       taskTitleSafe: "受控任務提醒端到端測試",
       dueDateKey: todayStr,
@@ -4814,6 +4828,52 @@ function buildControlledTaskReminderLiveCandidate_() {
   };
 }
 
+function resolveControlledTaskReminderRecipient_() {
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const targetLineId = (props.getProperty("LINE_PUSH_TEST_RECIPIENT") || "").trim();
+    if (!targetLineId) {
+      return { ok: false, errorCode: "RECIPIENT_PROPERTY_MISSING" };
+    }
+
+    const lineUserIdRegex = /^U[a-fA-F0-9]{32}$/;
+    if (!lineUserIdRegex.test(targetLineId)) {
+      return { ok: false, errorCode: "RECIPIENT_ID_INVALID" };
+    }
+
+    const users = readObjects(SHEETS.users, HEADERS.users);
+    const matchedUsers = users.filter(function(u) {
+      return String(u.lineUserId || "").trim() === targetLineId;
+    });
+
+    if (matchedUsers.length === 0) {
+      return { ok: false, errorCode: "RECIPIENT_BINDING_NOT_FOUND" };
+    }
+    if (matchedUsers.length > 1) {
+      return { ok: false, errorCode: "RECIPIENT_BINDING_DUPLICATE" };
+    }
+
+    const matchedUser = matchedUsers[0];
+    if (String(matchedUser.status || "").trim() !== "啟用") {
+      return { ok: false, errorCode: "RECIPIENT_ACCOUNT_INACTIVE" };
+    }
+
+    const username = normalizeLoginValue(matchedUser.username);
+    if (!username || !/^[a-z0-9_.-]{1,64}$/.test(username)) {
+      return { ok: false, errorCode: "RECIPIENT_USERNAME_INVALID" };
+    }
+
+    return {
+      ok: true,
+      recipientUsername: username,
+      recipientLineId: targetLineId
+    };
+  } catch (e) {
+    Logger.log("LOOKUP FAILED EXCEPTION: " + (e && e.stack ? e.stack : e));
+    return { ok: false, errorCode: "RECIPIENT_BINDING_LOOKUP_FAILED" };
+  }
+}
+
 function triggerControlledTaskDueReminderLiveTest() {
   const mode = "controlled-live-orchestration";
   try {
@@ -4834,8 +4894,9 @@ function triggerControlledTaskDueReminderLiveTest() {
       });
     }
 
-    const testRecipientUsername = (props.getProperty("LINE_PUSH_TEST_RECIPIENT_USERNAME") || "").trim().toLowerCase();
-    if (!testRecipientUsername || !/^[a-z0-9_.-]{1,64}$/.test(testRecipientUsername)) {
+    const resolvedRecipient = resolveControlledTaskReminderRecipient_();
+    Logger.log("RESOLVED RECIPIENT: " + JSON.stringify(resolvedRecipient));
+    if (!resolvedRecipient.ok) {
       return logTaskDueReminderE2EDryRunSummary_({
         ok: false,
         mode: mode,
@@ -4846,14 +4907,19 @@ function triggerControlledTaskDueReminderLiveTest() {
         remotePayloadValid: false,
         lineCalled: false,
         notificationSent: false,
-        errorCode: "RECIPIENT_NOT_ALLOWED"
+        errorCode: resolvedRecipient.errorCode || "RECIPIENT_NOT_ALLOWED"
       });
     }
+
+    const testRecipientUsername = resolvedRecipient.recipientUsername;
+    const testRecipientLineId = resolvedRecipient.recipientLineId;
+    const maskedRecipient = testRecipientLineId.substring(0, 4) + "..." + testRecipientLineId.substring(testRecipientLineId.length - 4);
 
     const todayStr = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd");
     const candidate = {
       taskId: "CONTROLLED_TASK_REMINDER_LIVE_TEST",
       recipientUsername: testRecipientUsername,
+      recipientMasked: maskedRecipient,
       bucket: "DUE_TODAY",
       bucketDate: todayStr,
       dueDateKey: todayStr,
@@ -4899,6 +4965,7 @@ function triggerControlledTaskDueReminderLiveTest() {
     // Phase 2: Transport (OUTSIDE ScriptLock)
     const payloadInput = {
       recipientUsername: testRecipientUsername,
+      recipientLineId: testRecipientLineId,
       taskIdSafe: "CONTROLLED_TASK_REMINDER_LIVE_TEST",
       taskTitleSafe: "受控任務提醒正式測試",
       dueDateKey: todayStr,
