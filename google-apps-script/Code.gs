@@ -4587,7 +4587,7 @@ function sendSignedTaskDueReminderSecureTunnelRequest_(payload) {
       contentType: "application/json",
       payload: JSON.stringify(fullPayload),
       muteHttpExceptions: true,
-      followRedirects: false
+      followRedirects: true
     };
     response = UrlFetchApp.fetch(endpoint, fetchOptions);
   } catch (e) {
