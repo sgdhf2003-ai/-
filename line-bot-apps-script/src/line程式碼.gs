@@ -43,9 +43,14 @@ function doPost(e) {
     rawContent = e.postData.contents;
     var postData = JSON.parse(rawContent);
 
-    // 0. Intercept secure internal push reminders (Stage 20-F)
-    if (postData && postData.internalRequest === "jy-line-push-v1" && postData.action === "sendPushReminder") {
-      return handleInternalPushReminder_(postData);
+    // 0. Intercept secure internal push reminders (Stage 20-F & Stage 21-E)
+    if (postData && postData.internalRequest === "jy-line-push-v1") {
+      if (postData.action === "sendPushReminder") {
+        return handleInternalPushReminder_(postData);
+      }
+      if (postData.action === "TASK_DUE_REMINDER") {
+        return handleTaskDueReminderPush_(postData);
+      }
     }
 
     // 1. 處理外部 API 或非 Webhook 請求
@@ -3946,4 +3951,255 @@ function computeHmacSha256Hex_(value, key) {
   return signatureBytes.map(function(b) {
     return ('0' + (b & 0xFF).toString(16)).slice(-2);
   }).join('');
+}
+
+function isTaskDueValidDateKey_(value) {
+  var s = String(value || "").trim();
+  var match = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return false;
+  var year = Number(match[1]);
+  var month = Number(match[2]);
+  var day = Number(match[3]);
+  var d = new Date(Date.UTC(year, month - 1, day));
+  return d.getUTCFullYear() === year && d.getUTCMonth() === month - 1 && d.getUTCDate() === day;
+}
+
+function validateTaskDueReminderPayload_(postData) {
+  if (!postData || typeof postData !== "object" || Array.isArray(postData)) {
+    return { ok: false, errorCode: "INVALID_PAYLOAD" };
+  }
+  var allowedKeys = {
+    "internalRequest": true,
+    "action": true,
+    "requestId": true,
+    "timestamp": true,
+    "signature": true,
+    "recipientUsername": true,
+    "taskIdSafe": true,
+    "taskTitleSafe": true,
+    "dueDateKey": true,
+    "bucket": true,
+    "reservationIdShort": true,
+    "dryRun": true
+  };
+  var keys = Object.keys(postData);
+  for (var i = 0; i < keys.length; i++) {
+    if (!allowedKeys[keys[i]]) {
+      return { ok: false, errorCode: "EXTRA_FIELD_FORBIDDEN" };
+    }
+  }
+
+  if (postData.internalRequest !== "jy-line-push-v1") {
+    return { ok: false, errorCode: "INVALID_PAYLOAD" };
+  }
+  if (postData.action !== "TASK_DUE_REMINDER") {
+    return { ok: false, errorCode: "UNSUPPORTED_ACTION" };
+  }
+
+  var recipientUsername = String(postData.recipientUsername || "").trim().toLowerCase();
+  if (!recipientUsername || !/^[a-z0-9_.-]{1,64}$/.test(recipientUsername) || /^u[a-f0-9]{32}$/i.test(recipientUsername)) {
+    return { ok: false, errorCode: "INVALID_RECIPIENT" };
+  }
+
+  var taskIdSafe = String(postData.taskIdSafe || "").trim();
+  if (!taskIdSafe || !/^[A-Za-z0-9_-]{1,64}$/.test(taskIdSafe)) {
+    return { ok: false, errorCode: "INVALID_TASK_ID" };
+  }
+
+  var rawTitle = String(postData.taskTitleSafe || "").trim();
+  if (!rawTitle) return { ok: false, errorCode: "INVALID_TASK_TITLE" };
+  if (/[\r\n\t]/.test(rawTitle) || /[\x00-\x1F\x7F]/.test(rawTitle) || rawTitle.length > 80) {
+    return { ok: false, errorCode: "INVALID_TASK_TITLE" };
+  }
+
+  var dueDateKey = String(postData.dueDateKey || "").trim();
+  if (!isTaskDueValidDateKey_(dueDateKey)) {
+    return { ok: false, errorCode: "INVALID_DUE_DATE" };
+  }
+
+  var bucket = String(postData.bucket || "").trim().toUpperCase();
+  if (bucket !== "DUE_TODAY" && bucket !== "OVERDUE") {
+    return { ok: false, errorCode: "INVALID_BUCKET" };
+  }
+
+  var reservationIdShort = String(postData.reservationIdShort || "").trim();
+  if (!reservationIdShort || !/^[a-f0-9]{8,16}$/i.test(reservationIdShort)) {
+    return { ok: false, errorCode: "INVALID_RESERVATION_REFERENCE" };
+  }
+
+  if (postData.dryRun !== true) {
+    return { ok: false, errorCode: "LIVE_MODE_FORBIDDEN" };
+  }
+
+  return {
+    ok: true,
+    value: {
+      action: "TASK_DUE_REMINDER",
+      recipientUsername: recipientUsername,
+      taskIdSafe: taskIdSafe,
+      taskTitleSafe: rawTitle,
+      dueDateKey: dueDateKey,
+      bucket: bucket,
+      reservationIdShort: reservationIdShort,
+      dryRun: true
+    },
+    errorCode: ""
+  };
+}
+
+function buildTaskDueReminderMessage_(payload) {
+  var statusLabel = payload.bucket === "OVERDUE" ? "已逾期" : "今天到期";
+  var text = "【任務到期提醒】\n\n" +
+             "任務：" + payload.taskTitleSafe + "\n" +
+             "到期日：" + payload.dueDateKey + "\n" +
+             "狀態：" + statusLabel + "\n\n" +
+             "請登入勁揚業務管家查看並處理。";
+  return {
+    type: "text",
+    text: text
+  };
+}
+
+function handleTaskDueReminderPush_(postData) {
+  var lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000);
+  } catch (e) {
+    return ContentService.createTextOutput(JSON.stringify({
+      ok: false,
+      mode: "task-reminder-dry-run",
+      action: "TASK_DUE_REMINDER",
+      payloadValid: false,
+      lineCalled: false,
+      errorCode: "LOCK_TIMEOUT"
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  try {
+    var props = PropertiesService.getScriptProperties();
+    var sharedSecret = (props.getProperty("LINE_PUSH_SHARED_SECRET") || "").trim() || "dummy_secret_for_dry_run";
+
+    if (!postData.requestId || !postData.timestamp || !postData.signature) {
+      return ContentService.createTextOutput(JSON.stringify({
+        ok: false,
+        mode: "task-reminder-dry-run",
+        action: "TASK_DUE_REMINDER",
+        payloadValid: false,
+        lineCalled: false,
+        errorCode: "MALFORMED_REQUEST"
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    var requestIdRegex = /^[A-Za-z0-9_-]{8,100}$/;
+    if (!requestIdRegex.test(postData.requestId)) {
+      return ContentService.createTextOutput(JSON.stringify({
+        ok: false,
+        mode: "task-reminder-dry-run",
+        action: "TASK_DUE_REMINDER",
+        payloadValid: false,
+        lineCalled: false,
+        errorCode: "INVALID_REQUEST_ID"
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    var timestamp = Number(postData.timestamp);
+    var now = new Date().getTime();
+    if (isNaN(timestamp) || Math.abs(now - timestamp) > 300000) {
+      return ContentService.createTextOutput(JSON.stringify({
+        ok: false,
+        mode: "task-reminder-dry-run",
+        action: "TASK_DUE_REMINDER",
+        payloadValid: false,
+        lineCalled: false,
+        errorCode: "EXPIRED_REQUEST"
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    var canonical = "jy-line-push-v1|TASK_DUE_REMINDER|" + postData.requestId + "|" + postData.timestamp + "|" + String(postData.recipientUsername || "").trim().toLowerCase();
+    var computedSignature = computeHmacSha256Hex_(canonical, sharedSecret);
+    if (!constantTimeAreEqual_(postData.signature, computedSignature)) {
+      return ContentService.createTextOutput(JSON.stringify({
+        ok: false,
+        mode: "task-reminder-dry-run",
+        action: "TASK_DUE_REMINDER",
+        payloadValid: false,
+        lineCalled: false,
+        errorCode: "INVALID_SIGNATURE"
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (isRequestIdProcessed_(postData.requestId)) {
+      return ContentService.createTextOutput(JSON.stringify({
+        ok: false,
+        mode: "task-reminder-dry-run",
+        action: "TASK_DUE_REMINDER",
+        payloadValid: false,
+        lineCalled: false,
+        errorCode: "DUPLICATE_REQUEST"
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    var validation = validateTaskDueReminderPayload_(postData);
+    if (!validation.ok) {
+      return ContentService.createTextOutput(JSON.stringify({
+        ok: false,
+        mode: "task-reminder-dry-run",
+        action: "TASK_DUE_REMINDER",
+        payloadValid: false,
+        lineCalled: false,
+        errorCode: validation.errorCode || "INVALID_PAYLOAD"
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    var validPayload = validation.value;
+    var msgObj = buildTaskDueReminderMessage_(validPayload);
+    if (!msgObj || !msgObj.text) {
+      return ContentService.createTextOutput(JSON.stringify({
+        ok: false,
+        mode: "task-reminder-dry-run",
+        action: "TASK_DUE_REMINDER",
+        payloadValid: false,
+        lineCalled: false,
+        errorCode: "TEMPLATE_BUILD_FAILED"
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (validPayload.dryRun === true) {
+      return ContentService.createTextOutput(JSON.stringify({
+        ok: true,
+        mode: "task-reminder-dry-run",
+        action: "TASK_DUE_REMINDER",
+        payloadValid: true,
+        recipientCount: 1,
+        messageType: "text",
+        templateId: "TASK_DUE_REMINDER_V1",
+        bucket: validPayload.bucket,
+        lineCalled: false,
+        errorCode: ""
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    return ContentService.createTextOutput(JSON.stringify({
+      ok: false,
+      mode: "task-reminder-dry-run",
+      action: "TASK_DUE_REMINDER",
+      payloadValid: true,
+      lineCalled: false,
+      errorCode: "LIVE_MODE_FORBIDDEN"
+    })).setMimeType(ContentService.MimeType.JSON);
+
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({
+      ok: false,
+      mode: "task-reminder-dry-run",
+      action: "TASK_DUE_REMINDER",
+      payloadValid: false,
+      lineCalled: false,
+      errorCode: "SYSTEM_ERROR"
+    })).setMimeType(ContentService.MimeType.JSON);
+  } finally {
+    try {
+      lock.releaseLock();
+    } catch (e) {}
+  }
 }
