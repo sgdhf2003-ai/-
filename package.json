@@ -5,6 +5,12 @@
   "description": "手機優先的勁揚業務管家 PWA 原型。",
   "scripts": {
     "start": "python3 -m http.server 4181 --bind 0.0.0.0",
-    "check": "node --check app.js && node --check service-worker.js"
+    "check": "node --check app.js && node --check service-worker.js",
+    "simulate:task-log": "node tests/simulations/task-notification-log.sim.js",
+    "simulate:task-due": "node tests/simulations/task-due-candidates.sim.js",
+    "simulate:secure-push": "node tests/simulations/secure-push.sim.js",
+    "simulate:login-binding": "node tests/simulations/login-binding.sim.js",
+    "simulate:line-integration": "node tests/simulations/line-integration.sim.js",
+    "simulate:all": "npm run simulate:task-log && npm run simulate:task-due && npm run simulate:secure-push && npm run simulate:login-binding && npm run simulate:line-integration"
   }
 }
