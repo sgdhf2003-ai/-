@@ -5365,3 +5365,152 @@ function triggerSingleLinePushLiveTest() {
     return safeErrorSummary;
   }
 }
+
+function validateControlledTaskReminderRecipientBindingSafe() {
+  const mode = "controlled-task-reminder-binding-validation";
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const rawLineId = (props.getProperty("LINE_PUSH_TEST_RECIPIENT") || "").trim();
+    const propertyConfigured = rawLineId !== "";
+    const lineIdFormatValid = /^U[a-fA-F0-9]{32}$/.test(rawLineId);
+
+    if (!propertyConfigured) {
+      const summary = {
+        ok: false,
+        mode: mode,
+        propertyConfigured: false,
+        lineIdFormatValid: false,
+        bindingMatchCount: 0,
+        exactlyOneBinding: false,
+        accountActive: false,
+        usernameValid: false,
+        errorCode: "RECIPIENT_PROPERTY_MISSING"
+      };
+      Logger.log("Controlled Task Reminder Binding Validation Safe Summary: " + JSON.stringify(summary));
+      return summary;
+    }
+
+    if (!lineIdFormatValid) {
+      const summary = {
+        ok: false,
+        mode: mode,
+        propertyConfigured: true,
+        lineIdFormatValid: false,
+        bindingMatchCount: 0,
+        exactlyOneBinding: false,
+        accountActive: false,
+        usernameValid: false,
+        errorCode: "RECIPIENT_ID_INVALID"
+      };
+      Logger.log("Controlled Task Reminder Binding Validation Safe Summary: " + JSON.stringify(summary));
+      return summary;
+    }
+
+    const users = readObjects(SHEETS.users, HEADERS.users);
+    const matchedUsers = users.filter(function(u) {
+      return String(u.lineUserId || "").trim() === rawLineId;
+    });
+
+    const matchCountRaw = matchedUsers.length;
+    const bindingMatchCount = matchCountRaw === 0 ? 0 : (matchCountRaw === 1 ? 1 : "2plus");
+    const exactlyOneBinding = matchCountRaw === 1;
+
+    if (matchCountRaw === 0) {
+      const summary = {
+        ok: false,
+        mode: mode,
+        propertyConfigured: true,
+        lineIdFormatValid: true,
+        bindingMatchCount: 0,
+        exactlyOneBinding: false,
+        accountActive: false,
+        usernameValid: false,
+        errorCode: "RECIPIENT_BINDING_NOT_FOUND"
+      };
+      Logger.log("Controlled Task Reminder Binding Validation Safe Summary: " + JSON.stringify(summary));
+      return summary;
+    }
+
+    if (matchCountRaw > 1) {
+      const summary = {
+        ok: false,
+        mode: mode,
+        propertyConfigured: true,
+        lineIdFormatValid: true,
+        bindingMatchCount: "2plus",
+        exactlyOneBinding: false,
+        accountActive: false,
+        usernameValid: false,
+        errorCode: "RECIPIENT_BINDING_DUPLICATE"
+      };
+      Logger.log("Controlled Task Reminder Binding Validation Safe Summary: " + JSON.stringify(summary));
+      return summary;
+    }
+
+    const matchedUser = matchedUsers[0];
+    const accountActive = String(matchedUser.status || "").trim() === "啟用";
+    if (!accountActive) {
+      const summary = {
+        ok: false,
+        mode: mode,
+        propertyConfigured: true,
+        lineIdFormatValid: true,
+        bindingMatchCount: 1,
+        exactlyOneBinding: true,
+        accountActive: false,
+        usernameValid: false,
+        errorCode: "RECIPIENT_ACCOUNT_INACTIVE"
+      };
+      Logger.log("Controlled Task Reminder Binding Validation Safe Summary: " + JSON.stringify(summary));
+      return summary;
+    }
+
+    const username = normalizeLoginValue(matchedUser.username);
+    const usernameValid = !!(username && /^[a-z0-9_.-]{1,64}$/.test(username));
+    if (!usernameValid) {
+      const summary = {
+        ok: false,
+        mode: mode,
+        propertyConfigured: true,
+        lineIdFormatValid: true,
+        bindingMatchCount: 1,
+        exactlyOneBinding: true,
+        accountActive: true,
+        usernameValid: false,
+        errorCode: "RECIPIENT_USERNAME_INVALID"
+      };
+      Logger.log("Controlled Task Reminder Binding Validation Safe Summary: " + JSON.stringify(summary));
+      return summary;
+    }
+
+    const summary = {
+      ok: true,
+      mode: mode,
+      propertyConfigured: true,
+      lineIdFormatValid: true,
+      bindingMatchCount: 1,
+      exactlyOneBinding: true,
+      accountActive: true,
+      usernameValid: true,
+      errorCode: ""
+    };
+    Logger.log("Controlled Task Reminder Binding Validation Safe Summary: " + JSON.stringify(summary));
+    return summary;
+  } catch (e) {
+    const summary = {
+      ok: false,
+      mode: mode,
+      propertyConfigured: false,
+      lineIdFormatValid: false,
+      bindingMatchCount: 0,
+      exactlyOneBinding: false,
+      accountActive: false,
+      usernameValid: false,
+      errorCode: "RECIPIENT_BINDING_LOOKUP_FAILED"
+    };
+    try {
+      Logger.log("Controlled Task Reminder Binding Validation Safe Summary: " + JSON.stringify(summary));
+    } catch (err) {}
+    return summary;
+  }
+}
