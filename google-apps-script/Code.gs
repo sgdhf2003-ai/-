@@ -4493,6 +4493,232 @@ function triggerTaskDueReminderSecureTunnelDryRun() {
   }
 }
 
+function sendSignedTaskDueReminderSecureTunnelRequest_(payload) {
+  const mode = "task-reminder-e2e-signed-dry-run";
+  if (!payload || payload.action !== "TASK_DUE_REMINDER") {
+    return {
+      ok: false,
+      mode: mode,
+      action: "TASK_DUE_REMINDER",
+      signedRequest: false,
+      transportCalled: false,
+      remoteAuthenticated: false,
+      remotePayloadValid: false,
+      lineCalled: false,
+      notificationSent: false,
+      errorCode: "INVALID_PAYLOAD"
+    };
+  }
+
+  const props = PropertiesService.getScriptProperties();
+  const endpoint = (props.getProperty("LINE_BOT_INTERNAL_ENDPOINT") || "").trim();
+  if (!endpoint) {
+    return {
+      ok: false,
+      mode: mode,
+      action: "TASK_DUE_REMINDER",
+      signedRequest: false,
+      transportCalled: false,
+      remoteAuthenticated: false,
+      remotePayloadValid: false,
+      lineCalled: false,
+      notificationSent: false,
+      errorCode: "SECURE_ENDPOINT_NOT_CONFIGURED"
+    };
+  }
+
+  const sharedSecret = (props.getProperty("LINE_PUSH_SHARED_SECRET") || "").trim();
+  if (!sharedSecret) {
+    return {
+      ok: false,
+      mode: mode,
+      action: "TASK_DUE_REMINDER",
+      signedRequest: false,
+      transportCalled: false,
+      remoteAuthenticated: false,
+      remotePayloadValid: false,
+      lineCalled: false,
+      notificationSent: false,
+      errorCode: "SHARED_SECRET_NOT_CONFIGURED"
+    };
+  }
+
+  const timestamp = new Date().getTime().toString();
+  const requestId = "req-" + timestamp + "-" + Math.floor(Math.random() * 1000000);
+  const canonical = "jy-line-push-v1|TASK_DUE_REMINDER|" + requestId + "|" + timestamp + "|" + payload.recipientUsername;
+  const signature = computeHmacSha256Hex_(canonical, sharedSecret);
+
+  const fullPayload = Object.assign({}, payload, {
+    requestId: requestId,
+    timestamp: timestamp,
+    signature: signature
+  });
+
+  let response = null;
+  try {
+    const fetchOptions = {
+      method: "post",
+      contentType: "application/json",
+      payload: JSON.stringify(fullPayload),
+      muteHttpExceptions: true,
+      followRedirects: false
+    };
+    response = UrlFetchApp.fetch(endpoint, fetchOptions);
+  } catch (e) {
+    return {
+      ok: false,
+      mode: mode,
+      action: "TASK_DUE_REMINDER",
+      signedRequest: true,
+      transportCalled: true,
+      remoteAuthenticated: false,
+      remotePayloadValid: false,
+      lineCalled: false,
+      notificationSent: false,
+      errorCode: "UNKNOWN_OUTCOME"
+    };
+  }
+
+  if (!response || response.getResponseCode() !== 200) {
+    return {
+      ok: false,
+      mode: mode,
+      action: "TASK_DUE_REMINDER",
+      signedRequest: true,
+      transportCalled: true,
+      remoteAuthenticated: false,
+      remotePayloadValid: false,
+      lineCalled: false,
+      notificationSent: false,
+      errorCode: "REMOTE_HTTP_ERROR"
+    };
+  }
+
+  let remoteRes = null;
+  try {
+    remoteRes = JSON.parse(response.getContentText());
+  } catch (e) {
+    return {
+      ok: false,
+      mode: mode,
+      action: "TASK_DUE_REMINDER",
+      signedRequest: true,
+      transportCalled: true,
+      remoteAuthenticated: false,
+      remotePayloadValid: false,
+      lineCalled: false,
+      notificationSent: false,
+      errorCode: "INVALID_REMOTE_JSON"
+    };
+  }
+
+  if (!remoteRes || typeof remoteRes !== "object" || Array.isArray(remoteRes)) {
+    return {
+      ok: false,
+      mode: mode,
+      action: "TASK_DUE_REMINDER",
+      signedRequest: true,
+      transportCalled: true,
+      remoteAuthenticated: false,
+      remotePayloadValid: false,
+      lineCalled: false,
+      notificationSent: false,
+      errorCode: "INVALID_REMOTE_DRY_RUN_RESPONSE"
+    };
+  }
+
+  if (remoteRes.ok !== true ||
+      remoteRes.mode !== "task-reminder-dry-run" ||
+      remoteRes.action !== "TASK_DUE_REMINDER" ||
+      remoteRes.payloadValid !== true ||
+      remoteRes.recipientCount !== 1 ||
+      remoteRes.messageType !== "text" ||
+      remoteRes.templateId !== "TASK_DUE_REMINDER_V1" ||
+      remoteRes.bucket !== payload.bucket ||
+      remoteRes.lineCalled !== false ||
+      (remoteRes.errorCode || "") !== "") {
+    return {
+      ok: false,
+      mode: mode,
+      action: "TASK_DUE_REMINDER",
+      signedRequest: true,
+      transportCalled: true,
+      remoteAuthenticated: remoteRes.errorCode !== "INVALID_SIGNATURE" && remoteRes.errorCode !== "EXPIRED_REQUEST",
+      remotePayloadValid: remoteRes.payloadValid === true,
+      lineCalled: remoteRes.lineCalled === true,
+      notificationSent: false,
+      errorCode: remoteRes.errorCode || "INVALID_REMOTE_DRY_RUN_RESPONSE"
+    };
+  }
+
+  const result = {
+    ok: true,
+    mode: mode,
+    action: "TASK_DUE_REMINDER",
+    signedRequest: true,
+    transportCalled: true,
+    remoteAuthenticated: true,
+    remotePayloadValid: true,
+    recipientCount: 1,
+    templateId: "TASK_DUE_REMINDER_V1",
+    messageType: "text",
+    bucket: payload.bucket,
+    lineCalled: false,
+    notificationSent: false,
+    errorCode: ""
+  };
+  Logger.log("Task Reminder E2E Signed Dry Run Summary: " + JSON.stringify(result));
+  return result;
+}
+
+function triggerTaskDueReminderSecureTunnelEndToEndDryRun() {
+  try {
+    const todayStr = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd");
+    const input = {
+      recipientUsername: "controlled-test",
+      taskIdSafe: "CONTROLLED_TASK_REMINDER_E2E_TEST",
+      taskTitleSafe: "受控任務提醒端到端測試",
+      dueDateKey: todayStr,
+      bucket: "DUE_TODAY",
+      reservationIdShort: "c1a2b3c4e5f6",
+      dryRun: true
+    };
+    const payload = buildTaskDueReminderSecurePayload_(input);
+    if (!payload) {
+      const failed = {
+        ok: false,
+        mode: "task-reminder-e2e-signed-dry-run",
+        action: "TASK_DUE_REMINDER",
+        signedRequest: false,
+        transportCalled: false,
+        remoteAuthenticated: false,
+        remotePayloadValid: false,
+        lineCalled: false,
+        notificationSent: false,
+        errorCode: "INVALID_PAYLOAD"
+      };
+      Logger.log("Task Reminder E2E Signed Dry Run Summary: " + JSON.stringify(failed));
+      return failed;
+    }
+    return sendSignedTaskDueReminderSecureTunnelRequest_(payload);
+  } catch (e) {
+    const failed = {
+      ok: false,
+      mode: "task-reminder-e2e-signed-dry-run",
+      action: "TASK_DUE_REMINDER",
+      signedRequest: false,
+      transportCalled: false,
+      remoteAuthenticated: false,
+      remotePayloadValid: false,
+      lineCalled: false,
+      notificationSent: false,
+      errorCode: "INVALID_PAYLOAD"
+    };
+    Logger.log("Task Reminder E2E Signed Dry Run Summary: " + JSON.stringify(failed));
+    return failed;
+  }
+}
+
 /**
  * Stage 20-F: LINE Push Single Whitelist Channel Manual Test Entrance
  */
