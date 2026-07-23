@@ -8,12 +8,11 @@
 
 ## Current Stage
 
-- current stage closed: Stage 21-F Controlled Task Reminder Live Validation
-- latest canonical closure commit: `8feafb5 docs: close controlled task reminder live validation`
-- backend deployed version: `72` (canonical deployment)
-- LINE Bot deployed version: `188` (canonical deployment)
-- live push validation: PASS (status SENT, attemptCount=1, duplicate transport-before blocked)
-- boundary restoration status: repair commit generated on `repair/canonical-boundary`
+- current stage closed: Stage 23 Same-Series Substitute Order Repair and Verification
+- latest canonical closure commit: `3c79ae7d266c9f31f5d5e7672915743a008ceded`
+- backend deployed version: `74` (canonical deployment)
+- LINE Bot deployed version: `189` (canonical deployment)
+- live message-order validation: PASS (ETA Flex card sandwiched between specifications and substitutes)
 
 ## Safety State
 
@@ -24,4 +23,4 @@
 
 ## Required Next Step
 
-Review `repair/canonical-boundary` repair commit and push to `main` when approved.
+Improve internal logging verification tools for developer verification.
