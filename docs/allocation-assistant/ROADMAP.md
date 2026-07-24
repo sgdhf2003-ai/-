@@ -6,13 +6,13 @@
 * **測試**: 本機模擬測試集 (`simulate:all`) 及靜態部署檢查 (`deploy.py --check`) 全部 PASS。
 * **退出條件**: 架構設計書與合約正式通過 Owner 審查與核准。
 
-## Phase 1A: 草稿與 Simulation Provider
-* **入口**: 業務管家 App 配貨操作 UI。
-* **輸出**: 建立 `AllocationDraft` 狀態為 `DRAFT`。
-* **測試**: 執行 `SimulationProvider` 的本機單元測試，模擬草稿資料建立，確認無 Sheet 寫入副作用。
-* **退出條件**: `AllocationGateway` 能夠依租戶配置成功路由至 `SimulationProvider` 並成功建立草稿。
+## Phase 1: Shadow Allocation Core (純本機 Shadow 核心 — 本次完成)
+* **入口**: 業務管家 App 配貨草稿與 OCR 輸入。
+* **輸出**: `AllocationDraft`, `AllocationSuggestion`, `AuditEvent` 記憶體資料結構。
+* **測試**: 執行純本機 30 項模擬測試矩陣 (`npm run simulate:shadow-allocation`)，74/74 PASS。
+* **退出條件**: `AllocationGateway`, `SimulationProvider`, `RuleEvaluator`, `AuditLogger` 100% 覆蓋測試且無任何 Sheet / LINE Side Effects。
 
-## Phase 1B: 唯讀庫存分析
+## Phase 2: BM Web UI 配貨工作區 (下階段規劃)
 * **入口**: `AllocationDraft` 內容。
 * **輸出**: 生成 `AllocationSuggestion`，包含建議倉庫、建議批號、配貨建議與判斷依據。
 * **測試**: 使用既有批號 `7J25` 與品號 `EQA-6522` 進行庫存配貨模擬測試，驗證演算法的分配正確性。

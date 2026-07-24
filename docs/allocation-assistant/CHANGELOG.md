@@ -1,4 +1,20 @@
-# JYAI Allocation Assistant - CHANGELOG
+## [v1.1.0-shadow-allocation] - 2026-07-24
+
+### Added
+* **純本機 Shadow Allocation Core Engine**:
+  * 實作 `TenantContext`, `AllocationDraft`, `InventorySnapshot`, `AllocationSuggestion`, `AllocationWarning`, `AuditEvent` 資料合約與驗證器。
+  * 實作 `AllocationGateway` 路由與調配器。
+  * 實作 `SimulationProvider` (記憶體內草稿狀態與 idempotency 重放/衝突檢測) 與 fail-closed `ExternalProvider` (拋出 `EXTERNAL_PROVIDER_DISABLED`)。
+  * 實作 `evaluateAllocationRules` 純函式規則引擎 (單倉優先、小量剩餘優先、OCR < 0.85 門檻、混批授權警告)。
+  * 實作 `AuditLogger` 不可變日誌追蹤器。
+* **完整模擬測試套件 (Simulation Suites)**:
+  * 實作 `tests/simulations/shadow-allocation.sim.js` 涵蓋 30 項綜合情境矩陣。
+  * 新增 `simulate:allocation-contract`, `simulate:allocation-gateway`, `simulate:allocation-provider`, `simulate:allocation-rules`, `simulate:allocation-audit`, `simulate:shadow-allocation` npm 指令。
+
+### Security Declaration
+* **零生產環境變更 (No Production Changes)**: 本階段未新增或修改任何生產環境程式碼。
+* **零通知發送 (No Notifications Sent)**: 未呼叫任何 LINE Bot 推送 API 或外部 HTTP 請求。
+* **零部署異動 (No clasp push/deploy)**: clasp 設定與 Apps Script 部署版本無任何異動。
 
 ## [v1.0.0-foundation] - 2026-07-24
 
