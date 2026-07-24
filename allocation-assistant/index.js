@@ -1,5 +1,5 @@
 /**
- * JYAI Allocation Assistant Package Entry Point (Phase 2A)
+ * JYAI Allocation Assistant Package Entry Point (Phase 2B)
  */
 
 const { validateTenantContext } = require('./contracts/tenant-context');
@@ -38,6 +38,7 @@ const { AuditLogger } = require('./audit/audit-logger');
 
 const { ReadOnlyInventoryAdapter } = require('./adapters/readonly-inventory-adapter');
 const { mapSheetRowsToInventorySnapshot } = require('./adapters/inventory-sheet-mapper');
+const { MockSheetInventoryAdapter } = require('./adapters/mock-sheet-inventory-adapter');
 
 module.exports = {
   // Constants
@@ -72,5 +73,6 @@ module.exports = {
 
   // Adapters & Mappers
   ReadOnlyInventoryAdapter,
-  mapSheetRowsToInventorySnapshot
+  mapSheetRowsToInventorySnapshot,
+  MockSheetInventoryAdapter
 };
