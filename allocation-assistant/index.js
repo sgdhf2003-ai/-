@@ -1,5 +1,5 @@
 /**
- * JYAI Allocation Assistant Package Entry Point (Phase 5C)
+ * JYAI Allocation Assistant Package Entry Point (Phase 7B)
  */
 
 const { validateTenantContext } = require('./contracts/tenant-context');
@@ -44,6 +44,7 @@ const { MockSheetInventoryAdapter } = require('./adapters/mock-sheet-inventory-a
 
 const { FormalReservationAdapter } = require('./adapters/formal-reservation-adapter');
 const { MockFormalReservationAdapter } = require('./adapters/mock-formal-reservation-adapter');
+const { FormalHoldWritebackAdapter } = require('./adapters/formal-hold-writeback-adapter');
 
 const { SyncIdempotencyGuard } = require('./sync/sync-idempotency-guard');
 const { AllocationSyncEngine } = require('./sync/allocation-sync-engine');
@@ -97,6 +98,7 @@ module.exports = {
   MockSheetInventoryAdapter,
   FormalReservationAdapter,
   MockFormalReservationAdapter,
+  FormalHoldWritebackAdapter,
 
   // Sync Engine & Guard
   SyncIdempotencyGuard,
