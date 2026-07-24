@@ -55,6 +55,10 @@ const { AllocationSandboxView } = require('./ui/allocation-sandbox-view');
 const { SandboxInventoryProvider } = require('./ui/sandbox-inventory-provider');
 const { DEMO_PRESETS, SandboxDemoCards } = require('./ui/sandbox-demo-cards');
 
+const { OcrCandidateMatcher } = require('./ocr/ocr-candidate-matcher');
+const { ImageOcrAdapter } = require('./ocr/image-ocr-adapter');
+const { LiffMicroEditPopup } = require('./ui/liff-micro-edit-popup');
+
 module.exports = {
   // Constants
   DRAFT_STATUSES,
@@ -104,5 +108,10 @@ module.exports = {
   AllocationViewRenderer,
   AllocationSandboxView,
   SandboxInventoryProvider,
-  SandboxDemoCards
+  SandboxDemoCards,
+
+  // OCR & LIFF Components
+  OcrCandidateMatcher,
+  ImageOcrAdapter,
+  LiffMicroEditPopup
 };
