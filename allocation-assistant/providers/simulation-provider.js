@@ -1,0 +1,183 @@
+/**
+ * SimulationProvider (In-Memory Draft Store & Idempotency Cache)
+ */
+
+const { AllocationProvider } = require('./allocation-provider');
+const { validateAllocationDraft, DRAFT_STATUSES } = require('../contracts/draft-contract');
+
+class SimulationProvider extends AllocationProvider {
+  constructor() {
+    super();
+    this.draftsStore = new Map(); // draftId -> draft object
+    this.idempotencyCache = new Map(); // idempotencyKey -> { payloadHash, response }
+  }
+
+  _hashPayload(payload) {
+    return JSON.stringify(payload || {});
+  }
+
+  _checkIdempotency(key, payload) {
+    if (!key) return null;
+    const cached = this.idempotencyCache.get(key);
+    if (!cached) return null;
+
+    const currentHash = this._hashPayload(payload);
+    if (cached.payloadHash === currentHash) {
+      return { ...cached.response, isReplay: true };
+    } else {
+      throw new Error('IDEMPOTENCY_CONFLICT: Key reused with conflicting payload');
+    }
+  }
+
+  _saveIdempotency(key, payload, response) {
+    if (!key) return;
+    this.idempotencyCache.set(key, {
+      payloadHash: this._hashPayload(payload),
+      response: { ...response }
+    });
+  }
+
+  createDraft(payload) {
+    const key = payload ? payload.idempotencyKey : null;
+    const replay = this._checkIdempotency(key, payload);
+    if (replay) return replay;
+
+    const draftId = payload.draftId || `draft_sim_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const items = Array.isArray(payload.items) ? payload.items : [];
+
+    // Simple OCR parsing fallback if rawText provided and items empty
+    if (items.length === 0 && payload.rawText) {
+      const parts = payload.rawText.split('*');
+      const productCode = (parts[0] || 'UNKNOWN_ITEM').trim();
+      const requestedQuantity = parseInt(parts[1] || '1', 10) || 1;
+      items.push({
+        itemId: `item_1`,
+        productCode,
+        requestedQuantity,
+        parsedConfidence: 0.95,
+        rawOcrText: payload.rawText
+      });
+    }
+
+    const draftData = {
+      draftId,
+      tenantContext: {
+        tenantId: payload.tenantId || 'tenant-jy-001',
+        companyId: payload.companyId || 'comp-jingyang-taiwan'
+      },
+      status: DRAFT_STATUSES.DRAFT,
+      sourceSystem: payload.sourceSystem || 'SIMULATION',
+      sourceDraftId: payload.sourceDraftId || '',
+      idempotencyKey: key || '',
+      salesOwner: payload.salesOwner || 'sim_clerk',
+      items
+    };
+
+    const validatedDraft = validateAllocationDraft(draftData);
+    this.draftsStore.set(draftId, validatedDraft);
+
+    const response = {
+      success: true,
+      draftId,
+      status: validatedDraft.status,
+      isReplay: false,
+      errorCode: ''
+    };
+
+    this._saveIdempotency(key, payload, response);
+    return response;
+  }
+
+  analyzeAllocation(draftId, idempotencyKey, inventorySnapshot) {
+    const key = idempotencyKey;
+    const payload = { draftId, inventorySnapshot };
+    const replay = this._checkIdempotency(key, payload);
+    if (replay) return replay;
+
+    const draft = this.draftsStore.get(draftId);
+    if (!draft) {
+      throw new Error(`DRAFT_NOT_FOUND: Draft ${draftId} does not exist`);
+    }
+
+    if (draft.status === DRAFT_STATUSES.CANCELLED) {
+      throw new Error(`INVALID_DRAFT_STATE: Draft ${draftId} is CANCELLED and cannot be analyzed`);
+    }
+
+    const response = {
+      success: true,
+      draftId,
+      status: DRAFT_STATUSES.ALLOCATION_REVIEW,
+      isReplay: false,
+      errorCode: ''
+    };
+
+    this._saveIdempotency(key, payload, response);
+    return response;
+  }
+
+  confirmAllocation(draftId, confirmedItems, idempotencyKey) {
+    const key = idempotencyKey;
+    const payload = { draftId, confirmedItems };
+    const replay = this._checkIdempotency(key, payload);
+    if (replay) return replay;
+
+    const draft = this.draftsStore.get(draftId);
+    if (!draft) {
+      throw new Error(`DRAFT_NOT_FOUND: Draft ${draftId} does not exist`);
+    }
+
+    if (draft.status === DRAFT_STATUSES.CANCELLED) {
+      throw new Error(`INVALID_DRAFT_STATE: Draft ${draftId} is CANCELLED`);
+    }
+
+    draft.status = DRAFT_STATUSES.ALLOCATION_CONFIRMED;
+    draft.updatedAt = new Date().toISOString();
+    this.draftsStore.set(draftId, draft);
+
+    const response = {
+      success: true,
+      draftId,
+      status: DRAFT_STATUSES.ALLOCATION_CONFIRMED,
+      isReplay: false,
+      errorCode: ''
+    };
+
+    this._saveIdempotency(key, payload, response);
+    return response;
+  }
+
+  cancelAllocation(draftId) {
+    const draft = this.draftsStore.get(draftId);
+    if (!draft) {
+      throw new Error(`DRAFT_NOT_FOUND: Draft ${draftId} does not exist`);
+    }
+
+    draft.status = DRAFT_STATUSES.CANCELLED;
+    draft.updatedAt = new Date().toISOString();
+    this.draftsStore.set(draftId, draft);
+
+    return {
+      success: true,
+      draftId,
+      status: DRAFT_STATUSES.CANCELLED,
+      errorCode: ''
+    };
+  }
+
+  getAllocationStatus(draftId) {
+    const draft = this.draftsStore.get(draftId);
+    if (!draft) {
+      throw new Error(`DRAFT_NOT_FOUND: Draft ${draftId} does not exist`);
+    }
+
+    return {
+      success: true,
+      draft,
+      errorCode: ''
+    };
+  }
+}
+
+module.exports = {
+  SimulationProvider
+};

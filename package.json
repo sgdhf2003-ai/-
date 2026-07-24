@@ -12,6 +12,8 @@
     "simulate:login-binding": "node tests/simulations/login-binding.sim.js",
     "simulate:line-integration": "node tests/simulations/line-integration.sim.js",
     "simulate:allocation-contract": "node tests/simulations/allocation-contract.sim.js",
-    "simulate:all": "npm run simulate:task-log && npm run simulate:task-due && npm run simulate:secure-push && npm run simulate:login-binding && npm run simulate:line-integration && npm run simulate:allocation-contract"
+    "simulate:allocation-gateway": "node tests/simulations/allocation-gateway.sim.js",
+    "simulate:allocation-provider": "node tests/simulations/allocation-provider.sim.js",
+    "simulate:all": "npm run simulate:task-log && npm run simulate:task-due && npm run simulate:secure-push && npm run simulate:login-binding && npm run simulate:line-integration && npm run simulate:allocation-contract && npm run simulate:allocation-gateway && npm run simulate:allocation-provider"
   }
 }

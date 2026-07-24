@@ -1,5 +1,5 @@
 /**
- * JYAI Allocation Assistant Package Entry Point (Phase 1A)
+ * JYAI Allocation Assistant Package Entry Point (Phase 1B)
  */
 
 const { validateTenantContext } = require('./contracts/tenant-context');
@@ -24,6 +24,11 @@ const {
   validateSyncResult
 } = require('./contracts/audit-contract');
 
+const { AllocationProvider } = require('./providers/allocation-provider');
+const { SimulationProvider } = require('./providers/simulation-provider');
+const { ExternalProvider } = require('./providers/external-provider');
+const { AllocationGateway } = require('./gateway/allocation-gateway');
+
 module.exports = {
   // Constants
   DRAFT_STATUSES,
@@ -40,5 +45,11 @@ module.exports = {
   validateAllocationSuggestion,
   validateAuditEvent,
   validateSyncRequest,
-  validateSyncResult
+  validateSyncResult,
+
+  // Providers & Gateway
+  AllocationProvider,
+  SimulationProvider,
+  ExternalProvider,
+  AllocationGateway
 };
