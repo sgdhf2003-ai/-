@@ -205,7 +205,19 @@ Every time an AI model or session takes over the project:
 - Do not claim this limit is resolved or risk-free.
 - Do not attempt to fix or modify this unit parsing logic unless explicitly requested by a specific stage.
 
-## 17. Handoff Report Template
+## 18. Decision-Making Protocol (決策行為規範)
+
+### Socratic Red/Blue Team Decision Protocol (蘇格拉底紅藍隊決策協定)
+
+凡是遇到技術架構選擇、階段推進方向、功能範疇取捨或策略選擇等重大決策時，AI Planner / Brain 必須自動啟動以下機制：
+1. **預設觸發「蘇格拉底提問法 (Socratic Method)」**：透過提問法挖出隱性風險、邊界假設與架構盲點。
+2. **自動扮演雙方觀點**：
+   - 🔴 **紅隊 (挑戰者 / 風險控管)**：質疑執行階段脆弱性、認知落差、邊界極限、架構碎片化與維護成本。
+   - 🔵 **藍隊 (建設者 / 商業價值)**：主張商業效益落地、使用者真實體驗、漸進式轉移價值與開發節奏。
+3. **進行多輪詰問辯論**：經由交鋒提煉出兼顧安全與價值的「最佳進化方案 (Option A+ / Optimized Master Plan)」。
+4. **輸出決策摘要**：向 Owner 呈報對比總覽、紅藍辯論突破口、優缺點分析與最終建議，待 Owner 確認後方可發送實作 Token。
+
+## 19. Handoff Report Template
 
 ```text
 【Project Context Gate】
