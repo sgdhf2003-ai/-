@@ -30,11 +30,17 @@
 * **測試**: 執行 18 大模擬測試套件 (`npm run simulate:all`)，115/115 PASS。
 * **退出條件**: 同步合約、Mock 保留適配器、SyncEngine 狀態機、IdempotencyGuard 防重與 Unknown-Outcome 回復 100% 覆蓋測試且無任何 Sheet / LINE 寫入 Side Effects。
 
-## Phase 5: UI Sandbox Integration & Interactive Demo Guide (前台沙盒介面掛載與真實體驗展示 — 本次完成)
+## Phase 5: UI Sandbox Integration & Interactive Demo Guide (前台沙盒介面掛載與真實體驗展示 — 已完工)
 * **入口**: Phase 1~4 核心引擎、UI 狀態機與同步防重防線。
 * **輸出**: `AllocationSandboxView`, `SandboxInventoryProvider`, `SandboxDemoCards`, `DEMO_PRESETS`。
 * **測試**: 執行 22 大模擬測試套件 (`npm run simulate:all`)，131/131 PASS。
 * **退出條件**: 沙盒 Tab 容器、唯讀警示橫幅、快照 Provider 串接、Fail-Closed 防寫保護、3 組 Demo 卡片與 E2E 流程 100% 覆蓋測試且無任何 Sheet / LINE 寫入 Side Effects。
+
+## Option 2+: UAT Demo Guide & Pre-launch Gate Checklist (UAT 驗收教案與上線前置檢核表 — 本次完成)
+* **入口**: Phase 5 前台沙盒介面與 DEMO 卡片體驗。
+* **輸出**: `UAT_DEMO_GUIDE.md`, `PRE_LAUNCH_CHECKLIST.md`。
+* **驗證**: 完整包含沙盒測試操作指引、3 組展示情境步聚、Sheet Schema 核對、Script Properties 權限與業務簽核四項評估指標。
+* **退出條件**: 雙文件 100% 完整無占位符，模擬測試 131/131 PASS 並且通過 deploy.py dry-run 檢驗。
 * **退出條件**: 草稿狀態變更為 `SYNC_PENDING`，並且系統完整記錄 AuditEvent 追蹤日誌。
 
 ## Phase 1D: 重用正式保留與通知流程

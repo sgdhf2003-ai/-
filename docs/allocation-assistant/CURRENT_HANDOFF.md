@@ -9,11 +9,10 @@
 * **Working Tree 狀態**: Clean
 
 ## 2. 本次完成內容 (Completed Work)
-* 成功完成 Phase 5 **UI Sandbox Integration & Interactive Demo Guide**。
-* 實作 `AllocationSandboxView` 前台獨立 Tab 視圖容器與黃色唯讀警示橫幅。
-* 實作 `SandboxInventoryProvider` 唯讀快照適配器串接與 Fail-Closed 防護 (`SANDBOX_WRITE_FORBIDDEN`).
-* 實作 `SandboxDemoCards` 內建 3 組真實 Demo 體驗卡片與一鍵試算情境觸發器。
-* 擴充模擬測試套件至 131 / 131 PASS (含 22 大模擬測試集，含沙盒 E2E 模擬)。
+* 成功完成 Option 2+ **UAT Demo & Pre-launch Gate Checklist** 規範制定。
+* 完成 `docs/allocation-assistant/UAT_DEMO_GUIDE.md` (前台沙盒操作指引、3 組 Demo 卡片代入試算流程、混批 Toggle 說明).
+* 完成 `docs/allocation-assistant/PRE_LAUNCH_CHECKLIST.md` (Production 上線四大門檻、Sheet Schema、Script Properties、SyncEngine 復原與業務簽核清單).
+* 擴充全套模擬測試套件至 131 / 131 PASS (含 22 大模擬測試集)。
 * 部署 Dry Run 檢查與靜態安全檢查全數通過 (`deploy.py --check` PASS, 零外部 Side Effects)。
 
 ## 3. 未完成內容與未啟用功能 (Deactivated Features)
@@ -30,8 +29,8 @@
 > 本次交接確無任何寫入正式 Google Sheets、無呼叫 LINE 機器人發送通知、無 clasp 部署及 clasp push 行為。所有安全性防護邊界均完好。
 
 ## 6. 下一個精確步驟 (Next Recommended Step)
-* 向 Owner 匯報 Phase 5 (UI Sandbox Integration & Interactive Demo Guide) 完工與 JYAI Allocation Assistant 專案全案落成。
-* 等待 Owner 發布後續整合或生產部署指令。
+* 向 Owner 匯報 Option 2+ UAT 教案與 Pre-launch 檢核表完工。
+* 等待 Owner 與業務主管簽核完成後發起正式生產環境上線部署指令。
 
 ## 7. 禁止下一位 Agent 自行執行的事項 (Prohibited Actions)
 * 嚴禁在未經 Owner 審查同意前撰寫任何正式庫存寫入代碼。
