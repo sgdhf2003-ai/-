@@ -18,9 +18,13 @@
 * **測試**: 執行 10 大模擬測試套件 (`npm run simulate:all`)，86/86 PASS。
 * **退出條件**: 庫存列轉譯器、Mock 試算表適配器與 Gateway 整合 100% 覆蓋測試且無任何 Sheet / LINE 寫入 Side Effects。
 
-## Phase 3: BM Web UI 配貨工作區 (下階段規劃)
+## Phase 3: BM Web UI 配貨工作區 (前台介面與互動控制 — 本次完成)
+* **入口**: 配貨草稿、庫存快照與 UI 控制事件。
+* **輸出**: `AllocationUIState`, `AllocationGatewayClient`, `AllocationViewRenderer`。
+* **測試**: 執行 14 大模擬測試套件 (`npm run simulate:all`)，102/102 PASS。
+* **退出條件**: UI 狀態機、Client Hook、View Renderer 轉譯器與全流程 E2E 100% 覆蓋測試且無任何 Sheet / LINE 寫入 Side Effects。
 
-## Phase 1C: 待同步與第二次確認
+## Phase 4: Formal Holds Integration & Sync Safety (下階段規劃)
 * **入口**: 使用者於 UI 修改並點選確認配貨建議。
 * **輸出**: 更新 `AllocationDraft` 狀態為 `ALLOCATION_CONFIRMED` 並準備進行同步。
 * **測試**: 模擬前端確認操作，驗證狀態機轉換合規性。

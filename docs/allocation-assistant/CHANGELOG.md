@@ -1,3 +1,19 @@
+## [v1.3.0-ui-app-interactivity] - 2026-07-24
+
+### Added
+* **配貨助手前台介面與互動控制層 (UI & App Interactivity)**:
+  * 實作 `AllocationUIState` 純 DOM 解耦 UI 狀態機與 ViewModel 轉譯器 (`DRAFT` -> `OCR_REVIEW` -> `ALLOCATION_REVIEW` -> `ALLOCATION_CONFIRMED`).
+  * 實作 `AllocationGatewayClient` 非同步 Client Hook，封裝 Gateway 呼叫、Idempotency/CorrelationId 自動補全與 Error Normalization.
+  * 實作 `AllocationViewRenderer` 樣板轉譯器（HTML Card, Warning Banners, Consent Toggle, Approval Checklist Validation & Lock Markers）.
+* **完整 UI E2E 模擬測試套件 (UI Simulation Suites)**:
+  * 新增 `simulate:allocation-ui-state`, `simulate:allocation-gateway-client`, `simulate:allocation-view-renderer`, `simulate:allocation-ui-e2e` npm 指令。
+  * 模擬測試總數擴充至 102 / 102 PASS (共 14 大模擬測試集).
+
+### Security Declaration
+* **零生產環境變更 (No Production Changes)**: 本階段未新增或修改任何生產環境程式碼。
+* **零通知發送 (No Notifications Sent)**: 未呼叫任何 LINE Bot 推送 API 或外部 HTTP 請求。
+* **零部署異動 (No clasp push/deploy)**: clasp 設定與 Apps Script 部署版本無任何異動。
+
 ## [v1.2.0-readonly-sheet-integration] - 2026-07-24
 
 ### Added
