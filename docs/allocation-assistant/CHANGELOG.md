@@ -1,3 +1,11 @@
+## [v1.7.1-115-sheet-redeploy] - 2026-07-25
+
+### Changed
+* **115 年庫存試算表 (網路連結版) 整合與雙端生產環境重部署**:
+  * 正式對齊與確認 `INVENTORY_SS_ID` (`1C_R1DdTj5brxftl9fPabTKBGzcG-lxWWxWoyi-ItA48`)。
+  * 成功發佈 Backend Apps Script Web App **Version 78**。
+  * 成功發佈 LINE Bot Apps Script **Version 191**。
+
 ## [v1.7.0-assistant-ocr-fulfillment] - 2026-07-25
 
 ### Added
