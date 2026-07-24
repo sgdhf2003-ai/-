@@ -1,12 +1,11 @@
 /**
- * Simulation Test: Production Apps Script & HTML Wireup (Pack 6A)
+ * Simulation Test: Production Apps Script & HTML Wireup (Pack 6A / Dispatcher Fix)
  */
 
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const {
-  AllocationSandboxView,
   SandboxInventoryProvider
 } = require('../../allocation-assistant/index');
 
@@ -29,13 +28,14 @@ function runTest(description, testFn) {
 const rootDir = path.resolve(__dirname, '../../');
 const codeGsPath = path.join(rootDir, 'google-apps-script/Code.gs');
 const indexHtmlPath = path.join(rootDir, 'index.html');
+const gasIndexHtmlPath = path.join(rootDir, 'google-apps-script/Index.html');
 
-// 1. Check Code.gs helper function existence and template contents
-runTest('google-apps-script/Code.gs contains getAllocationAssistantView helper function', () => {
+// 1. Check Code.gs helper function existence
+runTest('google-apps-script/Code.gs contains getAllocationAssistantView and include helper functions', () => {
   const codeGsContent = fs.readFileSync(codeGsPath, 'utf8');
 
   assert.ok(codeGsContent.includes('function getAllocationAssistantView()'));
-  assert.ok(codeGsContent.includes('getAllocationAssistantView'));
+  assert.ok(codeGsContent.includes('function include('));
 });
 
 // 2. Check index.html nav tab and view container mount points
@@ -46,7 +46,15 @@ runTest('index.html contains #nav-allocation tab button and #view-allocation-san
   assert.ok(indexHtmlContent.includes('id="view-allocation-sandbox"'));
 });
 
-// 3. Verify SANDBOX_WRITE_FORBIDDEN in production mounted sandbox environment
+// 3. Check google-apps-script/Index.html exists and is mounted
+runTest('google-apps-script/Index.html template exists with allocation sandbox mount', () => {
+  const gasIndexHtmlContent = fs.readFileSync(gasIndexHtmlPath, 'utf8');
+
+  assert.ok(gasIndexHtmlContent.includes('id="nav-allocation"'));
+  assert.ok(gasIndexHtmlContent.includes('id="view-allocation-sandbox"'));
+});
+
+// 4. Verify SANDBOX_WRITE_FORBIDDEN in production mounted sandbox environment
 runTest('Production mounted sandbox environment throws SANDBOX_WRITE_FORBIDDEN on formal write', () => {
   const provider = new SandboxInventoryProvider();
 
@@ -55,11 +63,13 @@ runTest('Production mounted sandbox environment throws SANDBOX_WRITE_FORBIDDEN o
   }, /SANDBOX_WRITE_FORBIDDEN/);
 });
 
-// 4. Verify Code.gs doGet endpoint is non-destructive and intact
-runTest('google-apps-script/Code.gs preserves existing doGet handler', () => {
+// 5. Verify Code.gs doGet route dispatcher logic for Web App vs API
+runTest('google-apps-script/Code.gs contains dual route dispatcher for Web App HTML and JSON API', () => {
   const codeGsContent = fs.readFileSync(codeGsPath, 'utf8');
 
   assert.ok(codeGsContent.includes('function doGet('));
+  assert.ok(codeGsContent.includes('if (data && data.action)'));
+  assert.ok(codeGsContent.includes('HtmlService.createTemplateFromFile("Index")'));
 });
 
 console.log(`\nAllocation Production Wireup Simulation Summary: ${passedTests} / ${totalTests} PASS`);

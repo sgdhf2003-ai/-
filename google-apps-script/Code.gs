@@ -27,14 +27,54 @@ const HEADERS = {
 function doGet(e) {
   try {
     const data = parseQuery(e);
-    const action = data.action || "readAll";
-    if (action === "setup") return jsonOutput(setupBackend(data));
-    if (action === "login") return jsonOutput(loginUser(data));
-    if (action === "testLineNotify") return jsonOutput(testLineNotifyAction(data));
-    return jsonOutput(readAll());
+
+    // 1. API Route Dispatcher (when action parameter is explicitly specified)
+    if (data && data.action) {
+      const action = data.action;
+      if (action === "setup") return jsonOutput(setupBackend(data));
+      if (action === "login") return jsonOutput(loginUser(data));
+      if (action === "testLineNotify") return jsonOutput(testLineNotifyAction(data));
+      if (action === "readLogs") {
+        const sheet = ensureSpreadsheet().getSheetByName("Logs");
+        if (!sheet) return jsonOutput({ ok: true, logs: [] });
+        const values = sheet.getDataRange().getValues();
+        return jsonOutput({ ok: true, logs: values });
+      }
+      return jsonOutput(readAll());
+    }
+
+    // 2. Web App View Route Dispatcher (browser access without action parameter)
+    // Supports ?page=..., ?view=..., or default Web App entrance
+    const page = (data && (data.page || data.view)) || "home";
+
+    // Direct Sandbox View Template access if explicitly requested via ?page=allocation-view
+    if (page === "allocation-view") {
+      return HtmlService.createTemplateFromFile("AllocationAssistantView")
+        .evaluate()
+        .setTitle("勁揚業務管家 (配貨試算沙盒)")
+        .addMetaTag("viewport", "width=device-width, initial-scale=1, viewport-fit=cover")
+        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    }
+
+    // Default Entrance: Serve Web App Index Page
+    const template = HtmlService.createTemplateFromFile("Index");
+    template.initialPage = page;
+    return template.evaluate()
+      .setTitle("勁揚業務管家 (配貨試算沙盒)")
+      .addMetaTag("viewport", "width=device-width, initial-scale=1, viewport-fit=cover")
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   } catch (error) {
     return jsonOutput({ ok: false, error: error.message || String(error) });
   }
+}
+
+/**
+ * Apps Script HTML include helper.
+ * @param {string} filename Name of the HTML file to include.
+ * @return {string} Raw HTML content.
+ */
+function include(filename) {
+  return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
 
 /**
