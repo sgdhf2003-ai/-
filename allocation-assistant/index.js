@@ -1,5 +1,5 @@
 /**
- * JYAI Allocation Assistant Package Entry Point (Phase 1C)
+ * JYAI Allocation Assistant Package Entry Point (Phase 1D)
  */
 
 const { validateTenantContext } = require('./contracts/tenant-context');
@@ -34,6 +34,8 @@ const {
   evaluateAllocationRules
 } = require('./rules/allocation-rules');
 
+const { AuditLogger } = require('./audit/audit-logger');
+
 module.exports = {
   // Constants
   DRAFT_STATUSES,
@@ -60,5 +62,8 @@ module.exports = {
   AllocationGateway,
 
   // Rules Evaluator
-  evaluateAllocationRules
+  evaluateAllocationRules,
+
+  // Audit Logger
+  AuditLogger
 };

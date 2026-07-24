@@ -1,15 +1,17 @@
 /**
- * SimulationProvider (In-Memory Draft Store & Idempotency Cache)
+ * SimulationProvider (In-Memory Draft Store & Idempotency Cache with Audit Logging)
  */
 
 const { AllocationProvider } = require('./allocation-provider');
 const { validateAllocationDraft, DRAFT_STATUSES } = require('../contracts/draft-contract');
+const { AuditLogger } = require('../audit/audit-logger');
 
 class SimulationProvider extends AllocationProvider {
   constructor() {
     super();
     this.draftsStore = new Map(); // draftId -> draft object
     this.idempotencyCache = new Map(); // idempotencyKey -> { payloadHash, response }
+    this.auditLogger = new AuditLogger();
   }
 
   _hashPayload(payload) {
@@ -76,6 +78,16 @@ class SimulationProvider extends AllocationProvider {
     const validatedDraft = validateAllocationDraft(draftData);
     this.draftsStore.set(draftId, validatedDraft);
 
+    this.auditLogger.logEvent({
+      operator: payload.salesOwner || 'sim_clerk',
+      action: 'CREATE_DRAFT',
+      draftId,
+      correlationId: payload.correlationId || '',
+      tenantId: validatedDraft.tenantContext.tenantId,
+      companyId: validatedDraft.tenantContext.companyId,
+      details: `Created draft ${draftId}`
+    });
+
     const response = {
       success: true,
       draftId,
@@ -102,6 +114,16 @@ class SimulationProvider extends AllocationProvider {
     if (draft.status === DRAFT_STATUSES.CANCELLED) {
       throw new Error(`INVALID_DRAFT_STATE: Draft ${draftId} is CANCELLED and cannot be analyzed`);
     }
+
+    this.auditLogger.logEvent({
+      operator: draft.salesOwner || 'sim_clerk',
+      action: 'ANALYZE_ALLOCATION',
+      draftId,
+      correlationId: draft.idempotencyKey || '',
+      tenantId: draft.tenantContext.tenantId,
+      companyId: draft.tenantContext.companyId,
+      details: `Analyzed allocation for draft ${draftId}`
+    });
 
     const response = {
       success: true,
@@ -134,6 +156,16 @@ class SimulationProvider extends AllocationProvider {
     draft.updatedAt = new Date().toISOString();
     this.draftsStore.set(draftId, draft);
 
+    this.auditLogger.logEvent({
+      operator: draft.salesOwner || 'sim_clerk',
+      action: 'CONFIRM_ALLOCATION',
+      draftId,
+      correlationId: idempotencyKey || '',
+      tenantId: draft.tenantContext.tenantId,
+      companyId: draft.tenantContext.companyId,
+      details: `Confirmed allocation for draft ${draftId}`
+    });
+
     const response = {
       success: true,
       draftId,
@@ -155,6 +187,16 @@ class SimulationProvider extends AllocationProvider {
     draft.status = DRAFT_STATUSES.CANCELLED;
     draft.updatedAt = new Date().toISOString();
     this.draftsStore.set(draftId, draft);
+
+    this.auditLogger.logEvent({
+      operator: draft.salesOwner || 'sim_clerk',
+      action: 'CANCEL_ALLOCATION',
+      draftId,
+      correlationId: draft.idempotencyKey || '',
+      tenantId: draft.tenantContext.tenantId,
+      companyId: draft.tenantContext.companyId,
+      details: `Cancelled draft ${draftId}`
+    });
 
     return {
       success: true,
