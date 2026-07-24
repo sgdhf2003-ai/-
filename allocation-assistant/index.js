@@ -1,5 +1,5 @@
 /**
- * JYAI Allocation Assistant Package Entry Point (Phase 4C)
+ * JYAI Allocation Assistant Package Entry Point (Phase 5A)
  */
 
 const { validateTenantContext } = require('./contracts/tenant-context');
@@ -51,6 +51,7 @@ const { AllocationSyncEngine } = require('./sync/allocation-sync-engine');
 const { AllocationUIState } = require('./ui/allocation-ui-state');
 const { AllocationGatewayClient } = require('./ui/allocation-gateway-client');
 const { AllocationViewRenderer } = require('./ui/allocation-view-renderer');
+const { AllocationSandboxView } = require('./ui/allocation-sandbox-view');
 
 module.exports = {
   // Constants
@@ -94,8 +95,9 @@ module.exports = {
   SyncIdempotencyGuard,
   AllocationSyncEngine,
 
-  // UI State Manager, Client Hook & Renderer
+  // UI State Manager, Client Hook, Renderer & Sandbox View
   AllocationUIState,
   AllocationGatewayClient,
-  AllocationViewRenderer
+  AllocationViewRenderer,
+  AllocationSandboxView
 };
