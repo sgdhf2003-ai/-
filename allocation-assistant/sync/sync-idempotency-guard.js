@@ -1,5 +1,5 @@
 /**
- * SyncIdempotencyGuard (Pack 4C)
+ * SyncIdempotencyGuard (Pack 4C / 4D)
  */
 
 class SyncIdempotencyGuard {
@@ -22,7 +22,7 @@ class SyncIdempotencyGuard {
       return {
         cached: true,
         isReplay: true,
-        response: { ...cached.response }
+        response: { ...cached.response, isReplay: true }
       };
     } else {
       throw new Error('IDEMPOTENCY_CONFLICT: Key reused with conflicting payload');

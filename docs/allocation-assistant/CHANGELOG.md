@@ -1,3 +1,20 @@
+## [v1.4.0-formal-holds-sync-safety] - 2026-07-24
+
+### Added
+* **正式保留同步與防重防線模組 (Formal Holds Integration & Sync Safety)**:
+  * 實作 `SyncRequest` 與 `SyncResult` 合約驗證器。
+  * 實作 `FormalReservationAdapter` 抽象基類與 `MockFormalReservationAdapter` 離線模擬器 (支援 UNKNOWN_OUTCOME 狀態復原查詢與 `EXPLICIT_FAIL` 模擬).
+  * 實作 `AllocationSyncEngine` 狀態機轉移器 (`ALLOCATION_CONFIRMED` -> `SYNC_PENDING` -> `SYNC_IN_PROGRESS` -> `SYNCED` / `SYNC_FAILED`).
+  * 實作 `SyncIdempotencyGuard` 獨立防重守衛與 payload 衝突排查機制。
+* **完整同步與復原模擬測試套件 (Sync Simulation Suites)**:
+  * 新增 `simulate:allocation-sync-adapter`, `simulate:allocation-sync-engine`, `simulate:allocation-sync-recovery`, `simulate:allocation-sync-full` npm 指令。
+  * 模擬測試總數擴充至 115 / 115 PASS (共 18 大模擬測試集).
+
+### Security Declaration
+* **零生產環境變更 (No Production Changes)**: 本階段未新增或修改任何生產環境程式碼。
+* **零通知發送 (No Notifications Sent)**: 未呼叫任何 LINE Bot 推送 API 或外部 HTTP 請求。
+* **零部署異動 (No clasp push/deploy)**: clasp 設定與 Apps Script 部署版本無任何異動。
+
 ## [v1.3.0-ui-app-interactivity] - 2026-07-24
 
 ### Added

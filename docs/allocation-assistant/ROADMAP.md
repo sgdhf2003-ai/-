@@ -24,7 +24,13 @@
 * **測試**: 執行 14 大模擬測試套件 (`npm run simulate:all`)，102/102 PASS。
 * **退出條件**: UI 狀態機、Client Hook、View Renderer 轉譯器與全流程 E2E 100% 覆蓋測試且無任何 Sheet / LINE 寫入 Side Effects。
 
-## Phase 4: Formal Holds Integration & Sync Safety (下階段規劃)
+## Phase 4: Formal Holds Integration & Sync Safety (正式保留同步與防重防線 — 本次完成)
+* **入口**: 已確認配貨草稿 `ALLOCATION_CONFIRMED` 與保留請求。
+* **輸出**: `SyncRequest`, `SyncResult`, `FormalReservationAdapter`, `MockFormalReservationAdapter`, `AllocationSyncEngine`, `SyncIdempotencyGuard`。
+* **測試**: 執行 18 大模擬測試套件 (`npm run simulate:all`)，115/115 PASS。
+* **退出條件**: 同步合約、Mock 保留適配器、SyncEngine 狀態機、IdempotencyGuard 防重與 Unknown-Outcome 回復 100% 覆蓋測試且無任何 Sheet / LINE 寫入 Side Effects。
+
+## Phase 5: Production Handoff & Governance (下階段規劃)
 * **入口**: 使用者於 UI 修改並點選確認配貨建議。
 * **輸出**: 更新 `AllocationDraft` 狀態為 `ALLOCATION_CONFIRMED` 並準備進行同步。
 * **測試**: 模擬前端確認操作，驗證狀態機轉換合規性。
