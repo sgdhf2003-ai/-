@@ -1,17 +1,23 @@
 /**
- * SimulationProvider (In-Memory Draft Store & Idempotency Cache with Audit Logging)
+ * SimulationProvider (In-Memory Draft Store & Idempotency Cache with Audit Logging & Inventory Adapter Integration)
  */
 
 const { AllocationProvider } = require('./allocation-provider');
 const { validateAllocationDraft, DRAFT_STATUSES } = require('../contracts/draft-contract');
 const { AuditLogger } = require('../audit/audit-logger');
+const { evaluateAllocationRules } = require('../rules/allocation-rules');
 
 class SimulationProvider extends AllocationProvider {
-  constructor() {
+  constructor(options = {}) {
     super();
     this.draftsStore = new Map(); // draftId -> draft object
     this.idempotencyCache = new Map(); // idempotencyKey -> { payloadHash, response }
     this.auditLogger = new AuditLogger();
+    this.inventoryAdapter = options.inventoryAdapter || null;
+  }
+
+  setInventoryAdapter(adapter) {
+    this.inventoryAdapter = adapter;
   }
 
   _hashPayload(payload) {
@@ -100,9 +106,9 @@ class SimulationProvider extends AllocationProvider {
     return response;
   }
 
-  analyzeAllocation(draftId, idempotencyKey, inventorySnapshot) {
+  analyzeAllocation(draftId, idempotencyKey, explicitSnapshot) {
     const key = idempotencyKey;
-    const payload = { draftId, inventorySnapshot };
+    const payload = { draftId, explicitSnapshot };
     const replay = this._checkIdempotency(key, payload);
     if (replay) return replay;
 
@@ -113,6 +119,38 @@ class SimulationProvider extends AllocationProvider {
 
     if (draft.status === DRAFT_STATUSES.CANCELLED) {
       throw new Error(`INVALID_DRAFT_STATE: Draft ${draftId} is CANCELLED and cannot be analyzed`);
+    }
+
+    let suggestion = null;
+    const firstItem = draft.items[0];
+
+    if (firstItem) {
+      let snapshot = explicitSnapshot || null;
+
+      if (!snapshot && this.inventoryAdapter) {
+        try {
+          snapshot = this.inventoryAdapter.getInventorySnapshot(firstItem.productCode, draft.tenantContext);
+        } catch (err) {
+          snapshot = null;
+        }
+      }
+
+      if (!snapshot) {
+        snapshot = {
+          snapshotId: `snap_empty_${Date.now()}`,
+          productCode: firstItem.productCode,
+          timestamp: new Date().toISOString(),
+          warehouses: []
+        };
+      }
+
+      const evalResult = evaluateAllocationRules({
+        item: firstItem,
+        snapshot,
+        customerApprovedMixedBatch: false
+      });
+
+      suggestion = evalResult.suggestion;
     }
 
     this.auditLogger.logEvent({
@@ -129,6 +167,7 @@ class SimulationProvider extends AllocationProvider {
       success: true,
       draftId,
       status: DRAFT_STATUSES.ALLOCATION_REVIEW,
+      suggestion,
       isReplay: false,
       errorCode: ''
     };

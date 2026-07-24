@@ -1,5 +1,5 @@
 /**
- * AllocationGateway Orchestrator & Router
+ * AllocationGateway Orchestrator & Router (Updated Pack 2C)
  */
 
 const { SimulationProvider } = require('../providers/simulation-provider');
@@ -7,9 +7,12 @@ const { ExternalProvider } = require('../providers/external-provider');
 
 class AllocationGateway {
   constructor(providers = {}) {
+    const simProv = providers.SIMULATION || providers.simulationProvider || (providers.providerMap && providers.providerMap.SIMULATION) || new SimulationProvider();
+    const extProv = providers.EXTERNAL || providers.externalProvider || (providers.providerMap && providers.providerMap.EXTERNAL) || new ExternalProvider();
+
     this.providers = {
-      SIMULATION: providers.simulationProvider || new SimulationProvider(),
-      EXTERNAL: providers.externalProvider || new ExternalProvider()
+      SIMULATION: simProv,
+      EXTERNAL: extProv
     };
   }
 
