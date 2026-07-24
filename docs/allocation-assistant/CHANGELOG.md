@@ -1,3 +1,16 @@
+## [v1.7.0-assistant-ocr-fulfillment] - 2026-07-25
+
+### Added
+* **業務助理 LINE OCR、模糊候選與出貨收尾閉環 (Phase 7 Sales Assistant Loop)**:
+  * **OcrCandidateMatcher & ImageOcrAdapter**: 實作影像單據辨識與 Top 3 模糊候選品項選項按鈕 (`candidateOptions`).
+  * **LiffMicroEditPopup**: 實作 LIFF 微型修正彈窗，含 `[10]`, `[50]`, `[500]`, `[1000]` 快捷標籤、語音/打字覆蓋解析 (`改 2000`)、大數量/庫存溢出黃色警示與原圖放大核對按鈕.
+  * **FormalHoldWritebackAdapter**: 實作 Google Sheet 去保留寫入適配器，產生結構化正式單號 (`RES-YYYYMMDD-XXX`) 並將狀態更新為 `RESERVED`.
+  * **FulfillmentAdapter**: 實作雙軌出貨收尾結案機制，支援 Option 2 待出貨輪播卡片 (`[🚚 全額出貨]`, `[✏️ 部分出貨]`, `[❌ 取消保留]`) 與 Option 3 文字快捷指令 (`出貨 #RES-20260725-001`, `結案 001`, `取消 #003`).
+* **Production 雙端 clasp 部署發佈**:
+  * 成功發佈 Backend Apps Script Web App **Version 77** (Deployment ID: `AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw`).
+  * 成功發佈 LINE Bot Apps Script **Version 190** (Deployment ID: `AKfycbxioavjvzENr9duOtomZQRmbycbDtJOzKNAuSgcnE1ptNquTStiWMZwygLEHaYfPxOn`).
+  * 全套 27 大模擬測試套件總數擴充至 149 / 149 PASS.
+
 ## [v1.6.0-production-sandbox-rollout] - 2026-07-24
 
 ### Added

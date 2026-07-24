@@ -42,8 +42,14 @@
 * **驗證**: 完整包含沙盒測試操作指引、3 組展示情境步聚、Sheet Schema 核對、Script Properties 權限與業務簽核四項評估指標。
 * **退出條件**: 雙文件 100% 完整無占位符，模擬測試 131/131 PASS 並且通過 deploy.py dry-run 檢驗。
 
-## Phase 6: Production Mounting & Sandbox Rollout (正式 Apps Script 生産環境掛載與沙盒 Web App 發佈 — 本次完成)
+## Phase 6: Production Mounting & Sandbox Rollout (正式 Apps Script 生産環境掛載與沙盒 Web App 發佈 — 已完工)
 * **入口**: Phase 5 前台沙盒介面、Demo 卡片與 Option 2+ UAT 檢核規範。
 * **輸出**: `google-apps-script/Code.gs`, `google-apps-script/AllocationAssistantView.html`, `index.html`, `Version 75 Deployment`。
 * **測試**: 執行 24 大模擬測試套件 (`npm run simulate:all`)，139/139 PASS。
 * **退出條件**: Code.gs Helper 進入點、HTML 主視圖與底部 Tab 頁籤成功掛載、clasp push 成功發佈 Web App Version 75、Production 唯讀驗證測試 100% 覆蓋且無 Sheet / LINE 寫入 Side Effects。
+
+## Phase 7: Sales Assistant LINE OCR & Fulfillment Loop (業務助理 LINE OCR 辨識、模糊候選與出貨收尾閉環 — 本次完成)
+* **入口**: 業務助理 LINE 圖片上傳、配貨劃扣與出貨結案需求。
+* **輸出**: `ImageOcrAdapter`, `OcrCandidateMatcher`, `LiffMicroEditPopup`, `FormalHoldWritebackAdapter`, `FulfillmentAdapter` (Backend Version 77 / LINE Bot Version 190)。
+* **測試**: 執行 27 大模擬測試套件 (`npm run simulate:all`)，149/149 PASS。
+* **退出條件**: 影像 OCR 解析、Top 3 模糊候選、LIFF 微型修正彈窗、結構化單號 `RES-YYYYMMDD-XXX` 去保留寫入、雙軌出貨結案（輪播卡片與快捷指令）100% 覆蓋測試，雙端 Production clasp push 部署成功，遠端 Git 同步。
