@@ -1,5 +1,5 @@
 /**
- * JYAI Allocation Assistant Package Entry Point (Phase 3C)
+ * JYAI Allocation Assistant Package Entry Point (Phase 4A)
  */
 
 const { validateTenantContext } = require('./contracts/tenant-context');
@@ -19,10 +19,12 @@ const {
   validateAllocationSuggestion
 } = require('./contracts/suggestion-contract');
 const {
-  validateAuditEvent,
+  validateAuditEvent
+} = require('./contracts/audit-contract');
+const {
   validateSyncRequest,
   validateSyncResult
-} = require('./contracts/audit-contract');
+} = require('./contracts/sync-contract');
 
 const { AllocationProvider } = require('./providers/allocation-provider');
 const { SimulationProvider } = require('./providers/simulation-provider');
@@ -39,6 +41,9 @@ const { AuditLogger } = require('./audit/audit-logger');
 const { ReadOnlyInventoryAdapter } = require('./adapters/readonly-inventory-adapter');
 const { mapSheetRowsToInventorySnapshot } = require('./adapters/inventory-sheet-mapper');
 const { MockSheetInventoryAdapter } = require('./adapters/mock-sheet-inventory-adapter');
+
+const { FormalReservationAdapter } = require('./adapters/formal-reservation-adapter');
+const { MockFormalReservationAdapter } = require('./adapters/mock-formal-reservation-adapter');
 
 const { AllocationUIState } = require('./ui/allocation-ui-state');
 const { AllocationGatewayClient } = require('./ui/allocation-gateway-client');
@@ -79,6 +84,8 @@ module.exports = {
   ReadOnlyInventoryAdapter,
   mapSheetRowsToInventorySnapshot,
   MockSheetInventoryAdapter,
+  FormalReservationAdapter,
+  MockFormalReservationAdapter,
 
   // UI State Manager, Client Hook & Renderer
   AllocationUIState,
