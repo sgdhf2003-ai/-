@@ -12,11 +12,13 @@
 * **測試**: 執行純本機 30 項模擬測試矩陣 (`npm run simulate:shadow-allocation`)，74/74 PASS。
 * **退出條件**: `AllocationGateway`, `SimulationProvider`, `RuleEvaluator`, `AuditLogger` 100% 覆蓋測試且無任何 Sheet / LINE Side Effects。
 
-## Phase 2: BM Web UI 配貨工作區 (下階段規劃)
-* **入口**: `AllocationDraft` 內容。
-* **輸出**: 生成 `AllocationSuggestion`，包含建議倉庫、建議批號、配貨建議與判斷依據。
-* **測試**: 使用既有批號 `7J25` 與品號 `EQA-6522` 進行庫存配貨模擬測試，驗證演算法的分配正確性。
-* **退出條件**: 配貨建議演算法在所有模擬庫存場景下（包含單批足量、單批不足、跨倉等）計算結果符合業務規則。
+## Phase 2: Read-Only Sheet Inventory Integration (唯讀 Sheet 庫存快照整合 — 本次完成)
+* **入口**: 試算表庫存列資料與配貨草稿。
+* **輸出**: `ReadOnlyInventoryAdapter`, `InventorySheetMapper`, `MockSheetInventoryAdapter`。
+* **測試**: 執行 10 大模擬測試套件 (`npm run simulate:all`)，86/86 PASS。
+* **退出條件**: 庫存列轉譯器、Mock 試算表適配器與 Gateway 整合 100% 覆蓋測試且無任何 Sheet / LINE 寫入 Side Effects。
+
+## Phase 3: BM Web UI 配貨工作區 (下階段規劃)
 
 ## Phase 1C: 待同步與第二次確認
 * **入口**: 使用者於 UI 修改並點選確認配貨建議。

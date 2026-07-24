@@ -1,3 +1,20 @@
+## [v1.2.0-readonly-sheet-integration] - 2026-07-24
+
+### Added
+* **純唯讀 Sheet 快照轉譯與適配層 (Read-Only Inventory Sheet Integration)**:
+  * 實作 `ReadOnlyInventoryAdapter` 抽象基類與 Fail-Closed 機制。
+  * 實作 `InventorySheetMapper` 純函式轉譯器（支援數量字串解析、負數校驗、無效列過濾與實體盤點未確認標記 `PHYSICAL_COUNT_UNCONFIRMED`）。
+  * 實作 `MockSheetInventoryAdapter` 支援多倉庫存原始列資料注入與 `EMPTY_SHEET_DATA` 警告處理。
+  * 升級 `SimulationProvider` 與 `AllocationGateway` 支援動態注入/連結 `ReadOnlyInventoryAdapter` 並產出即時配貨建議。
+* **完整模擬測試套件 (Simulation Suites)**:
+  * 新增 `simulate:allocation-adapter`, `simulate:allocation-mock-sheet`, `simulate:allocation-provider-snapshot` npm 指令。
+  * 模擬測試總數擴充至 86 / 86 PASS。
+
+### Security Declaration
+* **零生產環境變更 (No Production Changes)**: 本階段未新增或修改任何生產環境程式碼。
+* **零通知發送 (No Notifications Sent)**: 未呼叫任何 LINE Bot 推送 API 或外部 HTTP 請求。
+* **零部署異動 (No clasp push/deploy)**: clasp 設定與 Apps Script 部署版本無任何異動。
+
 ## [v1.1.0-shadow-allocation] - 2026-07-24
 
 ### Added
