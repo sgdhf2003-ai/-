@@ -1,9 +1,9 @@
 # JYAI Allocation Assistant - Phase 1 Shadow Allocation Design Specification
 
-**Document Version**: `v1.0.0`  
-**Date**: `2026-07-24`  
-**Status**: `PROPOSED_SPECIFICATION`  
-**Module**: `JYAI Allocation Assistant (JYAI 配貨助手)`  
+**Document Version**: `v1.0.0`
+**Date**: `2026-07-24`
+**Status**: `PROPOSED_SPECIFICATION`
+**Module**: `JYAI Allocation Assistant (JYAI 配貨助手)`
 
 ---
 
