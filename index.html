@@ -178,6 +178,17 @@
                 <span class="quick-chip" data-shortcut-view="inventory">查詢庫存</span>
               </span>
             </button>
+            <button class="domain-card" id="allocationCard" data-view="allocation" style="--tone: #f59e0b">
+              <span class="team-badge">SANDBOX</span>
+              <span class="domain-icon" aria-hidden="true">配</span>
+              <span>
+                <strong>配貨建議 (沙盒)</strong>
+                <p>模擬試算庫存劃扣、跨倉配貨與混批授權</p>
+              </span>
+              <span class="quick-row" data-shortcut-row>
+                <span class="quick-chip" data-shortcut-view="allocation">開啟沙盒</span>
+              </span>
+            </button>
             <button type="button" class="domain-card" id="tasksCard" data-view="tasks" style="--tone: #8b5cf6">
               <span class="team-badge">MVP</span>
               <span class="domain-icon" aria-hidden="true">工</span>
@@ -776,6 +787,22 @@
             </section>
             
 
+        <section class="view" id="view-allocation-sandbox">
+          <div class="view-toolbar">
+            <button class="back-button" data-view="home">‹</button>
+            <div>
+              <p class="eyebrow">SANDBOX ALLOCATION</p>
+              <h1>配貨建議試算 (唯讀沙盒)</h1>
+            </div>
+          </div>
+          <div class="sandbox-banner amber-banner" style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 8px; padding: 12px; margin-bottom: 16px; color: #f59e0b;">
+            ⚠️ 配貨建議試算 (唯讀沙盒模式) - 本頁面僅供模擬試算，不寫入正式保留與 LINE 通知
+          </div>
+          <div class="sandbox-container">
+            <textarea id="sandboxOrderInput" rows="3" placeholder="輸入需求文字 (例如: EQA-6522 * 10)..." style="width: 100%; border-radius: 8px; padding: 12px; background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 12px;"></textarea>
+            <button class="primary-button" id="sandboxEvalBtn">進行配貨評估</button>
+            <div id="sandboxDemoCardsSection" style="margin-top: 20px;"></div>
+            <div id="sandboxResultSection" style="margin-top: 20px;"></div>
           </div>
         </section>
       </main>
@@ -787,6 +814,7 @@
         <button class="nav-item" data-view="projects">案場</button>
         <button class="nav-item" data-view="samples">樣品</button>
         <button class="nav-item" data-view="complaints">客訴</button>
+        <button class="nav-item" id="nav-allocation" data-view="allocation">配貨</button>
       </nav>
     </div>
 

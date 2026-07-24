@@ -37,6 +37,14 @@ function doGet(e) {
   }
 }
 
+/**
+ * Returns the Allocation Assistant Sandbox View HTML template string.
+ * @return {string} HTML content for Allocation Assistant Sandbox View.
+ */
+function getAllocationAssistantView() {
+  return HtmlService.createTemplateFromFile('AllocationAssistantView').evaluate().getContent();
+}
+
 function doPost(e) {
   try {
     const contents = e && e.postData && e.postData.contents ? e.postData.contents : "";
