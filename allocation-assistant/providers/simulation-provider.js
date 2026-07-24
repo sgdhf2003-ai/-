@@ -78,7 +78,8 @@ class SimulationProvider extends AllocationProvider {
       sourceDraftId: payload.sourceDraftId || '',
       idempotencyKey: key || '',
       salesOwner: payload.salesOwner || 'sim_clerk',
-      items
+      items,
+      customerApprovedMixedBatch: Boolean(payload.customerApprovedMixedBatch)
     };
 
     const validatedDraft = validateAllocationDraft(draftData);
@@ -106,9 +107,13 @@ class SimulationProvider extends AllocationProvider {
     return response;
   }
 
-  analyzeAllocation(draftId, idempotencyKey, explicitSnapshot) {
+  analyzeAllocation(draftId, idempotencyKey, explicitSnapshot, options = {}) {
+    const customerApprovedMixedBatch = typeof options === 'boolean'
+      ? options
+      : Boolean(options && options.customerApprovedMixedBatch);
+
     const key = idempotencyKey;
-    const payload = { draftId, explicitSnapshot };
+    const payload = { draftId, explicitSnapshot, customerApprovedMixedBatch };
     const replay = this._checkIdempotency(key, payload);
     if (replay) return replay;
 
@@ -120,6 +125,9 @@ class SimulationProvider extends AllocationProvider {
     if (draft.status === DRAFT_STATUSES.CANCELLED) {
       throw new Error(`INVALID_DRAFT_STATE: Draft ${draftId} is CANCELLED and cannot be analyzed`);
     }
+
+    draft.customerApprovedMixedBatch = customerApprovedMixedBatch;
+    this.draftsStore.set(draftId, draft);
 
     let suggestion = null;
     const firstItem = draft.items[0];
@@ -145,9 +153,9 @@ class SimulationProvider extends AllocationProvider {
       }
 
       const evalResult = evaluateAllocationRules({
-        item: firstItem,
+        item: { ...firstItem, draftId },
         snapshot,
-        customerApprovedMixedBatch: false
+        customerApprovedMixedBatch
       });
 
       suggestion = evalResult.suggestion;

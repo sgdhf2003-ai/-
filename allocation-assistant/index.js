@@ -1,5 +1,5 @@
 /**
- * JYAI Allocation Assistant Package Entry Point (Phase 3A)
+ * JYAI Allocation Assistant Package Entry Point (Phase 3B)
  */
 
 const { validateTenantContext } = require('./contracts/tenant-context');
@@ -41,6 +41,7 @@ const { mapSheetRowsToInventorySnapshot } = require('./adapters/inventory-sheet-
 const { MockSheetInventoryAdapter } = require('./adapters/mock-sheet-inventory-adapter');
 
 const { AllocationUIState } = require('./ui/allocation-ui-state');
+const { AllocationGatewayClient } = require('./ui/allocation-gateway-client');
 
 module.exports = {
   // Constants
@@ -78,6 +79,7 @@ module.exports = {
   mapSheetRowsToInventorySnapshot,
   MockSheetInventoryAdapter,
 
-  // UI State Manager
-  AllocationUIState
+  // UI State Manager & Client Hook
+  AllocationUIState,
+  AllocationGatewayClient
 };

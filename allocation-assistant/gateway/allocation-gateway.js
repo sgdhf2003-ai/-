@@ -1,5 +1,5 @@
 /**
- * AllocationGateway Orchestrator & Router (Updated Pack 2C)
+ * AllocationGateway Orchestrator & Router (Updated Pack 3B)
  */
 
 const { SimulationProvider } = require('../providers/simulation-provider');
@@ -54,9 +54,9 @@ class AllocationGateway {
     };
   }
 
-  analyzeAllocation(draftId, idempotencyKey, inventorySnapshot, providerMode = 'SIMULATION') {
+  analyzeAllocation(draftId, idempotencyKey, inventorySnapshot, providerMode = 'SIMULATION', options = {}) {
     const provider = this.getProvider(providerMode);
-    return provider.analyzeAllocation(draftId, idempotencyKey, inventorySnapshot);
+    return provider.analyzeAllocation(draftId, idempotencyKey, inventorySnapshot, options);
   }
 
   confirmAllocation(draftId, confirmedItems, idempotencyKey, providerMode = 'SIMULATION') {
