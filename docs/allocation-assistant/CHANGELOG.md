@@ -1,3 +1,20 @@
+## [v1.5.0-ui-sandbox-integration-demo] - 2026-07-24
+
+### Added
+* **前台沙盒介面掛載與真實體驗展示模組 (UI Sandbox Integration & Interactive Demo)**:
+  * 實作 `AllocationSandboxView` 前台獨立 Tab 視圖容器與 `#view-allocation-sandbox` 掛載點。
+  * 實作黃色顯眼警示橫幅 `SandboxWarningBanner` (`配貨建議試算 (唯讀沙盒模式)`).
+  * 實作 `SandboxInventoryProvider` 動態對接 ReadOnlyInventoryAdapter 快照與傳送/寫入攔截防護 (`SANDBOX_WRITE_FORBIDDEN`).
+  * 實作 `SandboxDemoCards` 內建 3 組真實 Demo 體驗卡片與一鍵試算觸發器 (`DEMO_EQA_6522`, `DEMO_GUJIA_575`, `DEMO_LOW_CONFIDENCE`).
+* **沙盒 E2E 模擬測試套件 (Sandbox Simulation Suites)**:
+  * 新增 `simulate:allocation-sandbox-view`, `simulate:allocation-sandbox-provider`, `simulate:allocation-sandbox-demo`, `simulate:allocation-sandbox-e2e` npm 指令。
+  * 模擬測試總數擴充至 131 / 131 PASS (共 22 大模擬測試集).
+
+### Security Declaration
+* **零生產環境變更 (No Production Changes)**: 本階段未新增或修改任何生產環境程式碼。
+* **零通知發送 (No Notifications Sent)**: 未呼叫任何 LINE Bot 推送 API 或外部 HTTP 請求。
+* **零部署異動 (No clasp push/deploy)**: clasp 設定與 Apps Script 部署版本無任何異動。
+
 ## [v1.4.0-formal-holds-sync-safety] - 2026-07-24
 
 ### Added
