@@ -59,6 +59,7 @@ const { DEMO_PRESETS, SandboxDemoCards } = require('./ui/sandbox-demo-cards');
 const { OcrCandidateMatcher } = require('./ocr/ocr-candidate-matcher');
 const { ImageOcrAdapter } = require('./ocr/image-ocr-adapter');
 const { LiffMicroEditPopup } = require('./ui/liff-micro-edit-popup');
+const { FulfillmentAdapter } = require('./fulfillment/fulfillment-adapter');
 
 module.exports = {
   // Constants
@@ -112,8 +113,9 @@ module.exports = {
   SandboxInventoryProvider,
   SandboxDemoCards,
 
-  // OCR & LIFF Components
+  // OCR, LIFF & Fulfillment Components
   OcrCandidateMatcher,
   ImageOcrAdapter,
-  LiffMicroEditPopup
+  LiffMicroEditPopup,
+  FulfillmentAdapter
 };
