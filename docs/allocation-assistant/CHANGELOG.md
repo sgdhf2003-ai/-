@@ -1,3 +1,20 @@
+## [v1.6.0-production-sandbox-rollout] - 2026-07-24
+
+### Added
+* **正式 Apps Script 生産環境掛載與沙盒 Web App 發佈 (Production Mounting & Rollout)**:
+  * 於 `google-apps-script/Code.gs` 實作 `getAllocationAssistantView()` 樣板載入器。
+  * 建立 `google-apps-script/AllocationAssistantView.html` 樣板檔案。
+  * 於 `index.html` 前端主視圖與導覽選單成功掛載配貨助手獨立 Tab 頁籤 (`#nav-allocation`) 與沙盒視圖容器 (`#view-allocation-sandbox`).
+  * 成功執行 Apps Script 部署 (Deployment ID: `AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw` @ Version 75).
+* **正式環境唯讀驗證測試套件 (Production Validation Simulation Suites)**:
+  * 新增 `simulate:allocation-production-wireup` 與 `simulate:allocation-production-validation` npm 指令。
+  * 全套模擬測試總數擴充至 139 / 139 PASS (共 24 大模擬測試集).
+
+### Security Declaration
+* **零正式 Sheet 修改 (Zero Sheet Mutations)**: 測試與掛載過程中無新增或刪除任何正式試算表保留列。
+* **零 LINE 訊息發送 (Zero LINE Messages Sent)**: 隔離 LINE Bot 推播 API，無發送任何推播。
+* **全額 Fail-Closed 防寫保護 (Full Fail-Closed Protection)**: 保持 `SANDBOX_WRITE_FORBIDDEN` 100% 作用。
+
 ## [v1.5.0-ui-sandbox-integration-demo] - 2026-07-24
 
 ### Added

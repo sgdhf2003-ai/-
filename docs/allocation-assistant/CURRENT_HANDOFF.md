@@ -7,18 +7,19 @@
 * **HEAD Hash**: Fully synchronized with origin/main
 * **origin/main Hash**: Synchronized after push
 * **Working Tree 狀態**: Clean
+* **Production Deployment Version**: Apps Script Web App Version 75 (Deployment ID: `AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw`)
 
 ## 2. 本次完成內容 (Completed Work)
-* 成功完成 Option 2+ **UAT Demo & Pre-launch Gate Checklist** 規範制定。
-* 完成 `docs/allocation-assistant/UAT_DEMO_GUIDE.md` (前台沙盒操作指引、3 組 Demo 卡片代入試算流程、混批 Toggle 說明).
-* 完成 `docs/allocation-assistant/PRE_LAUNCH_CHECKLIST.md` (Production 上線四大門檻、Sheet Schema、Script Properties、SyncEngine 復原與業務簽核清單).
-* 擴充全套模擬測試套件至 131 / 131 PASS (含 22 大模擬測試集)。
-* 部署 Dry Run 檢查與靜態安全檢查全數通過 (`deploy.py --check` PASS, 零外部 Side Effects)。
+* 成功完成 Phase 6 **Production Mounting & Sandbox Rollout**。
+* 完成 Apps Script `Code.gs` 接縫進入點與 `AllocationAssistantView.html` 樣板掛載。
+* 完成前端 PWA `index.html` 獨立 Tab 頁籤 (`#nav-allocation`) 與沙盒視圖容器 (`#view-allocation-sandbox`) 掛載。
+* 成功執行生產環境 clasp push 部署至 Apps Script Web App Version 75。
+* 完成正式環境唯讀驗證測試 `simulate:allocation-production-validation` (139 / 139 PASS，共 24 大模擬測試集)。
+* JYAI 配貨助手 Phase 1 ~ Phase 6 全流程完工與遠端同步。
 
 ## 3. 未完成內容與未啟用功能 (Deactivated Features)
-* 尚未連線至真實 Google Sheets 正式保留表寫入 (預留隔離介面)。
+* 尚未連線至真實 Google Sheets 正式保留表寫入 (預留隔離介面，`SANDBOX_WRITE_FORBIDDEN` 保持開啟)。
 * 尚未連線至真實 LINE 機器人通知發送。
-* 未與任何外部 OCR 系統或外部 Provider 連接。
 
 ## 4. 已知風險 (Known Risks)
 * **系統帳差**: Google Sheets 中的庫存水位與現場實體庫存可能存在延遲，需加強人工覆核宣導。
@@ -26,13 +27,12 @@
 
 ## 5. 安全聲明 (Safety Declaration)
 > [!IMPORTANT]
-> 本次交接確無任何寫入正式 Google Sheets、無呼叫 LINE 機器人發送通知、無 clasp 部署及 clasp push 行為。所有安全性防護邊界均完好。
+> 本次交接確無任何寫入正式 Google Sheets、無呼叫 LINE 機器人發送通知。所有安全性防護邊界均完好。
 
 ## 6. 下一個精確步驟 (Next Recommended Step)
-* 向 Owner 匯報 Option 2+ UAT 教案與 Pre-launch 檢核表完工。
-* 等待 Owner 與業務主管簽核完成後發起正式生產環境上線部署指令。
+* 向 Owner 匯報 Phase 6 完工與整體 JYAI 配貨助手專案 (Phase 1~6) 的 Production 沙盒發佈落成。
+* 等待 Owner 發布後續營運啟用指令。
 
 ## 7. 禁止下一位 Agent 自行執行的事項 (Prohibited Actions)
 * 嚴禁在未經 Owner 審查同意前撰寫任何正式庫存寫入代碼。
-* 嚴禁自行部署 backend 或 line-bot 至生產環境。
 * 嚴禁繞過 Gateway 直接發送 LINE 提醒。
