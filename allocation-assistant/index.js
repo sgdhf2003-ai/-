@@ -1,5 +1,5 @@
 /**
- * JYAI Allocation Assistant Package Entry Point (Phase 1D)
+ * JYAI Allocation Assistant Package Entry Point (Phase 2A)
  */
 
 const { validateTenantContext } = require('./contracts/tenant-context');
@@ -36,6 +36,9 @@ const {
 
 const { AuditLogger } = require('./audit/audit-logger');
 
+const { ReadOnlyInventoryAdapter } = require('./adapters/readonly-inventory-adapter');
+const { mapSheetRowsToInventorySnapshot } = require('./adapters/inventory-sheet-mapper');
+
 module.exports = {
   // Constants
   DRAFT_STATUSES,
@@ -65,5 +68,9 @@ module.exports = {
   evaluateAllocationRules,
 
   // Audit Logger
-  AuditLogger
+  AuditLogger,
+
+  // Adapters & Mappers
+  ReadOnlyInventoryAdapter,
+  mapSheetRowsToInventorySnapshot
 };

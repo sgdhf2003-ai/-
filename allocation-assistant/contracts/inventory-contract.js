@@ -1,5 +1,5 @@
 /**
- * InventorySnapshot & InventoryLot Contract Validators
+ * InventorySnapshot & InventoryLot Contract Validators (Updated Phase 2A)
  */
 
 function validateInventoryLot(data) {
@@ -17,9 +17,14 @@ function validateInventoryLot(data) {
     throw new Error('availableQuantity cannot be negative');
   }
 
+  const physicalCountConfirmed = typeof data.physicalCountConfirmed === 'boolean'
+    ? data.physicalCountConfirmed
+    : true;
+
   return {
     batchNumber,
-    availableQuantity
+    availableQuantity,
+    physicalCountConfirmed
   };
 }
 
@@ -47,11 +52,14 @@ function validateInventorySnapshot(data) {
       })
     : [];
 
+  const warnings = Array.isArray(data.warnings) ? data.warnings : [];
+
   return {
     snapshotId: snapshotId || `snap_${Date.now()}`,
     productCode,
     timestamp: data.timestamp || new Date().toISOString(),
-    warehouses
+    warehouses,
+    warnings
   };
 }
 

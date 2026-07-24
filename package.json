@@ -17,6 +17,7 @@
     "simulate:allocation-rules": "node tests/simulations/allocation-rules.sim.js",
     "simulate:allocation-audit": "node tests/simulations/allocation-audit.sim.js",
     "simulate:shadow-allocation": "node tests/simulations/shadow-allocation.sim.js",
-    "simulate:all": "npm run simulate:task-log && npm run simulate:task-due && npm run simulate:secure-push && npm run simulate:login-binding && npm run simulate:line-integration && npm run simulate:allocation-contract && npm run simulate:allocation-gateway && npm run simulate:allocation-provider && npm run simulate:allocation-rules && npm run simulate:allocation-audit && npm run simulate:shadow-allocation"
+    "simulate:allocation-adapter": "node tests/simulations/allocation-adapter.sim.js",
+    "simulate:all": "npm run simulate:task-log && npm run simulate:task-due && npm run simulate:secure-push && npm run simulate:login-binding && npm run simulate:line-integration && npm run simulate:allocation-contract && npm run simulate:allocation-gateway && npm run simulate:allocation-provider && npm run simulate:allocation-rules && npm run simulate:allocation-audit && npm run simulate:shadow-allocation && npm run simulate:allocation-adapter"
   }
 }
