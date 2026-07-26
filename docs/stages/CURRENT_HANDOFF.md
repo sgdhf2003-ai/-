@@ -3,19 +3,21 @@
 ## Repository
 
 - repo root: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
-- branch: `main`
+- branch: `stage-24-b3-production-contract-spec`
 - source of truth: Canonical cloud-drive checkout path above
-- HEAD / origin/main: `75aed13274311d1905601c4b2946078f7e102791`
-- ahead / behind: `0 / 0`
+- HEAD: `440e8cd30cc7bf52142a24008968415fa35aa606`
+- origin/stage-24-b3-production-contract-spec: `440e8cd30cc7bf52142a24008968415fa35aa606`
+- origin/main base: `b32fad100afb3b0c926d9edc466fea2833e8ac45`
+- ahead / behind vs origin/main: `1 / 0`
 
 ## Current Stage
 
-- current stage: Stage 24-A Governance Cleanup Pack
+- current stage: Stage 24-DOCS-A AI Project Docs Structure
 - previous completed delivery: Phase 7 Sales Assistant LINE OCR & Fulfillment Loop
-- latest canonical commit: `75aed13274311d1905601c4b2946078f7e102791`
+- latest pushed stage commit: `440e8cd30cc7bf52142a24008968415fa35aa606`
 - backend deployed version: `78` (canonical deployment record)
 - LINE Bot deployed version: `191` (canonical deployment record)
-- automated simulations: `npm run simulate:all` = 149 / 149 PASS
+- automated simulations: `npm run simulate:all` PASS in the latest Stage 24-DOCS-A local verification
 
 ## Product North Star
 
@@ -29,7 +31,7 @@
 - LINE Bot LINE_PUSH_ENABLED: disabled
 - production notification send: disabled (re-enable requires explicit approval window)
 - Developer/Documents/scratch/exported paths: untrusted/backup only and blocked unless Owner explicitly reassigns the project root
-- Stage 24-A scope: documentation/governance cleanup only; no production code changes, deploys, Sheet writes, LINE API calls, commits, or pushes without explicit Owner approval.
+- Stage 24-DOCS-A scope: AI project docs structure and stale-path governance cleanup only; no Stage 24-B4 implementation, production code changes, deploys, Sheet writes, LINE API calls, token/secret access, commits, or pushes without explicit Owner approval.
 
 ## Phase 7 Integration-Hardening Gaps
 
@@ -40,4 +42,4 @@
 
 ## Required Next Step
 
-Complete Stage 24-A documentation cleanup verification, then request Owner approval before any Stage 24-B integration-hardening implementation.
+Complete Stage 24-DOCS-A verification, then perform commit-readiness review before any commit/push approval request. `CANCEL_RELEASE` ledger semantics remain an Owner decision before Stage 24-B4.

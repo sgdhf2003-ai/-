@@ -14,7 +14,7 @@ These rules apply to Codex, Gemini, Antigravity, and any future coding agent wor
 - Canonical branch: `main`
 - Old Documents paths, Developer checkouts, scratch workspaces, and other exported copies are stale, backup, or non-canonical unless the Owner explicitly states otherwise for a specific stage.
 - Scratch workspace is temporary only and must not be treated as official storage.
-- Durable project materials, generated planning docs, stage notes, handoff notes, specs, reports, and organized project information must be saved inside the canonical cloud-drive checkout.
+- All durable JYAI project data, generated docs, stage notes, handoff notes, specs, plans, tasks, reports, memory records, and organized project information must be saved inside the canonical cloud-drive checkout, not scratch workspace or chat memory.
 - If a workbench cannot access the cloud-drive checkout, create only a transfer-ready draft and clearly state that it must be copied into the project-root `AGENTS.md` or the proper docs path before it becomes authoritative.
 - Do not modify, test, deploy, commit, or push from stale or backup paths.
 - If path identity is unclear, stop and report `BLOCKED`.

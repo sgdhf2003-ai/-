@@ -3,14 +3,15 @@
 ## 1. 專案基線狀態 (Project Baseline)
 * **交接日期**: 2026-07-26
 * **執行目錄**: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
-* **目前分支**: `main`
-* **HEAD Hash**: `75aed13274311d1905601c4b2946078f7e102791`
-* **origin/main Hash**: `75aed13274311d1905601c4b2946078f7e102791`
-* **Ahead / Behind**: `0 / 0`
-* **Working Tree 狀態**: Clean
+* **目前分支**: `stage-24-b3-production-contract-spec`
+* **HEAD Hash**: `440e8cd30cc7bf52142a24008968415fa35aa606`
+* **origin/stage-24-b3-production-contract-spec Hash**: `440e8cd30cc7bf52142a24008968415fa35aa606`
+* **origin/main Base Hash**: `b32fad100afb3b0c926d9edc466fea2833e8ac45`
+* **Ahead / Behind vs origin/main**: `1 / 0`
+* **Working Tree 狀態**: Dirty by approved Stage 24-DOCS-A documentation changes only
 * **Backend Web App Deployment Version**: Version 78 (`AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw`)
 * **LINE Bot Deployment Version**: Version 191 (`AKfycbxioavjvzENr9duOtomZQRmbycbDtJOzKNAuSgcnE1ptNquTStiWMZwygLEHaYfPxOn`)
-* **Simulation Baseline**: `npm run simulate:all` = 149 / 149 PASS
+* **Simulation Baseline**: `npm run simulate:all` PASS in latest Stage 24-DOCS-A local verification
 
 ## 2. 產品定位 (North Star)
 * **核心使用者**: 業務助理 / Sales Assistant / Admin，而非一般業務員。
@@ -31,6 +32,12 @@
 * 修正文檔中舊 `/Users/chenhaoan/Documents/...` 官方路徑描述。
 * 對齊 Backend Version 78、LINE Bot Version 191、main 與 origin/main 同步、149 / 149 PASS。
 
+## 4.1 Stage 24-DOCS-A AI Project Docs Structure
+* 補齊根目錄 `ARCHITECTURE.md` 與 `DESIGN.md`，整理系統架構、產品設計原則與文件地圖。
+* 補齊 `docs/MEMORY.md`、`docs/ai/README.md`、`docs/ai/SKILL.md`，讓 Codex、Gemini、Antigravity 與未來 agent 有一致的專案導航與操作流程。
+* 對齊 `docs/DECISIONS.md` 與 `scripts/preflight-check.sh` 的 canonical cloud-drive checkout 規則。
+* 本階段僅限文件與治理骨架，不進 Stage 24-B4、不部署、不寫 Sheet、不呼叫 LINE API、不碰 token/secret、不 commit/push。
+
 ## 5. Phase 7 Integration-Hardening Gaps
 * `FormalHoldWritebackAdapter` 的正式 Sheet persistence contract 尚未被 real adapter 完整證明。
 * `holds` 分頁欄位 mapping 需要和 canonical schema 對齊。
@@ -48,8 +55,9 @@
 > Stage 24-A 僅允許文件與治理修正。未經 Owner 明確批准，不得修改 production code、部署、寫入 Google Sheet、呼叫 LINE API、commit 或 push。
 
 ## 9. 下一個精確步驟 (Next Recommended Step)
-* 完成 Stage 24-A 文件治理修正驗證。
-* 待 Owner 批准後，另開 Stage 24-B 處理 Phase 7 integration-hardening。
+* 完成 Stage 24-DOCS-A commit-readiness review。
+* 待 Owner 明確批准 exact scope 後，才可 commit/push DOCS-A 文件治理變更。
+* Stage 24-B4 前需先決定 `CANCEL_RELEASE` ledger semantics。
 
 ## 10. 禁止下一位 Agent 自行執行的事項 (Prohibited Actions)
 * 嚴禁在未經 Owner 審查同意前撰寫任何正式庫存寫入代碼。
