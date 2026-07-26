@@ -5,7 +5,7 @@ This document establishes the official boundaries for the Jingyang Sales Assista
 ## 1. Directory Roles
 
 * **Official Workspace & Source of Truth**:
-  * **Path**: `/Users/chenhaoan/Developer/JYAI-Independent-Repos/jingyang-sales-app`
+  * **Path**: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
   * **Role**: This is the **only** official repository for all source code. All modifications, testing, and deployments must be executed from this directory.
   * **Subdirectories**:
     * `google-apps-script/`: Source code for the PWA Backend Apps Script project (Script ID: `1vRepq_HNkjbs8vRQvbkkDE8unGPHfksfhOTrkrNZthFZHs2GSHO8Gasc`).
@@ -17,7 +17,7 @@ This document establishes the official boundaries for the Jingyang Sales Assista
   * **Role**: strictly for Product Bibles, workflows, QA logs, SOPs, and project roadmaps. **No source code changes or deployments should be made here.**
 
 * **Stale / Backup Checkouts**:
-  * **Paths**: `/Users/chenhaoan/Documents/jingyang-sales-app`, `/Users/chenhaoan/Documents/JYAI-Independent-Repos/jingyang-sales-app`, and any Google Drive / CloudStorage copy.
+  * **Paths**: `/Users/chenhaoan/Developer/JYAI-Independent-Repos/jingyang-sales-app`, `/Users/chenhaoan/Documents/jingyang-sales-app`, `/Users/chenhaoan/Documents/JYAI-Independent-Repos/jingyang-sales-app`, scratch workspaces, and exported copies.
   * **Role**: backup or stale material only. **Do not modify, test, push, or deploy from these paths.**
 
 * **Legacy Archive**:
@@ -29,7 +29,7 @@ This document establishes the official boundaries for the Jingyang Sales Assista
 ## 2. Deployment Governance Rules
 
 1. **No Cross-Project Pushing**:
-   Deployments must only be performed from `/Users/chenhaoan/Developer/JYAI-Independent-Repos/jingyang-sales-app` using the `deploy.py` script.
+   Deployments must only be performed from `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app` using the `deploy.py` script and only after explicit Owner approval.
 2. **Configuration Validation**:
    Every deployment reads and validates settings from `deployment.config.json`. Pushes to incorrect Script IDs or Deployment IDs are blocked automatically.
 3. **Preserve URL**:

@@ -2,7 +2,7 @@
 
 This repository is the canonical `jingyang-sales-app` workspace when located at:
 
-`/Users/chenhaoan/Developer/JYAI-Independent-Repos/jingyang-sales-app`
+`/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 
 ## Cross-Agent Operating Rules
 
@@ -10,18 +10,22 @@ These rules apply to Codex, Gemini, Antigravity, and any future coding agent wor
 
 ### Canonical Repository
 
-- Canonical repo path: `/Users/chenhaoan/Developer/JYAI-Independent-Repos/jingyang-sales-app`
+- Canonical repo path: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 - Canonical branch: `main`
-- Old Documents paths, Google Drive paths, and CloudStorage paths are stale, backup, or non-canonical unless the Owner explicitly states otherwise for a specific stage.
+- Old Documents paths, Developer checkouts, scratch workspaces, and other exported copies are stale, backup, or non-canonical unless the Owner explicitly states otherwise for a specific stage.
+- Scratch workspace is temporary only and must not be treated as official storage.
+- Durable project materials, generated planning docs, stage notes, handoff notes, specs, reports, and organized project information must be saved inside the canonical cloud-drive checkout.
+- If a workbench cannot access the cloud-drive checkout, create only a transfer-ready draft and clearly state that it must be copied into the project-root `AGENTS.md` or the proper docs path before it becomes authoritative.
 - Do not modify, test, deploy, commit, or push from stale or backup paths.
 - If path identity is unclear, stop and report `BLOCKED`.
+- Contract-first workflow applies before allocation, reservation, fulfillment, Google Sheet persistence, Apps Script, LINE Bot, deploy wrapper, or any production-side-effect change.
 
 ### Mandatory Preflight
 
 Before any audit, implementation, verification, commit, push, or deployment decision, run and verify:
 
 ```bash
-cd "/Users/chenhaoan/Developer/JYAI-Independent-Repos/jingyang-sales-app"
+cd "/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app"
 pwd
 git rev-parse --show-toplevel
 git branch --show-current
@@ -99,10 +103,10 @@ git diff --check
 
 ## 1. Canonical Workspace
 
-- **Canonical Path**: `/Users/chenhaoan/Developer/JYAI-Independent-Repos/jingyang-sales-app`
+- **Canonical Path**: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 - **Canonical Branch**: `main`
 - **Canonical Remote**: `https://github.com/sgdhf2003-ai/-.git`
-- **Stale Clone Paths**: `/Users/chenhaoan/Documents/JYAI-Independent-Repos/jingyang-sales-app` (and `/Users/chenhaoan/Documents/jingyang-sales-app`).
+- **Stale Clone Paths**: `/Users/chenhaoan/Developer/JYAI-Independent-Repos/jingyang-sales-app`, `/Users/chenhaoan/Documents/JYAI-Independent-Repos/jingyang-sales-app`, `/Users/chenhaoan/Documents/jingyang-sales-app`, scratch workspaces, and exported copies unless the Owner explicitly reassigns the project root.
 - **Prohibitions**:
   - Never pull, commit, push, or deploy from any stale clone path.
   - Never assume a directory is the canonical repository based solely on directory name.

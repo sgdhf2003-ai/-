@@ -8,6 +8,9 @@ from pathlib import Path
 # Official project boundary is derived from this script's repository root.
 # This avoids stale machine-specific paths while keeping cross-project guards.
 OFFICIAL_PATH = Path(__file__).resolve().parent
+CANONICAL_REPOSITORY_PATH = Path(
+    "/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app"
+).resolve()
 
 DEFAULT_CLASP_EXTENSIONS = {".gs", ".js", ".html", ".json"}
 SECRET_SCAN_EXTENSIONS = {
@@ -43,21 +46,13 @@ def check_env():
     cwd = Path.cwd().resolve()
 
     # 1. Enforce canonical repository path boundary
-    expected_canonical_path = Path("/Users/chenhaoan/Developer/JYAI-Independent-Repos/jingyang-sales-app").resolve()
-    if OFFICIAL_PATH != expected_canonical_path:
+    if OFFICIAL_PATH != CANONICAL_REPOSITORY_PATH:
         fail(
-            f"deploy.py MUST reside inside canonical repository {expected_canonical_path}, got {OFFICIAL_PATH}",
+            f"deploy.py MUST reside inside canonical repository {CANONICAL_REPOSITORY_PATH}, got {OFFICIAL_PATH}",
             "NON_CANONICAL_REPOSITORY_ROOT"
         )
 
-    # 2. Block Google Drive / CloudStorage sync directories
-    if any(keyword in str(OFFICIAL_PATH) for keyword in ["CloudStorage", "GoogleDrive", "Google Drive"]):
-        fail(
-            f"Running deploy script from cloud-synchronized folder (Google Drive / CloudStorage) is blocked for safety: {OFFICIAL_PATH}",
-            "GOOGLE_DRIVE_PATH_BLOCKED"
-        )
-
-    # 3. Cross-project safeguard: cwd must reside within OFFICIAL_PATH
+    # 2. Cross-project safeguard: cwd must reside within OFFICIAL_PATH
     try:
         cwd.relative_to(OFFICIAL_PATH)
     except ValueError:
@@ -66,7 +61,7 @@ def check_env():
             "CROSS_PROJECT_SOURCE_BLOCKED"
         )
 
-    # 4. Repository markers validation.
+    # 3. Repository markers validation.
     backend_marker = OFFICIAL_PATH / "google-apps-script" / "Code.gs"
     bot_marker = OFFICIAL_PATH / "line-bot-apps-script" / "src" / "line程式碼.gs"
     if not backend_marker.exists() or not bot_marker.exists():

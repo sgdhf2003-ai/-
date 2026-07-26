@@ -2,7 +2,7 @@
 
 ## 1. 專案基線狀態 (Project Baseline)
 * **交接日期**: 2026-07-26
-* **執行目錄**: `/Users/chenhaoan/Developer/JYAI-Independent-Repos/jingyang-sales-app`
+* **執行目錄**: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 * **目前分支**: `main`
 * **HEAD Hash**: `75aed13274311d1905601c4b2946078f7e102791`
 * **origin/main Hash**: `75aed13274311d1905601c4b2946078f7e102791`
@@ -27,7 +27,7 @@
 * 擴充全套模擬測試至 149 / 149 PASS (共 27 大模擬測試套件)。
 
 ## 4. Stage 24-A 文件治理修正重點
-* 對齊 canonical repo path: `/Users/chenhaoan/Developer/JYAI-Independent-Repos/jingyang-sales-app`。
+* 對齊 canonical repo path: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`。
 * 修正文檔中舊 `/Users/chenhaoan/Documents/...` 官方路徑描述。
 * 對齊 Backend Version 78、LINE Bot Version 191、main 與 origin/main 同步、149 / 149 PASS。
 

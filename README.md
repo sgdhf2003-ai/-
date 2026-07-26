@@ -75,6 +75,6 @@ http://localhost:4181
 
 目前固定使用的 canonical 業務管家主資料夾：
 
-`/Users/chenhaoan/Developer/JYAI-Independent-Repos/jingyang-sales-app`
+`/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 
-請避免再用 `/Users/chenhaoan/Documents/jingyang-sales-app`、`/Users/chenhaoan/Documents/JYAI-Independent-Repos/jingyang-sales-app`、Google Drive / CloudStorage checkout 或 `/Users/chenhaoan/Documents/app` 來修改、測試或部署業務管家。這些路徑只可視為舊資料或備份，不是官方工作區。
+請避免再用 `/Users/chenhaoan/Developer/JYAI-Independent-Repos/jingyang-sales-app`、`/Users/chenhaoan/Documents/jingyang-sales-app`、`/Users/chenhaoan/Documents/JYAI-Independent-Repos/jingyang-sales-app` 或 `/Users/chenhaoan/Documents/app` 來修改、測試或部署業務管家。這些路徑只可視為舊資料或備份，不是官方工作區，除非 Owner 明確重新指定。

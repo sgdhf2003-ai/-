@@ -2,9 +2,9 @@
 
 ## Repository
 
-- repo root: `/Users/chenhaoan/Developer/JYAI-Independent-Repos/jingyang-sales-app`
+- repo root: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 - branch: `main`
-- source of truth: Canonical Developer repo path above
+- source of truth: Canonical cloud-drive checkout path above
 - HEAD / origin/main: `75aed13274311d1905601c4b2946078f7e102791`
 - ahead / behind: `0 / 0`
 
@@ -28,7 +28,7 @@
 - Backend LINE_PUSH_ENABLED: disabled
 - LINE Bot LINE_PUSH_ENABLED: disabled
 - production notification send: disabled (re-enable requires explicit approval window)
-- CloudStorage / Google Drive paths: untrusted/backup only and blocked for deployment
+- Developer/Documents/scratch/exported paths: untrusted/backup only and blocked unless Owner explicitly reassigns the project root
 - Stage 24-A scope: documentation/governance cleanup only; no production code changes, deploys, Sheet writes, LINE API calls, commits, or pushes without explicit Owner approval.
 
 ## Phase 7 Integration-Hardening Gaps
