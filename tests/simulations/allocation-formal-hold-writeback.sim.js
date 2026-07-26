@@ -3,10 +3,30 @@
  */
 
 const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
 const {
   FormalHoldWritebackAdapter,
   MockFormalReservationAdapter
 } = require('../../allocation-assistant/index');
+
+const BACKEND_HOLDS_HEADERS = [
+  'id',
+  'storeId',
+  'storeName',
+  'salesOwner',
+  'item',
+  'quantity',
+  'reservationStatus',
+  'holdAddress',
+  'holdDate',
+  'expiresAt',
+  'reminderAt',
+  'note',
+  'status',
+  'createdAt',
+  'updatedAt'
+];
 
 let totalTests = 0;
 let passedTests = 0;
@@ -32,10 +52,10 @@ runTest('FormalHoldWritebackAdapter generates structured reservation number RES-
   assert.strictEqual(resNo, 'RES-20260725-042');
 });
 
-// 2. Sheet Row Format Alignment
-runTest('FormalHoldWritebackAdapter formats reservation payload into standard Google Sheet row array', () => {
+// 2. Sheet Record Format Alignment
+runTest('FormalHoldWritebackAdapter formats reservation payload into backend HEADERS.holds object', () => {
   const adapter = new FormalHoldWritebackAdapter();
-  const rowData = adapter.formatHoldRow({
+  const holdRecord = adapter.formatHoldRecord({
     reservationNumber: 'RES-20260725-101',
     storeId: 'store_001',
     storeName: '中山建材',
@@ -46,16 +66,29 @@ runTest('FormalHoldWritebackAdapter formats reservation payload into standard Go
     batchNumber: '7J25'
   });
 
-  assert.strictEqual(rowData[1], 'RES-20260725-101');
-  assert.strictEqual(rowData[3], '中山建材');
-  assert.strictEqual(rowData[5], 'EQA-6522');
-  assert.strictEqual(rowData[6], 10);
-  assert.strictEqual(rowData[7], '已收訂 (劃扣)');
-  assert.strictEqual(rowData[11], 'RESERVED');
+  assert.deepStrictEqual(Object.keys(holdRecord), BACKEND_HOLDS_HEADERS);
+  assert.strictEqual(holdRecord.id, 'RES-20260725-101');
+  assert.strictEqual(holdRecord.storeId, 'store_001');
+  assert.strictEqual(holdRecord.storeName, '中山建材');
+  assert.strictEqual(holdRecord.item, 'EQA-6522');
+  assert.strictEqual(holdRecord.quantity, 10);
+  assert.strictEqual(holdRecord.reservationStatus, '已收訂 (劃扣)');
+  assert.strictEqual(holdRecord.status, 'RESERVED');
+  assert.ok(holdRecord.createdAt);
+  assert.ok(holdRecord.updatedAt);
+});
+
+runTest('FormalHoldWritebackAdapter validates backend HEADERS.holds exact order from Code.gs', () => {
+  const code = fs.readFileSync(path.join(__dirname, '../../google-apps-script/Code.gs'), 'utf8');
+  const match = code.match(/holds:\s*(\[[^\n]+\])/);
+  assert.ok(match, 'backend HEADERS.holds must be discoverable');
+  const backendHeaders = Function(`return ${match[1]};`)();
+
+  assert.deepStrictEqual(FormalHoldWritebackAdapter.HOLDS_HEADERS, backendHeaders);
 });
 
 // 3. Execution of Writeback & LINE Confirmation Payload
-runTest('FormalHoldWritebackAdapter executes writeback to mock sheet and returns LINE confirmation message', () => {
+runTest('FormalHoldWritebackAdapter persists through adapter and returns LINE confirmation message', () => {
   const sheetMock = new MockFormalReservationAdapter();
   const adapter = new FormalHoldWritebackAdapter({ sheetAdapter: sheetMock });
 
@@ -72,8 +105,85 @@ runTest('FormalHoldWritebackAdapter executes writeback to mock sheet and returns
   assert.strictEqual(result.success, true);
   assert.strictEqual(result.status, 'RESERVED');
   assert.ok(result.reservationNumber.startsWith('RES-'));
+  assert.strictEqual(result.holdRecord.id, result.reservationNumber);
+  assert.strictEqual(result.rowData[0], result.reservationNumber);
+  assert.strictEqual(sheetMock.holdsStore.size, 1);
+  assert.strictEqual(sheetMock.queryHoldByReservationNumber(result.reservationNumber).found, true);
   assert.ok(result.lineConfirmationMessage.includes('已成功完成去保留'));
   assert.ok(result.lineConfirmationMessage.includes(result.reservationNumber));
+});
+
+runTest('FormalHoldWritebackAdapter fails closed when writeback adapter capability is missing', () => {
+  const adapter = new FormalHoldWritebackAdapter({ sheetAdapter: {} });
+
+  const result = adapter.executeWriteback({
+    reservationNumber: 'RES-20260725-404',
+    productCode: 'EQA-6522',
+    quantity: 3
+  });
+
+  assert.strictEqual(result.success, false);
+  assert.strictEqual(result.errorCode, 'HOLD_WRITE_ADAPTER_MISSING');
+  assert.ok(!result.lineConfirmationMessage.includes('已成功完成去保留'));
+});
+
+runTest('FormalHoldWritebackAdapter fails closed when no adapter is explicitly provided', () => {
+  const adapter = new FormalHoldWritebackAdapter();
+
+  const result = adapter.executeWriteback({
+    reservationNumber: 'RES-20260725-406',
+    productCode: 'EQA-6522',
+    quantity: 3
+  });
+
+  assert.strictEqual(result.success, false);
+  assert.strictEqual(result.errorCode, 'HOLD_WRITE_ADAPTER_MISSING');
+  assert.ok(!result.lineConfirmationMessage.includes('已成功完成去保留'));
+});
+
+runTest('FormalHoldWritebackAdapter fails closed on writeback failure or header mismatch', () => {
+  const failingAdapter = {
+    appendHoldRecord() {
+      return { success: false, errorCode: 'HOLD_SCHEMA_MISMATCH' };
+    }
+  };
+  const adapter = new FormalHoldWritebackAdapter({ sheetAdapter: failingAdapter });
+
+  const result = adapter.executeWriteback({
+    reservationNumber: 'RES-20260725-405',
+    productCode: 'EQA-6522',
+    quantity: 3
+  });
+
+  assert.strictEqual(result.success, false);
+  assert.strictEqual(result.errorCode, 'HOLD_SCHEMA_MISMATCH');
+});
+
+runTest('FormalHoldWritebackAdapter returns idempotent replay without duplicate hold rows', () => {
+  const sheetMock = new MockFormalReservationAdapter();
+  const adapter = new FormalHoldWritebackAdapter({ sheetAdapter: sheetMock });
+  const payload = {
+    reservationNumber: 'RES-20260725-777',
+    storeId: 'store_777',
+    productCode: '艾美 336',
+    quantity: 9
+  };
+
+  const first = adapter.executeWriteback(payload);
+  const second = adapter.executeWriteback(payload);
+
+  assert.strictEqual(first.success, true);
+  assert.strictEqual(second.success, true);
+  assert.strictEqual(second.isReplay, true);
+  assert.strictEqual(sheetMock.holdsStore.size, 1);
+});
+
+runTest('JingyangAssistant spreadsheet fallback is property gated and no stale hardcoded spreadsheet ID remains', () => {
+  const source = fs.readFileSync(path.join(__dirname, '../../line-bot-apps-script/src/JingyangAssistant.gs'), 'utf8');
+
+  assert.ok(source.includes('JINGYANG_MANAGER_SPREADSHEET_ID'));
+  assert.ok(!source.includes('1BtroF_mFVlC3mXyw7vO09H244636Vc6nVseW_0qS2Ss'));
+  assert.ok(source.includes('JINGYANG_ASSISTANT_SPREADSHEET_ID_REQUIRED'));
 });
 
 console.log(`\nFormal Hold Writeback Simulation Summary: ${passedTests} / ${totalTests} PASS`);

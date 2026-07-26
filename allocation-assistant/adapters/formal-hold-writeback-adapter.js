@@ -3,11 +3,29 @@
  * Formats reservation data into structured Google Sheet rows and generates RES-YYYYMMDD-XXX reservation numbers.
  */
 
-const { MockFormalReservationAdapter } = require('./mock-formal-reservation-adapter');
+const HOLDS_HEADERS = [
+  'id',
+  'storeId',
+  'storeName',
+  'salesOwner',
+  'item',
+  'quantity',
+  'reservationStatus',
+  'holdAddress',
+  'holdDate',
+  'expiresAt',
+  'reminderAt',
+  'note',
+  'status',
+  'createdAt',
+  'updatedAt'
+];
 
 class FormalHoldWritebackAdapter {
   constructor(options = {}) {
-    this.sheetAdapter = options.sheetAdapter || new MockFormalReservationAdapter();
+    this.sheetAdapter = typeof options.appendHoldRecord === 'function'
+      ? options
+      : options.sheetAdapter || options.adapter || null;
     this.sequenceCounter = options.initialSequence || 1;
   }
 
@@ -20,11 +38,15 @@ class FormalHoldWritebackAdapter {
     return `RES-${yyyy}${mm}${dd}-${seq}`;
   }
 
-  formatHoldRow(reservation = {}) {
+  static get HOLDS_HEADERS() {
+    return HOLDS_HEADERS.slice();
+  }
+
+  formatHoldRecord(reservation = {}) {
     const now = new Date();
     const expires = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000); // 60 days
+    const reminder = new Date(expires.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-    const id = reservation.id || `hold_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
     const reservationNumber = reservation.reservationNumber || FormalHoldWritebackAdapter.generateReservationNumber(now, this.sequenceCounter++);
     const storeId = reservation.storeId || 'store_default';
     const storeName = reservation.storeName || '未指定店家';
@@ -37,11 +59,14 @@ class FormalHoldWritebackAdapter {
     const holdAddress = `${whName}${batch}`;
     const holdDate = reservation.holdDate || now.toISOString().split('T')[0];
     const expiresAt = reservation.expiresAt || expires.toISOString().split('T')[0];
+    const reminderAt = reservation.reminderAt || reminder.toISOString().split('T')[0];
+    const note = reservation.note || reservation.sourceNote || '';
     const status = 'RESERVED';
+    const createdAt = reservation.createdAt || now.toISOString();
+    const updatedAt = reservation.updatedAt || createdAt;
 
-    return [
-      id,
-      reservationNumber,
+    return {
+      id: reservationNumber,
       storeId,
       storeName,
       salesOwner,
@@ -51,19 +76,62 @@ class FormalHoldWritebackAdapter {
       holdAddress,
       holdDate,
       expiresAt,
-      status
-    ];
+      reminderAt,
+      note,
+      status,
+      createdAt,
+      updatedAt
+    };
+  }
+
+  formatHoldRow(reservation = {}) {
+    const record = HOLDS_HEADERS.every(header => Object.prototype.hasOwnProperty.call(reservation, header))
+      ? reservation
+      : this.formatHoldRecord(reservation);
+    return HOLDS_HEADERS.map(header => record[header]);
   }
 
   executeWriteback(reservationPayload = {}) {
-    const rowData = this.formatHoldRow(reservationPayload);
-    const reservationNumber = rowData[1];
-    const item = rowData[5];
-    const quantity = rowData[6];
-    const status = rowData[11];
+    const holdRecord = this.formatHoldRecord(reservationPayload);
+    const reservationNumber = holdRecord.id;
+    const item = holdRecord.item;
+    const quantity = holdRecord.quantity;
+    const status = holdRecord.status;
 
-    if (this.sheetAdapter && typeof this.sheetAdapter.appendHoldRow === 'function') {
-      this.sheetAdapter.appendHoldRow(rowData);
+    if (!this.sheetAdapter || typeof this.sheetAdapter.appendHoldRecord !== 'function') {
+      return {
+        success: false,
+        reservationNumber,
+        status: 'WRITE_FAILED',
+        holdRecord,
+        errorCode: 'HOLD_WRITE_ADAPTER_MISSING',
+        lineConfirmationMessage: `⚠️ 去保留尚未寫入正式紀錄，缺少 Sheet 寫入能力：${reservationNumber}`
+      };
+    }
+
+    let writeResult;
+    try {
+      writeResult = this.sheetAdapter.appendHoldRecord(holdRecord, { headers: HOLDS_HEADERS.slice() });
+    } catch (err) {
+      return {
+        success: false,
+        reservationNumber,
+        status: 'WRITE_FAILED',
+        holdRecord,
+        errorCode: err && err.message ? err.message : 'HOLD_WRITE_FAILED',
+        lineConfirmationMessage: `⚠️ 去保留寫入失敗：${reservationNumber}`
+      };
+    }
+
+    if (!writeResult || writeResult.success !== true || writeResult.persisted !== true) {
+      return {
+        success: false,
+        reservationNumber,
+        status: 'WRITE_FAILED',
+        holdRecord,
+        errorCode: (writeResult && writeResult.errorCode) || 'HOLD_WRITE_FAILED',
+        lineConfirmationMessage: `⚠️ 去保留尚未確認寫入正式紀錄：${reservationNumber}`
+      };
     }
 
     const lineConfirmationMessage = `✅ 已成功完成去保留劃扣！\n正式單號：${reservationNumber}\n品項數量：${item} * ${quantity} PCS\n狀態：${status}`;
@@ -72,7 +140,10 @@ class FormalHoldWritebackAdapter {
       success: true,
       reservationNumber,
       status,
-      rowData,
+      holdRecord,
+      rowData: HOLDS_HEADERS.map(header => holdRecord[header]),
+      persisted: true,
+      isReplay: Boolean(writeResult.isReplay),
       lineConfirmationMessage
     };
   }

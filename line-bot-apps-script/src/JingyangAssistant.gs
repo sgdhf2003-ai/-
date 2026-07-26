@@ -5,7 +5,7 @@ var JINGYANG_ASSISTANT_DEFAULT_API_URL = "https://script.google.com/macros/s/AKf
 var JINGYANG_ASSISTANT_DEFAULT_APP_URL = "https://brown-phi.vercel.app/";
 var JINGYANG_ASSISTANT_MENU_IMAGE_URL = "https://brown-phi.vercel.app/sales_rich_menu.jpg";
 var JINGYANG_ASSISTANT_MENU_NAME = "Jingyang Business Manager Menu v3";
-var JINGYANG_ASSISTANT_SPREADSHEET_ID = "1BtroF_mFVlC3mXyw7vO09H244636Vc6nVseW_0qS2Ss";
+var JINGYANG_ASSISTANT_SPREADSHEET_ID_REQUIRED = "JINGYANG_MANAGER_SPREADSHEET_ID";
 
 function JingyangAssistant_tryHandleLineEvent(event) {
   if (!event || event.type !== "message" || !event.message || event.message.type !== "text") return false;
@@ -439,7 +439,11 @@ function JingyangAssistant_getApiUrl_() {
 }
 
 function JingyangAssistant_getSpreadsheetId_() {
-  return PropertiesService.getScriptProperties().getProperty("JINGYANG_MANAGER_SPREADSHEET_ID") || JINGYANG_ASSISTANT_SPREADSHEET_ID;
+  var spreadsheetId = PropertiesService.getScriptProperties().getProperty(JINGYANG_ASSISTANT_SPREADSHEET_ID_REQUIRED);
+  if (!spreadsheetId) {
+    throw new Error("JINGYANG_MANAGER_SPREADSHEET_ID_REQUIRED");
+  }
+  return spreadsheetId;
 }
 
 function JingyangAssistant_getAppUrl_() {
