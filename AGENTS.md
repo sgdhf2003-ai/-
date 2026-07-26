@@ -4,6 +4,99 @@ This repository is the canonical `jingyang-sales-app` workspace when located at:
 
 `/Users/chenhaoan/Developer/JYAI-Independent-Repos/jingyang-sales-app`
 
+## Cross-Agent Operating Rules
+
+These rules apply to Codex, Gemini, Antigravity, and any future coding agent working on this repository. `AGENTS.md` is the source of truth for cross-agent project governance. Tool-specific rule files, if present, must point back to this file instead of redefining conflicting rules.
+
+### Canonical Repository
+
+- Canonical repo path: `/Users/chenhaoan/Developer/JYAI-Independent-Repos/jingyang-sales-app`
+- Canonical branch: `main`
+- Old Documents paths, Google Drive paths, and CloudStorage paths are stale, backup, or non-canonical unless the Owner explicitly states otherwise for a specific stage.
+- Do not modify, test, deploy, commit, or push from stale or backup paths.
+- If path identity is unclear, stop and report `BLOCKED`.
+
+### Mandatory Preflight
+
+Before any audit, implementation, verification, commit, push, or deployment decision, run and verify:
+
+```bash
+cd "/Users/chenhaoan/Developer/JYAI-Independent-Repos/jingyang-sales-app"
+pwd
+git rev-parse --show-toplevel
+git branch --show-current
+git status -sb
+git rev-parse HEAD
+git rev-parse origin/main
+git rev-list --left-right --count HEAD...origin/main
+```
+
+For implementation, commit, push, or deploy work, also run `git fetch origin` before final HEAD/origin comparison.
+
+### Required Governance Reads
+
+Before audit or implementation, read these files from the canonical repo:
+
+1. `AGENTS.md`
+2. `README.md`
+3. `PROJECT_BOUNDARIES.md`
+4. `docs/stages/CURRENT_HANDOFF.md`
+5. `docs/allocation-assistant/CURRENT_HANDOFF.md`
+6. `docs/allocation-assistant/CHANGELOG.md`
+7. `docs/allocation-assistant/ROADMAP.md`
+8. Any stage-specific spec, design note, or source file named by the Owner.
+
+Do not rely on a chat transcript, tool memory, or a stale handoff as the only source of project state.
+
+### Explicit Owner Approval Required
+
+The following actions are forbidden unless the Owner explicitly approves them in the current stage:
+
+- Backend deploy.
+- LINE Bot deploy.
+- `clasp push`, `clasp pull`, `clasp version`, or `clasp deploy`.
+- Google Sheet writes, schema edits, trigger edits, or Script Properties edits.
+- LINE API calls, including reply, push, rich menu mutation, or live webhook tests.
+- Token, secret, credential access, credential verification, or rotation.
+- Git commit or push.
+
+Approval for one action does not imply approval for another. A dry-run check is not a deployment approval.
+
+### Allowed Dry-Run Checks
+
+These commands are allowed when they match the active stage and remain non-mutating:
+
+```bash
+npm run simulate:all
+python3 deploy.py backend --check
+python3 deploy.py line-bot --check
+git diff --check
+```
+
+`deploy.py --check` must remain dry-run only: no clasp subprocess, no push, no version creation, and no deploy.
+
+### Product North Star
+
+- Core user: Sales Assistant / Admin, not generic sales reps.
+- Product position: 配貨與出貨資料自動化管理助手.
+- Core loop: Inbound 去保留 -> Outbound 待出貨銷扣.
+- Agent work must simplify the admin-assistant workflow and preserve the allocation, reservation, shipment, and inventory-deduction loop.
+
+### Current Known State
+
+- Stage 24-A documentation/governance cleanup: complete.
+- Backend Web App production record: Version 78.
+- LINE Bot production record: Version 191.
+- Latest verified simulation baseline: `npm run simulate:all` = 149 / 149 PASS.
+- Latest verified handoff: `main` synced with `origin/main` at the recorded baseline; re-run preflight before relying on this.
+
+### Remaining Stage 24-B Warnings
+
+- Formal hold writeback persistence contract is not fully proven.
+- Canonical `holds` schema mapping must be aligned.
+- Fulfillment Sheet status update and inventory snapshot persistence are not fully proven.
+- `JingyangAssistant` fallback spreadsheet ID must be confirmed or aligned with the 115 inventory spreadsheet.
+
 ## 1. Canonical Workspace
 
 - **Canonical Path**: `/Users/chenhaoan/Developer/JYAI-Independent-Repos/jingyang-sales-app`

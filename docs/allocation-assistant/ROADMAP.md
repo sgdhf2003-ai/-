@@ -50,6 +50,18 @@
 
 ## Phase 7: Sales Assistant LINE OCR & Fulfillment Loop (業務助理 LINE OCR 辨識、模糊候選與出貨收尾閉環 — 本次完成)
 * **入口**: 業務助理 LINE 圖片上傳、配貨劃扣與出貨結案需求。
-* **輸出**: `ImageOcrAdapter`, `OcrCandidateMatcher`, `LiffMicroEditPopup`, `FormalHoldWritebackAdapter`, `FulfillmentAdapter` (Backend Version 77 / LINE Bot Version 190)。
+* **輸出**: `ImageOcrAdapter`, `OcrCandidateMatcher`, `LiffMicroEditPopup`, `FormalHoldWritebackAdapter`, `FulfillmentAdapter` (Backend Version 78 / LINE Bot Version 191)。
 * **測試**: 執行 27 大模擬測試套件 (`npm run simulate:all`)，149/149 PASS。
 * **退出條件**: 影像 OCR 解析、Top 3 模糊候選、LIFF 微型修正彈窗、結構化單號 `RES-YYYYMMDD-XXX` 去保留寫入、雙軌出貨結案（輪播卡片與快捷指令）100% 覆蓋測試，雙端 Production clasp push 部署成功，遠端 Git 同步。
+
+## Stage 24-A: Governance Cleanup Pack (文件治理修正 — 進行中)
+* **入口**: Phase 7 audit findings 與 documentation drift。
+* **輸出**: 對齊 canonical repo path、Sales Assistant / Admin North Star、Backend Version 78、LINE Bot Version 191、149/149 PASS 狀態。
+* **測試**: 僅執行 read-only / dry-run 驗證：`npm run simulate:all`、`deploy.py backend --check`、`deploy.py line-bot --check`、`git diff --check`。
+* **限制**: 不允許 production code change、deploy、Google Sheet 寫入、LINE API、commit 或 push，除非 Owner 另行明確批准。
+
+## Stage 24-B: Phase 7 Integration Hardening (待 Owner 批准)
+* **Formal Hold Persistence Contract**: 證明或補齊正式去保留寫入 adapter，不再只依賴 mock。
+* **Canonical Holds Schema Mapping**: 對齊 `holds` 分頁欄位、`RES-YYYYMMDD-XXX` 單號位置與 `RESERVED` 狀態。
+* **Fulfillment Persistence**: 證明或補齊 `FULFILLED` / `PARTIALLY_FULFILLED` / `CANCELLED` 寫回 Sheet 與 inventory snapshot 更新。
+* **Spreadsheet Binding**: 確認或對齊 `JingyangAssistant` fallback spreadsheet ID 與 115 年庫存試算表綁定。

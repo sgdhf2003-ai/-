@@ -1,6 +1,6 @@
 # 勁揚業務管家
 
-這是一個手機優先的 PWA 網頁 App 原型，提供業務員管理店家、保留物品提醒、拍照存檔、業績分析與庫存查詢。
+這是一個手機優先的業務助理 / Admin 管理系統，核心定位是「配貨與出貨資料自動化管理助手」。目前 North Star 是協助業務助理把 Inbound 去保留、Outbound 待出貨銷扣、庫存快照與出貨結案串成可追蹤的自動化閉環。
 
 ## 目前功能
 
@@ -12,6 +12,13 @@
 - 外部資訊：業績分析表與庫存查詢表以卡片入口整合到 App
 - 後台管理：新增店家、清除本機資料、匯出資料
 - PWA 設定：支援 manifest 與 service worker，可加入手機主畫面
+- 配貨助手：支援業務助理 OCR 單據辨識、去保留確認、待出貨銷扣與結案流程管理
+
+## 產品定位
+
+- 核心使用者：業務助理 / Sales Assistant / Admin。
+- 核心流程：Inbound 去保留 -> Outbound 待出貨銷扣。
+- 核心目標：讓配貨、保留、出貨、銷扣資料一致化，降低手動整理與跨系統核對成本。
 
 ## 使用方式
 
@@ -66,8 +73,8 @@ http://localhost:4181
 
 ## 專案位置
 
-目前固定使用的業務管家主資料夾：
+目前固定使用的 canonical 業務管家主資料夾：
 
-`/Users/chenhaoan/Documents/jingyang-sales-app`
+`/Users/chenhaoan/Developer/JYAI-Independent-Repos/jingyang-sales-app`
 
-請避免再用 `/Users/chenhaoan/Documents/app` 來修改業務管家，該資料夾目前已偏向其他專案用途。
+請避免再用 `/Users/chenhaoan/Documents/jingyang-sales-app`、`/Users/chenhaoan/Documents/JYAI-Independent-Repos/jingyang-sales-app`、Google Drive / CloudStorage checkout 或 `/Users/chenhaoan/Documents/app` 來修改、測試或部署業務管家。這些路徑只可視為舊資料或備份，不是官方工作區。

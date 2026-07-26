@@ -5,7 +5,7 @@ This document establishes the official boundaries for the Jingyang Sales Assista
 ## 1. Directory Roles
 
 * **Official Workspace & Source of Truth**:
-  * **Path**: `/Users/chenhaoan/Documents/jingyang-sales-app`
+  * **Path**: `/Users/chenhaoan/Developer/JYAI-Independent-Repos/jingyang-sales-app`
   * **Role**: This is the **only** official repository for all source code. All modifications, testing, and deployments must be executed from this directory.
   * **Subdirectories**:
     * `google-apps-script/`: Source code for the PWA Backend Apps Script project (Script ID: `1vRepq_HNkjbs8vRQvbkkDE8unGPHfksfhOTrkrNZthFZHs2GSHO8Gasc`).
@@ -16,6 +16,10 @@ This document establishes the official boundaries for the Jingyang Sales Assista
   * **Path**: `/Users/chenhaoan/Documents/JYAI-Platform`
   * **Role**: strictly for Product Bibles, workflows, QA logs, SOPs, and project roadmaps. **No source code changes or deployments should be made here.**
 
+* **Stale / Backup Checkouts**:
+  * **Paths**: `/Users/chenhaoan/Documents/jingyang-sales-app`, `/Users/chenhaoan/Documents/JYAI-Independent-Repos/jingyang-sales-app`, and any Google Drive / CloudStorage copy.
+  * **Role**: backup or stale material only. **Do not modify, test, push, or deploy from these paths.**
+
 * **Legacy Archive**:
   * **Path**: `/Users/chenhaoan/Desktop/ＡＩ/line機器人`
   * **Role**: Deprecated/archive directory. **Do not modify or deploy from this folder.**
@@ -25,7 +29,7 @@ This document establishes the official boundaries for the Jingyang Sales Assista
 ## 2. Deployment Governance Rules
 
 1. **No Cross-Project Pushing**:
-   Deployments must only be performed from `/Users/chenhaoan/Documents/jingyang-sales-app` using the `deploy.py` script.
+   Deployments must only be performed from `/Users/chenhaoan/Developer/JYAI-Independent-Repos/jingyang-sales-app` using the `deploy.py` script.
 2. **Configuration Validation**:
    Every deployment reads and validates settings from `deployment.config.json`. Pushes to incorrect Script IDs or Deployment IDs are blocked automatically.
 3. **Preserve URL**:
