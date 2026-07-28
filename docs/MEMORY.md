@@ -17,7 +17,12 @@ All durable JYAI project data, generated docs, stage notes, handoff notes, specs
 
 - Stage 24-B3/B3C commit on `stage-24-b3-production-contract-spec`: production allocation persistence contract and cloud-drive boundary alignment.
 - Stage 24-B3E local governance drift alignment: `docs/DECISIONS.md` and `scripts/preflight-check.sh` now point at the cloud-drive checkout.
-- Stage 24-DOCS-A: AI project docs structure, document map, and stale-path governance cleanup. No B4 implementation, deploy, Sheet write, LINE API call, token/secret access, commit, or push.
+- Stage 24-DOCS-A: AI project docs structure, document map, and stale-path governance cleanup committed/pushed as `cf16edd712216790693d32e2ac2a5f287bbe8c58`.
+- Stage 24-B3-A: production persistence contract draft before B4. This is docs/spec work only; no production adapter wiring, deploy, Sheet write, LINE API call, token/secret access, commit, or push without explicit Owner approval.
+- Stage 24-B3-A contract focus: formal hold writeback must prove confirmed persistence beyond `success: true`; `reservationNumber`, `holdRecord.id`, and `rowData[0]` must match; production paths fail closed without real persistence capability; mock adapters are explicit simulation dependencies only; fulfillment must prove status update plus inventory ledger/snapshot persistence.
+- Stage 24-B3-A ledger naming note: semantic contract names are `FULL_SHIP` / `PARTIAL_SHIP` / `CANCEL_RELEASE`, while current B2 emitted ledger actions are `FULFILL_DEDUCT` / `PARTIAL_FULFILL_DEDUCT` / `CANCEL_RELEASE`.
+- Stage 24-B3-B Owner decision: use Option B for `CANCEL_RELEASE`; `quantity` equals released quantity and `remainingQuantity` remains audit context after release/cancel.
+- Stage 24-B3-C Owner decision: use explicit semantic mapper for fulfillment ledger action naming: `FULL_SHIP -> FULFILL_DEDUCT`, `PARTIAL_SHIP -> PARTIAL_FULFILL_DEDUCT`, `CANCEL_RELEASE -> CANCEL_RELEASE`.
 
 ## Durable References
 
@@ -49,5 +54,4 @@ git status -sb
 
 ## Open Decisions
 
-- `CANCEL_RELEASE` ledger semantics before B4.
-- Whether and when to merge/push Stage 24-DOCS-A after commit readiness review.
+- No remaining Stage 24-B3 ledger semantics decision. Stage 24-B4 implementation remains unstarted and requires separate Owner approval.

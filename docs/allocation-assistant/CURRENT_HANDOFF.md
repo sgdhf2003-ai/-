@@ -4,11 +4,11 @@
 * **交接日期**: 2026-07-26
 * **執行目錄**: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 * **目前分支**: `stage-24-b3-production-contract-spec`
-* **HEAD Hash**: `440e8cd30cc7bf52142a24008968415fa35aa606`
-* **origin/stage-24-b3-production-contract-spec Hash**: `440e8cd30cc7bf52142a24008968415fa35aa606`
+* **HEAD Hash**: `cf16edd712216790693d32e2ac2a5f287bbe8c58`
+* **origin/stage-24-b3-production-contract-spec Hash**: `cf16edd712216790693d32e2ac2a5f287bbe8c58`
 * **origin/main Base Hash**: `b32fad100afb3b0c926d9edc466fea2833e8ac45`
-* **Ahead / Behind vs origin/main**: `1 / 0`
-* **Working Tree 狀態**: Dirty by approved Stage 24-DOCS-A documentation changes only
+* **Ahead / Behind vs origin/main**: `2 / 0`
+* **Working Tree 狀態**: Dirty by Stage 24-B3-A documentation/spec draft changes only
 * **Backend Web App Deployment Version**: Version 78 (`AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw`)
 * **LINE Bot Deployment Version**: Version 191 (`AKfycbxioavjvzENr9duOtomZQRmbycbDtJOzKNAuSgcnE1ptNquTStiWMZwygLEHaYfPxOn`)
 * **Simulation Baseline**: `npm run simulate:all` PASS in latest Stage 24-DOCS-A local verification
@@ -36,7 +36,15 @@
 * 補齊根目錄 `ARCHITECTURE.md` 與 `DESIGN.md`，整理系統架構、產品設計原則與文件地圖。
 * 補齊 `docs/MEMORY.md`、`docs/ai/README.md`、`docs/ai/SKILL.md`，讓 Codex、Gemini、Antigravity 與未來 agent 有一致的專案導航與操作流程。
 * 對齊 `docs/DECISIONS.md` 與 `scripts/preflight-check.sh` 的 canonical cloud-drive checkout 規則。
-* 本階段僅限文件與治理骨架，不進 Stage 24-B4、不部署、不寫 Sheet、不呼叫 LINE API、不碰 token/secret、不 commit/push。
+* 已 commit/push 到 `origin/stage-24-b3-production-contract-spec`，commit `cf16edd712216790693d32e2ac2a5f287bbe8c58`。
+
+## 4.2 Stage 24-B3-A Production Contract Spec Draft
+* 僅限文件/spec 草案，不進 Stage 24-B4、不部署、不寫 Sheet、不呼叫 LINE API、不碰 token/secret、不 commit/push。
+* `docs/stages/stage-24-b3-production-contract-spec.md` 定義 production persistence success 條件、fail-closed failure modes、canonical `holds` schema、mock boundary、fulfillment ledger semantics、side-effect classification 與測試證據。
+* Formal hold writeback 的 production success 不得只看 `success: true`，必須確認 adapter capability、header-name mapping、persisted receipt/readback、id equality 與 idempotent replay。
+* Fulfillment persistence 必須同時證明 hold status update 與 inventory ledger/snapshot boundary。
+* Stage 24-B3-B Owner decision 已記錄：`CANCEL_RELEASE.quantity` 等於 released quantity，`CANCEL_RELEASE.remainingQuantity` 在 release/cancel 後保留為 audit context。
+* Stage 24-B3-C Owner decision 已記錄：fulfillment ledger action naming 使用 explicit semantic mapper：`FULL_SHIP -> FULFILL_DEDUCT`、`PARTIAL_SHIP -> PARTIAL_FULFILL_DEDUCT`、`CANCEL_RELEASE -> CANCEL_RELEASE`。
 
 ## 5. Phase 7 Integration-Hardening Gaps
 * `FormalHoldWritebackAdapter` 的正式 Sheet persistence contract 尚未被 real adapter 完整證明。
@@ -52,12 +60,12 @@
 
 ## 8. 安全聲明 (Safety Declaration)
 > [!IMPORTANT]
-> Stage 24-A 僅允許文件與治理修正。未經 Owner 明確批准，不得修改 production code、部署、寫入 Google Sheet、呼叫 LINE API、commit 或 push。
+> Stage 24-B3-A 僅允許 production contract 文件/spec 修正。未經 Owner 明確批准，不得修改 production code、部署、寫入 Google Sheet、呼叫 LINE API、commit 或 push。
 
 ## 9. 下一個精確步驟 (Next Recommended Step)
-* 完成 Stage 24-DOCS-A commit-readiness review。
-* 待 Owner 明確批准 exact scope 後，才可 commit/push DOCS-A 文件治理變更。
-* Stage 24-B4 前需先決定 `CANCEL_RELEASE` ledger semantics。
+* 完成 Stage 24-B3-A verification 與 commit-readiness review。
+* 待 Owner 明確批准 exact scope 後，才可 commit/push B3-A 文件/spec 變更。
+* 完成 Stage 24-B3-C verification 與 commit-readiness review；Stage 24-B4 尚未開始，需 Owner 另行明確批准。
 
 ## 10. 禁止下一位 Agent 自行執行的事項 (Prohibited Actions)
 * 嚴禁在未經 Owner 審查同意前撰寫任何正式庫存寫入代碼。

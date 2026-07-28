@@ -23,3 +23,12 @@
 - Frontend deploy is separate from Apps Script deploys.
 - Dry-run checks are required before deploy stages.
 - Cross-project guards stay enabled: cwd must be inside the repo root and clasp rootDir must remain inside its target directory.
+
+## Allocation Fulfillment Ledger
+
+- Stage 24-B3-B Owner decision: use Option B for `CANCEL_RELEASE` ledger semantics.
+- `CANCEL_RELEASE.quantity` equals the released quantity.
+- `CANCEL_RELEASE.remainingQuantity` remains audit context after release/cancel.
+- Stage 24-B3-C Owner decision: use an explicit semantic mapper for fulfillment ledger action naming.
+- Fulfillment ledger action mapper: `FULL_SHIP -> FULFILL_DEDUCT`, `PARTIAL_SHIP -> PARTIAL_FULFILL_DEDUCT`, `CANCEL_RELEASE -> CANCEL_RELEASE`.
+- This decision records the contract only. It does not authorize Stage 24-B4, production source changes, Google Sheet writes, LINE API calls, Apps Script production wrapper execution, deploy, commit, or push.
