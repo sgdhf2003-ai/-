@@ -148,6 +148,11 @@ runTest('FulfillmentAdapter persists status transitions and inventory records fo
     sheetMock.inventoryAdjustments.map(entry => entry.action),
     ['FULFILL_DEDUCT', 'PARTIAL_FULFILL_DEDUCT', 'CANCEL_RELEASE']
   );
+  assert.deepStrictEqual(
+    sheetMock.inventoryAdjustments.map(entry => entry.quantity),
+    [10, 5, 6]
+  );
+  assert.strictEqual(sheetMock.inventoryAdjustments[2].remainingQuantity, 6);
 });
 
 runTest('FulfillmentAdapter fails closed when persistence adapter capability is missing', () => {

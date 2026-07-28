@@ -159,6 +159,68 @@ runTest('FormalHoldWritebackAdapter fails closed on writeback failure or header 
   assert.strictEqual(result.errorCode, 'HOLD_SCHEMA_MISMATCH');
 });
 
+runTest('FormalHoldWritebackAdapter fails closed when production config property is missing', () => {
+  const missingPropertyAdapter = {
+    appendHoldRecord() {
+      return {
+        success: false,
+        persisted: false,
+        errorCode: 'HOLD_SCRIPT_PROPERTY_MISSING'
+      };
+    }
+  };
+  const adapter = new FormalHoldWritebackAdapter({ sheetAdapter: missingPropertyAdapter });
+
+  const result = adapter.executeWriteback({
+    reservationNumber: 'RES-20260725-407',
+    productCode: 'EQA-6522',
+    quantity: 3
+  });
+
+  assert.strictEqual(result.success, false);
+  assert.strictEqual(result.errorCode, 'HOLD_SCRIPT_PROPERTY_MISSING');
+});
+
+runTest('FormalHoldWritebackAdapter fails closed on permission or API failure', () => {
+  const permissionFailureAdapter = {
+    appendHoldRecord() {
+      throw new Error('HOLD_PERMISSION_DENIED');
+    }
+  };
+  const adapter = new FormalHoldWritebackAdapter({ sheetAdapter: permissionFailureAdapter });
+
+  const result = adapter.executeWriteback({
+    reservationNumber: 'RES-20260725-408',
+    productCode: 'EQA-6522',
+    quantity: 3
+  });
+
+  assert.strictEqual(result.success, false);
+  assert.strictEqual(result.errorCode, 'HOLD_PERMISSION_DENIED');
+});
+
+runTest('FormalHoldWritebackAdapter fails closed on unknown write outcome without persisted confirmation', () => {
+  const unknownOutcomeAdapter = {
+    appendHoldRecord() {
+      return {
+        success: true,
+        persisted: false,
+        errorCode: 'HOLD_WRITE_OUTCOME_UNKNOWN'
+      };
+    }
+  };
+  const adapter = new FormalHoldWritebackAdapter({ sheetAdapter: unknownOutcomeAdapter });
+
+  const result = adapter.executeWriteback({
+    reservationNumber: 'RES-20260725-409',
+    productCode: 'EQA-6522',
+    quantity: 3
+  });
+
+  assert.strictEqual(result.success, false);
+  assert.strictEqual(result.errorCode, 'HOLD_WRITE_OUTCOME_UNKNOWN');
+});
+
 runTest('FormalHoldWritebackAdapter returns idempotent replay without duplicate hold rows', () => {
   const sheetMock = new MockFormalReservationAdapter();
   const adapter = new FormalHoldWritebackAdapter({ sheetAdapter: sheetMock });
@@ -175,6 +237,29 @@ runTest('FormalHoldWritebackAdapter returns idempotent replay without duplicate 
   assert.strictEqual(first.success, true);
   assert.strictEqual(second.success, true);
   assert.strictEqual(second.isReplay, true);
+  assert.strictEqual(sheetMock.holdsStore.size, 1);
+});
+
+runTest('FormalHoldWritebackAdapter blocks conflicting replay payloads', () => {
+  const sheetMock = new MockFormalReservationAdapter();
+  const adapter = new FormalHoldWritebackAdapter({ sheetAdapter: sheetMock });
+
+  const first = adapter.executeWriteback({
+    reservationNumber: 'RES-20260725-778',
+    storeId: 'store_778',
+    productCode: '艾美 336',
+    quantity: 9
+  });
+  const conflictingReplay = adapter.executeWriteback({
+    reservationNumber: 'RES-20260725-778',
+    storeId: 'store_778',
+    productCode: '艾美 336',
+    quantity: 12
+  });
+
+  assert.strictEqual(first.success, true);
+  assert.strictEqual(conflictingReplay.success, false);
+  assert.strictEqual(conflictingReplay.errorCode, 'HOLD_IDEMPOTENCY_CONFLICT');
   assert.strictEqual(sheetMock.holdsStore.size, 1);
 });
 

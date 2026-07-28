@@ -91,6 +91,11 @@ class FormalHoldWritebackAdapter {
     return HOLDS_HEADERS.map(header => record[header]);
   }
 
+  isConflictingReplay(existingRecord = {}, holdRecord = {}) {
+    const replayComparisonFields = HOLDS_HEADERS.filter(header => !['createdAt', 'updatedAt'].includes(header));
+    return replayComparisonFields.some(header => existingRecord[header] !== holdRecord[header]);
+  }
+
   executeWriteback(reservationPayload = {}) {
     const holdRecord = this.formatHoldRecord(reservationPayload);
     const reservationNumber = holdRecord.id;
@@ -131,6 +136,17 @@ class FormalHoldWritebackAdapter {
         holdRecord,
         errorCode: (writeResult && writeResult.errorCode) || 'HOLD_WRITE_FAILED',
         lineConfirmationMessage: `⚠️ 去保留尚未確認寫入正式紀錄：${reservationNumber}`
+      };
+    }
+
+    if (writeResult.isReplay && writeResult.record && this.isConflictingReplay(writeResult.record, holdRecord)) {
+      return {
+        success: false,
+        reservationNumber,
+        status: 'WRITE_FAILED',
+        holdRecord,
+        errorCode: 'HOLD_IDEMPOTENCY_CONFLICT',
+        lineConfirmationMessage: `⚠️ 去保留重送資料與既有正式紀錄不一致：${reservationNumber}`
       };
     }
 

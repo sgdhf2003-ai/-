@@ -140,8 +140,8 @@ class FulfillmentAdapter {
       lineNotificationMessage = `✏️ 單據 ${reservationNumber} 已部分出貨 (${fulfilledQty} PCS)，剩餘 ${remainingQuantity} PCS 繼續保留中。`;
     } else if (action === 'CANCEL_FULFILL') {
       status = 'CANCELLED';
-      fulfilledQuantity = 0;
       remainingQuantity = Number(holdLookup.record.quantity || payload.totalQuantity || 0);
+      fulfilledQuantity = remainingQuantity;
       inventoryAction = 'CANCEL_RELEASE';
       lineNotificationMessage = `❌ 單據 ${reservationNumber} 已取消保留，預留庫存已釋放歸還至可用庫存池。`;
     } else if (action === 'PARTIAL_FULFILL_REQUIRES_QUANTITY') {
