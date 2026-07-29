@@ -3,12 +3,12 @@
 ## 1. 專案基線狀態 (Project Baseline)
 * **交接日期**: 2026-07-26
 * **執行目錄**: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
-* **目前分支**: `stage-24-b3-production-contract-spec`
-* **HEAD Hash**: `cf16edd712216790693d32e2ac2a5f287bbe8c58`
-* **origin/stage-24-b3-production-contract-spec Hash**: `cf16edd712216790693d32e2ac2a5f287bbe8c58`
+* **目前分支**: `stage-24-b4-production-sheet-adapter`
+* **HEAD Hash**: `368a4efaace9b9f5762eb559656f048cd033232f` at Stage 24-B4-D3/D4 entry
+* **origin/stage-24-b4-production-sheet-adapter Hash**: `368a4efaace9b9f5762eb559656f048cd033232f`
 * **origin/main Base Hash**: `b32fad100afb3b0c926d9edc466fea2833e8ac45`
-* **Ahead / Behind vs origin/main**: `2 / 0`
-* **Working Tree 狀態**: Dirty by Stage 24-B3-A documentation/spec draft changes only
+* **Ahead / Behind vs origin/stage-24-b4-production-sheet-adapter**: `0 / 0` at Stage 24-B4-D3/D4 entry
+* **Working Tree 狀態**: Dirty by Stage 24-B4-D3/D4 readiness docs/code/simulation changes only after implementation
 * **Backend Web App Deployment Version**: Version 78 (`AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw`)
 * **LINE Bot Deployment Version**: Version 191 (`AKfycbxioavjvzENr9duOtomZQRmbycbDtJOzKNAuSgcnE1ptNquTStiWMZwygLEHaYfPxOn`)
 * **Simulation Baseline**: `npm run simulate:all` PASS in latest Stage 24-DOCS-A local verification
@@ -46,6 +46,18 @@
 * Stage 24-B3-B Owner decision 已記錄：`CANCEL_RELEASE.quantity` 等於 released quantity，`CANCEL_RELEASE.remainingQuantity` 在 release/cancel 後保留為 audit context。
 * Stage 24-B3-C Owner decision 已記錄：fulfillment ledger action naming 使用 explicit semantic mapper：`FULL_SHIP -> FULFILL_DEDUCT`、`PARTIAL_SHIP -> PARTIAL_FULFILL_DEDUCT`、`CANCEL_RELEASE -> CANCEL_RELEASE`。
 
+## 4.3 Stage 24-B4 Production Sheet Adapter Readiness
+* Stage 24-B4-A/B tests-first 與 minimal contract fixes 已完成並 push 至 feature branch。
+* Stage 24-B4-D1 controlled cloned/test Sheet adapter wiring 已 commit/push：`368a4efaace9b9f5762eb559656f048cd033232f`。
+* Stage 24-B4-D2 controlled cloned/test Sheet write-readback 已 PASS，且僅使用 cloned/test Sheet，敏感 ID 與設定值均未輸出：
+  * formal hold writeback 寫入並可依 reservation number readback。
+  * `reservationNumber === holdRecord.id === rowData[0] === persisted row id`。
+  * same-payload replay 不新增 duplicate row。
+  * conflicting replay fail-closed：`HOLD_IDEMPOTENCY_CONFLICT`。
+  * ledger mapper PASS：`FULL_SHIP -> FULFILL_DEDUCT`、`PARTIAL_SHIP -> PARTIAL_FULFILL_DEDUCT`、`CANCEL_RELEASE -> CANCEL_RELEASE`。
+  * `CANCEL_RELEASE.quantity` 等於 released quantity；`remainingQuantity` 保留為 audit context。
+* Stage 24-B4-D3/D4 目前只新增 local-only production readiness diagnostics、simulation 與 handoff/spec。這不是 production adapter wiring，也不證明 production Sheet persistence。
+
 ## 5. Phase 7 Integration-Hardening Gaps
 * `FormalHoldWritebackAdapter` 的正式 Sheet persistence contract 尚未被 real adapter 完整證明。
 * `holds` 分頁欄位 mapping 需要和 canonical schema 對齊。
@@ -60,12 +72,12 @@
 
 ## 8. 安全聲明 (Safety Declaration)
 > [!IMPORTANT]
-> Stage 24-B3-A 僅允許 production contract 文件/spec 修正。未經 Owner 明確批准，不得修改 production code、部署、寫入 Google Sheet、呼叫 LINE API、commit 或 push。
+> Stage 24-B4-D3/D4 僅允許 production wiring readiness、fail-closed local diagnostics、simulation 與 handoff/spec 更新。未經 Owner 明確批准，不得 production Sheet read/write/readback、不得 fallback Sheet ID、不得部署、不得呼叫 LINE API、不得碰 token/secret 或 Script Property values、不得執行 Apps Script production wrapper、不得 commit 或 push。
 
 ## 9. 下一個精確步驟 (Next Recommended Step)
-* 完成 Stage 24-B3-A verification 與 commit-readiness review。
-* 待 Owner 明確批准 exact scope 後，才可 commit/push B3-A 文件/spec 變更。
-* 完成 Stage 24-B3-C verification 與 commit-readiness review；Stage 24-B4 尚未開始，需 Owner 另行明確批准。
+* 完成 Stage 24-B4-D3/D4 verification 與 commit-readiness review。
+* 待 Owner 明確批准 exact scope 後，才可 commit/push B4-D3/D4 變更。
+* production adapter wiring、production Sheet access、deploy、LINE API、Apps Script production wrapper execution 仍需 Owner 另行明確批准。
 
 ## 10. 禁止下一位 Agent 自行執行的事項 (Prohibited Actions)
 * 嚴禁在未經 Owner 審查同意前撰寫任何正式庫存寫入代碼。
