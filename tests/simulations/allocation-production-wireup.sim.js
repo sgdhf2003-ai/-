@@ -31,11 +31,12 @@ const indexHtmlPath = path.join(rootDir, 'index.html');
 const gasIndexHtmlPath = path.join(rootDir, 'google-apps-script/Index.html');
 
 // 1. Check Code.gs helper function existence
-runTest('google-apps-script/Code.gs contains getAllocationAssistantView and include helper functions', () => {
+runTest('google-apps-script/Code.gs contains getAllocationAssistantView, include, and runAllocationProductionAdapterRuntimeProof_B8 functions', () => {
   const codeGsContent = fs.readFileSync(codeGsPath, 'utf8');
 
   assert.ok(codeGsContent.includes('function getAllocationAssistantView()'));
   assert.ok(codeGsContent.includes('function include('));
+  assert.ok(codeGsContent.includes('function runAllocationProductionAdapterRuntimeProof_B8('));
 });
 
 // 2. Check index.html nav tab and view container mount points
