@@ -34,6 +34,7 @@ function doGet(e) {
       if (action === "setup") return jsonOutput(setupBackend(data));
       if (action === "login") return jsonOutput(loginUser(data));
       if (action === "testLineNotify") return jsonOutput(testLineNotifyAction(data));
+      if (action === "test_b8_readiness") return jsonOutput(testB8ReadinessAction(data));
       if (action === "readLogs") {
         const sheet = ensureSpreadsheet().getSheetByName("Logs");
         if (!sheet) return jsonOutput({ ok: true, logs: [] });
@@ -113,6 +114,7 @@ function doPost(e) {
     if (action === "uploadPhoto") return jsonOutput(uploadPhoto(data));
     if (action === "saveSetting") return jsonOutput(saveSettingAction(data));
     if (action === "testLineNotify") return jsonOutput(testLineNotifyAction(data));
+    if (action === "test_b8_readiness") return jsonOutput(testB8ReadinessAction(data));
     if (action === "listMyTasks") return jsonOutput(listMyTasks(data));
     if (action === "createTask") return jsonOutput(createTask(data));
     if (action === "updateTaskStatus") return jsonOutput(updateTaskStatus(data));
@@ -5594,6 +5596,40 @@ function validateControlledTaskReminderRecipientBindingSafe() {
     } catch (err) {}
     return summary;
   }
+}
+
+/**
+ * Gated Web App action for Stage 24-B8 Production Adapter Runtime Readiness Check.
+ * Requires explicit execution key validation and forces READINESS_CHECK mode.
+ *
+ * @param {Object} data Request payload.
+ * @return {Object} Redacted readiness result object.
+ */
+function testB8ReadinessAction(data) {
+  const req = data || {};
+  const key = req.executionKey || req.key;
+
+  if (!key) {
+    return {
+      ok: false,
+      errorCode: "MISSING_EXECUTION_KEY",
+      message: "Execution key is required for B8 readiness test action"
+    };
+  }
+
+  const props = PropertiesService.getScriptProperties();
+  const expectedKey = props.getProperty("JYAI_B8_RUNTIME_PROOF_EXECUTION_KEY") || "JYAI_STAGE_24_B8_PROOF_KEY_2026";
+
+  if (String(key).trim() !== expectedKey) {
+    return {
+      ok: false,
+      errorCode: "INVALID_EXECUTION_KEY",
+      message: "Provided execution key does not match authorization requirement"
+    };
+  }
+
+  // Force mode to READINESS_CHECK only (write modes remain strictly blocked)
+  return runAllocationProductionAdapterRuntimeProof_B8({ mode: "READINESS_CHECK" });
 }
 
 /**

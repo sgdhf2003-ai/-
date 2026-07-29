@@ -73,6 +73,17 @@ runTest('google-apps-script/Code.gs contains dual route dispatcher for Web App H
   assert.ok(codeGsContent.includes('HtmlService.createTemplateFromFile("Index")'));
 });
 
+// 6. Verify Stage 24-B9 Boundary 3A test_b8_readiness gated action route and execution key protection
+runTest('google-apps-script/Code.gs contains test_b8_readiness action route and testB8ReadinessAction function with key protection', () => {
+  const codeGsContent = fs.readFileSync(codeGsPath, 'utf8');
+
+  assert.ok(codeGsContent.includes('if (action === "test_b8_readiness") return jsonOutput(testB8ReadinessAction(data));'));
+  assert.ok(codeGsContent.includes('function testB8ReadinessAction(data)'));
+  assert.ok(codeGsContent.includes('errorCode: "MISSING_EXECUTION_KEY"'));
+  assert.ok(codeGsContent.includes('errorCode: "INVALID_EXECUTION_KEY"'));
+  assert.ok(codeGsContent.includes('runAllocationProductionAdapterRuntimeProof_B8({ mode: "READINESS_CHECK" })'));
+});
+
 console.log(`\nAllocation Production Wireup Simulation Summary: ${passedTests} / ${totalTests} PASS`);
 if (passedTests !== totalTests) {
   process.exit(1);
