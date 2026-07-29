@@ -47,6 +47,7 @@ const { MockFormalReservationAdapter } = require('./adapters/mock-formal-reserva
 const { FormalHoldWritebackAdapter } = require('./adapters/formal-hold-writeback-adapter');
 const { ControlledTestSheetReservationAdapter } = require('./adapters/controlled-test-sheet-reservation-adapter');
 const { ProductionSheetReadinessDiagnostics } = require('./adapters/production-sheet-readiness-diagnostics');
+const { ProductionSheetReservationAdapter } = require('./adapters/production-sheet-reservation-adapter');
 
 const { SyncIdempotencyGuard } = require('./sync/sync-idempotency-guard');
 const { AllocationSyncEngine } = require('./sync/allocation-sync-engine');
@@ -104,6 +105,7 @@ module.exports = {
   FormalHoldWritebackAdapter,
   ControlledTestSheetReservationAdapter,
   ProductionSheetReadinessDiagnostics,
+  ProductionSheetReservationAdapter,
 
   // Sync Engine & Guard
   SyncIdempotencyGuard,

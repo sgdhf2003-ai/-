@@ -4,14 +4,14 @@
 * **交接日期**: 2026-07-26
 * **執行目錄**: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 * **目前分支**: `stage-24-b4-production-sheet-adapter`
-* **HEAD Hash**: `368a4efaace9b9f5762eb559656f048cd033232f` at Stage 24-B4-D3/D4 entry
-* **origin/stage-24-b4-production-sheet-adapter Hash**: `368a4efaace9b9f5762eb559656f048cd033232f`
+* **HEAD Hash**: `facd53f32c17a638eea98e2fd6e92e470a11d3ae` before Stage 24-B6 local implementation
+* **origin/stage-24-b4-production-sheet-adapter Hash**: `facd53f32c17a638eea98e2fd6e92e470a11d3ae`
 * **origin/main Base Hash**: `b32fad100afb3b0c926d9edc466fea2833e8ac45`
-* **Ahead / Behind vs origin/stage-24-b4-production-sheet-adapter**: `0 / 0` at Stage 24-B4-D3/D4 entry
-* **Working Tree 狀態**: Dirty by Stage 24-B4-D3/D4 readiness docs/code/simulation changes only after implementation
+* **Ahead / Behind vs origin/stage-24-b4-production-sheet-adapter**: `0 / 0` before Stage 24-B6 local implementation
+* **Working Tree 狀態**: Dirty by Stage 24-B6 production adapter docs/code/simulation changes only after implementation
 * **Backend Web App Deployment Version**: Version 78 (`AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw`)
 * **LINE Bot Deployment Version**: Version 191 (`AKfycbxioavjvzENr9duOtomZQRmbycbDtJOzKNAuSgcnE1ptNquTStiWMZwygLEHaYfPxOn`)
-* **Simulation Baseline**: `npm run simulate:all` PASS in latest Stage 24-DOCS-A local verification
+* **Simulation Baseline**: `npm run simulate:all` PASS in latest Stage 24-B6 local verification
 
 ## 2. 產品定位 (North Star)
 * **核心使用者**: 業務助理 / Sales Assistant / Admin，而非一般業務員。
@@ -56,7 +56,9 @@
   * conflicting replay fail-closed：`HOLD_IDEMPOTENCY_CONFLICT`。
   * ledger mapper PASS：`FULL_SHIP -> FULFILL_DEDUCT`、`PARTIAL_SHIP -> PARTIAL_FULFILL_DEDUCT`、`CANCEL_RELEASE -> CANCEL_RELEASE`。
   * `CANCEL_RELEASE.quantity` 等於 released quantity；`remainingQuantity` 保留為 audit context。
-* Stage 24-B4-D3/D4 目前只新增 local-only production readiness diagnostics、simulation 與 handoff/spec。這不是 production adapter wiring，也不證明 production Sheet persistence。
+* Stage 24-B4-D3/D4 已新增 local-only production readiness diagnostics、simulation 與 handoff/spec。
+* Stage 24-B5P 已確認 production Sheet schema readiness：`holds!A1:O1` 與 `ledger!A1:G1` 符合 contract；Script Property key presence 為 Owner-confirmed only，尚無獨立 key-only live verification wrapper。
+* Stage 24-B6 新增 production Sheet reservation adapter boundary，使用 injected `configProvider` 與 `sheetClient`，不直接讀 Script Properties、不直接 instantiate SpreadsheetApp/UrlFetchApp/LINE client、不使用 mock fallback。這不是 production write-readback，也不證明 production Sheet persistence。
 
 ## 5. Phase 7 Integration-Hardening Gaps
 * `FormalHoldWritebackAdapter` 的正式 Sheet persistence contract 尚未被 real adapter 完整證明。
@@ -72,12 +74,12 @@
 
 ## 8. 安全聲明 (Safety Declaration)
 > [!IMPORTANT]
-> Stage 24-B4-D3/D4 僅允許 production wiring readiness、fail-closed local diagnostics、simulation 與 handoff/spec 更新。未經 Owner 明確批准，不得 production Sheet read/write/readback、不得 fallback Sheet ID、不得部署、不得呼叫 LINE API、不得碰 token/secret 或 Script Property values、不得執行 Apps Script production wrapper、不得 commit 或 push。
+> Stage 24-B6 僅允許 production Sheet adapter implementation、local simulations、docs/handoff 更新與 deploy `--check` dry-run。未經 Owner 明確批准，不得 production Sheet write/readback、不得 production test row append、不得 data row update/delete/clear、不得 fallback Sheet ID、不得部署、不得呼叫 LINE API、不得輸出 token/secret 或 Script Property values、不得執行 Apps Script production wrapper、不得 commit 或 push。
 
 ## 9. 下一個精確步驟 (Next Recommended Step)
-* 完成 Stage 24-B4-D3/D4 verification 與 commit-readiness review。
-* 待 Owner 明確批准 exact scope 後，才可 commit/push B4-D3/D4 變更。
-* production adapter wiring、production Sheet access、deploy、LINE API、Apps Script production wrapper execution 仍需 Owner 另行明確批准。
+* 完成 Stage 24-B6 verification 與 commit-readiness review。
+* 待 Owner 明確批准 exact scope 後，才可 commit/push B6 變更。
+* production Sheet write-readback、deploy、LINE API、Apps Script production wrapper execution 仍需 Owner 另行明確批准。
 
 ## 10. 禁止下一位 Agent 自行執行的事項 (Prohibited Actions)
 * 嚴禁在未經 Owner 審查同意前撰寫任何正式庫存寫入代碼。
