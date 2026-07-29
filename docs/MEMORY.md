@@ -23,6 +23,9 @@ All durable JYAI project data, generated docs, stage notes, handoff notes, specs
 - Stage 24-B3-A ledger naming note: semantic contract names are `FULL_SHIP` / `PARTIAL_SHIP` / `CANCEL_RELEASE`, while current B2 emitted ledger actions are `FULFILL_DEDUCT` / `PARTIAL_FULFILL_DEDUCT` / `CANCEL_RELEASE`.
 - Stage 24-B3-B Owner decision: use Option B for `CANCEL_RELEASE`; `quantity` equals released quantity and `remainingQuantity` remains audit context after release/cancel.
 - Stage 24-B3-C Owner decision: use explicit semantic mapper for fulfillment ledger action naming: `FULL_SHIP -> FULFILL_DEDUCT`, `PARTIAL_SHIP -> PARTIAL_FULFILL_DEDUCT`, `CANCEL_RELEASE -> CANCEL_RELEASE`.
+- Stage 24-B6 production Sheet reservation adapter implementation was committed and pushed on `stage-24-b4-production-sheet-adapter` at `3339fa036d06e10e90a1432e32f92c3f18336318`.
+- Stage 24-B7 controlled production Sheet write-readback passed and touched only `holds!A2:O2` and `ledger!A2:G2`. Existing B7 rows remain audit evidence; no cleanup is approved.
+- Stage 24-B8 is planning only for deployed/live production adapter runtime proof. B7 did not prove Apps Script runtime adapter wiring. Use `docs/stages/stage-24-b8-live-runtime-proof-plan.md` before any deploy, production wrapper execution, or additional production Sheet write/readback.
 
 ## Durable References
 
@@ -34,6 +37,7 @@ All durable JYAI project data, generated docs, stage notes, handoff notes, specs
 | Current stage state | `docs/stages/CURRENT_HANDOFF.md` |
 | Allocation Assistant handoff | `docs/allocation-assistant/CURRENT_HANDOFF.md` |
 | Production persistence contract | `docs/stages/stage-24-b3-production-contract-spec.md` |
+| Live runtime proof plan | `docs/stages/stage-24-b8-live-runtime-proof-plan.md` |
 | AI navigation and workflow | `docs/ai/README.md`, `docs/ai/SKILL.md` |
 | Architecture and product design | `ARCHITECTURE.md`, `DESIGN.md` |
 

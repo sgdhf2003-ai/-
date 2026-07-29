@@ -4,11 +4,11 @@
 * **交接日期**: 2026-07-26
 * **執行目錄**: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 * **目前分支**: `stage-24-b4-production-sheet-adapter`
-* **HEAD Hash**: `facd53f32c17a638eea98e2fd6e92e470a11d3ae` before Stage 24-B6 local implementation
-* **origin/stage-24-b4-production-sheet-adapter Hash**: `facd53f32c17a638eea98e2fd6e92e470a11d3ae`
+* **HEAD Hash**: `3339fa036d06e10e90a1432e32f92c3f18336318`
+* **origin/stage-24-b4-production-sheet-adapter Hash**: `3339fa036d06e10e90a1432e32f92c3f18336318`
 * **origin/main Base Hash**: `b32fad100afb3b0c926d9edc466fea2833e8ac45`
-* **Ahead / Behind vs origin/stage-24-b4-production-sheet-adapter**: `0 / 0` before Stage 24-B6 local implementation
-* **Working Tree 狀態**: Dirty by Stage 24-B6 production adapter docs/code/simulation changes only after implementation
+* **Ahead / Behind vs origin/stage-24-b4-production-sheet-adapter**: `0 / 0`
+* **Working Tree 狀態**: clean before Stage 24-B8 planning docs
 * **Backend Web App Deployment Version**: Version 78 (`AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw`)
 * **LINE Bot Deployment Version**: Version 191 (`AKfycbxioavjvzENr9duOtomZQRmbycbDtJOzKNAuSgcnE1ptNquTStiWMZwygLEHaYfPxOn`)
 * **Simulation Baseline**: `npm run simulate:all` PASS in latest Stage 24-B6 local verification
@@ -59,6 +59,10 @@
 * Stage 24-B4-D3/D4 已新增 local-only production readiness diagnostics、simulation 與 handoff/spec。
 * Stage 24-B5P 已確認 production Sheet schema readiness：`holds!A1:O1` 與 `ledger!A1:G1` 符合 contract；Script Property key presence 為 Owner-confirmed only，尚無獨立 key-only live verification wrapper。
 * Stage 24-B6 新增 production Sheet reservation adapter boundary，使用 injected `configProvider` 與 `sheetClient`，不直接讀 Script Properties、不直接 instantiate SpreadsheetApp/UrlFetchApp/LINE client、不使用 mock fallback。這不是 production write-readback，也不證明 production Sheet persistence。
+* Stage 24-B6 已 commit/push 至 feature branch：`3339fa036d06e10e90a1432e32f92c3f18336318`。
+* Stage 24-B7 controlled production Sheet write-readback 已 PASS，僅觸碰 `holds!A2:O2` 與 `ledger!A2:G2`。既有 B7 rows 保留作為 audit evidence，未批准 cleanup。
+* Stage 24-B7 未證明 deployed/live runtime adapter wiring；它證明的是受控 production Sheet write/readback，不是 Apps Script runtime 內執行 B6 adapter。
+* Stage 24-B8 只做 live production adapter runtime proof planning，文件為 `docs/stages/stage-24-b8-live-runtime-proof-plan.md`。不得 deploy、不得 production test row append、不得 wrapper execution、不得 cleanup、不得 LINE API、不得輸出 token/secret/property values、不得 commit/push，除非 Owner 另行批准 exact scope。
 
 ## 5. Phase 7 Integration-Hardening Gaps
 * `FormalHoldWritebackAdapter` 的正式 Sheet persistence contract 尚未被 real adapter 完整證明。
@@ -74,12 +78,12 @@
 
 ## 8. 安全聲明 (Safety Declaration)
 > [!IMPORTANT]
-> Stage 24-B6 僅允許 production Sheet adapter implementation、local simulations、docs/handoff 更新與 deploy `--check` dry-run。未經 Owner 明確批准，不得 production Sheet write/readback、不得 production test row append、不得 data row update/delete/clear、不得 fallback Sheet ID、不得部署、不得呼叫 LINE API、不得輸出 token/secret 或 Script Property values、不得執行 Apps Script production wrapper、不得 commit 或 push。
+> Stage 24-B8 僅允許 live runtime proof planning、local simulations、docs/handoff 更新與 deploy `--check` dry-run。未經 Owner 明確批准，不得 production Sheet write/readback、不得 production test row append、不得 data row update/delete/clear/cleanup、不得 fallback Sheet ID、不得部署、不得呼叫 LINE API、不得輸出 token/secret 或 Script Property values、不得執行 Apps Script production wrapper、不得 commit 或 push。
 
 ## 9. 下一個精確步驟 (Next Recommended Step)
-* 完成 Stage 24-B6 verification 與 commit-readiness review。
-* 待 Owner 明確批准 exact scope 後，才可 commit/push B6 變更。
-* production Sheet write-readback、deploy、LINE API、Apps Script production wrapper execution 仍需 Owner 另行明確批准。
+* 審閱 Stage 24-B8 live runtime proof plan。
+* 下一步若要進入 runtime proof implementation/execution，Owner 必須明確批准 exact scope：Apps Script runtime wrapper/source、backend deploy 或 clasp 操作、production wrapper execution、production Sheet exact rows/ranges、是否新增 controlled row、以及是否允許 cleanup。
+* production Sheet write-readback、deploy、LINE API、Apps Script production wrapper execution、token/secret/property value access、commit/push 仍需 Owner 另行明確批准。
 
 ## 10. 禁止下一位 Agent 自行執行的事項 (Prohibited Actions)
 * 嚴禁在未經 Owner 審查同意前撰寫任何正式庫存寫入代碼。
