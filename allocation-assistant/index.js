@@ -45,6 +45,7 @@ const { MockSheetInventoryAdapter } = require('./adapters/mock-sheet-inventory-a
 const { FormalReservationAdapter } = require('./adapters/formal-reservation-adapter');
 const { MockFormalReservationAdapter } = require('./adapters/mock-formal-reservation-adapter');
 const { FormalHoldWritebackAdapter } = require('./adapters/formal-hold-writeback-adapter');
+const { ControlledTestSheetReservationAdapter } = require('./adapters/controlled-test-sheet-reservation-adapter');
 
 const { SyncIdempotencyGuard } = require('./sync/sync-idempotency-guard');
 const { AllocationSyncEngine } = require('./sync/allocation-sync-engine');
@@ -100,6 +101,7 @@ module.exports = {
   FormalReservationAdapter,
   MockFormalReservationAdapter,
   FormalHoldWritebackAdapter,
+  ControlledTestSheetReservationAdapter,
 
   // Sync Engine & Guard
   SyncIdempotencyGuard,
