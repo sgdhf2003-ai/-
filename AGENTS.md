@@ -15,6 +15,10 @@ These rules apply to Codex, Gemini, Antigravity, and any future coding agent wor
 - Old Documents paths, Developer checkouts, scratch workspaces, and other exported copies are stale, backup, or non-canonical unless the Owner explicitly states otherwise for a specific stage.
 - Scratch workspace is temporary only and must not be treated as official storage.
 - All durable JYAI project data, generated docs, stage notes, handoff notes, specs, plans, tasks, reports, memory records, and organized project information must be saved inside the canonical cloud-drive checkout, not scratch workspace or chat memory.
+- Default storage policy: all created or updated project data, documents, plans, reports, specs, handoff notes, memory notes, exported artifacts, and organized working materials must be saved in the Owner's local cloud-drive-backed project checkout by default.
+- For this Owner, "local cloud-drive-backed project checkout" means the macOS Google Drive for desktop synced folder at the canonical repo path. It does not mean iOS/mobile app storage and does not mean a transient scratch workspace.
+- Local-only scratch, temp, cache, build, or dependency paths are allowed only when technically required or fully reproducible.
+- Any local-only intermediate that becomes handoff, audit, or future-work material must be copied or summarized back into the canonical cloud-drive checkout before completion.
 - If a workbench cannot access the cloud-drive checkout, create only a transfer-ready draft and clearly state that it must be copied into the project-root `AGENTS.md` or the proper docs path before it becomes authoritative.
 - Do not modify, test, deploy, commit, or push from stale or backup paths.
 - If path identity is unclear, stop and report `BLOCKED`.
