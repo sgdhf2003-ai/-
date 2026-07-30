@@ -197,6 +197,62 @@ runTest('FulfillmentAdapter blocks partial fulfillment without valid quantity co
   assert.strictEqual(result.errorCode, 'PARTIAL_QUANTITY_REQUIRED');
 });
 
+runTest('FulfillmentAdapter parses inline partial fulfillment quantity and fails closed on unauthorized operator', () => {
+  const inlineCmd = FulfillmentAdapter.parseShortcutCommand('部分出貨 #RES-20260725-004 3');
+  assert.strictEqual(inlineCmd.isFulfillmentCommand, true);
+  assert.strictEqual(inlineCmd.action, 'PARTIAL_FULFILL');
+  assert.strictEqual(inlineCmd.reservationNumber, 'RES-20260725-004');
+  assert.strictEqual(inlineCmd.fulfilledQuantity, 3);
+  assert.strictEqual(inlineCmd.requiresQuantityConfirmation, false);
+
+  const sheetMock = new MockFormalReservationAdapter();
+  const adapter = new FulfillmentAdapter({ sheetAdapter: sheetMock });
+  const unauthorizedRes = adapter.processFulfillment({
+    reservationNumber: 'RES-20260725-004',
+    action: 'FULL_FULFILL',
+    authorized: false
+  });
+
+  assert.strictEqual(unauthorizedRes.success, false);
+  assert.strictEqual(unauthorizedRes.errorCode, 'UNAUTHORIZED_OPERATOR');
+});
+
+runTest('FulfillmentAdapter verifies hold status update, ledger append, and readback consistency', () => {
+  const sheetMock = new MockFormalReservationAdapter();
+  const adapter = new FulfillmentAdapter({ sheetAdapter: sheetMock });
+  sheetMock.appendHoldRecord({
+    id: 'RES-20260725-300',
+    storeId: 'store_300',
+    storeName: '新莊門市',
+    salesOwner: '張助理',
+    item: 'EQA-6522',
+    quantity: 20,
+    reservationStatus: '已收訂 (劃扣)',
+    holdAddress: '五股倉',
+    holdDate: '2026-07-25',
+    expiresAt: '2026-09-23',
+    reminderAt: '2026-09-16',
+    note: '',
+    status: 'RESERVED',
+    createdAt: '2026-07-25T00:00:00.000Z',
+    updatedAt: '2026-07-25T00:00:00.000Z'
+  });
+
+  const fullRes = adapter.processFulfillment({
+    reservationNumber: 'RES-20260725-300',
+    action: 'FULL_FULFILL'
+  });
+
+  assert.strictEqual(fullRes.success, true);
+  assert.strictEqual(fullRes.status, 'FULFILLED');
+  const readback = sheetMock.queryHoldByReservationNumber('RES-20260725-300');
+  assert.strictEqual(readback.found, true);
+  assert.strictEqual(readback.record.status, 'FULFILLED');
+  assert.strictEqual(sheetMock.inventoryAdjustments.length, 1);
+  assert.strictEqual(sheetMock.inventoryAdjustments[0].action, 'FULFILL_DEDUCT');
+  assert.strictEqual(sheetMock.inventoryAdjustments[0].quantity, 20);
+});
+
 console.log(`\nOutbound Fulfillment Loop Simulation Summary: ${passedTests} / ${totalTests} PASS`);
 if (passedTests !== totalTests) {
   process.exit(1);

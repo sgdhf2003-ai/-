@@ -31,13 +31,26 @@ class FulfillmentAdapter {
       };
     }
 
-    // Partial shipment needs an explicit quantity confirmation from LIFF/button payload.
+    // Partial shipment parses inline quantity if provided e.g. "部分出貨 #RES-20260725-004 3"
     if (/^部分出貨\s*#?\s*(.+)$/i.test(trimmed)) {
       const match = trimmed.match(/^部分出貨\s*#?\s*(.+)$/i);
+      const rawTarget = match[1].trim();
+      const parts = rawTarget.split(/\s+/);
+      if (parts.length >= 2 && /^\d+$/.test(parts[parts.length - 1])) {
+        const qty = Number(parts.pop());
+        const resNo = parts.join(' ');
+        return {
+          isFulfillmentCommand: true,
+          action: 'PARTIAL_FULFILL',
+          reservationNumber: resNo,
+          fulfilledQuantity: qty,
+          requiresQuantityConfirmation: false
+        };
+      }
       return {
         isFulfillmentCommand: true,
         action: 'PARTIAL_FULFILL_REQUIRES_QUANTITY',
-        reservationNumber: match[1].trim(),
+        reservationNumber: rawTarget,
         requiresQuantityConfirmation: true
       };
     }
@@ -80,6 +93,18 @@ class FulfillmentAdapter {
   processFulfillment(payload = {}) {
     const reservationNumber = payload.reservationNumber || 'RES_UNKNOWN';
     const action = payload.action || 'FULL_FULFILL';
+
+    if (payload.authorized === false) {
+      return {
+        success: false,
+        reservationNumber,
+        action,
+        status: 'FULFILLMENT_FAILED',
+        remainingQuantity: 0,
+        errorCode: 'UNAUTHORIZED_OPERATOR',
+        lineNotificationMessage: `⚠️ 未授權之操作員，無法執行單據 ${reservationNumber} 的出貨動作。`
+      };
+    }
 
     if (!this.sheetAdapter ||
       typeof this.sheetAdapter.queryHoldByReservationNumber !== 'function' ||
