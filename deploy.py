@@ -8,6 +8,9 @@ from pathlib import Path
 # Official project boundary is derived from this script's repository root.
 # This avoids stale machine-specific paths while keeping cross-project guards.
 OFFICIAL_PATH = Path(__file__).resolve().parent
+CANONICAL_REPOSITORY_PATH = Path(
+    "/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app"
+).resolve()
 
 DEFAULT_CLASP_EXTENSIONS = {".gs", ".js", ".html", ".json"}
 SECRET_SCAN_EXTENSIONS = {
@@ -42,7 +45,14 @@ def mask_secret(value):
 def check_env():
     cwd = Path.cwd().resolve()
 
-    # Cross-project safeguard: cwd must reside within this deploy.py repository.
+    # 1. Enforce canonical repository path boundary
+    if OFFICIAL_PATH != CANONICAL_REPOSITORY_PATH:
+        fail(
+            f"deploy.py MUST reside inside canonical repository {CANONICAL_REPOSITORY_PATH}, got {OFFICIAL_PATH}",
+            "NON_CANONICAL_REPOSITORY_ROOT"
+        )
+
+    # 2. Cross-project safeguard: cwd must reside within OFFICIAL_PATH
     try:
         cwd.relative_to(OFFICIAL_PATH)
     except ValueError:
@@ -51,7 +61,7 @@ def check_env():
             "CROSS_PROJECT_SOURCE_BLOCKED"
         )
 
-    # Repository markers validation.
+    # 3. Repository markers validation.
     backend_marker = OFFICIAL_PATH / "google-apps-script" / "Code.gs"
     bot_marker = OFFICIAL_PATH / "line-bot-apps-script" / "src" / "line程式碼.gs"
     if not backend_marker.exists() or not bot_marker.exists():

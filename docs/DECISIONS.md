@@ -2,10 +2,11 @@
 
 ## Repo Location
 
-- Use the CloudStorage `jingyang-sales-app` repo as the current canonical workspace.
-- Do not assume the legacy local path `/Users/chenhaoan/Documents/jingyang-sales-app`.
-- If multiple matching repos are found, stop and ask the user to choose.
-- `deploy.py` must derive its official boundary from the current repository root, not from a machine-specific Documents path.
+- Use `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app` as the sole canonical workspace.
+- Developer, Documents, scratch workspace, and exported checkout paths are stale or backup copies unless the Owner explicitly reassigns the project root.
+- Do not assume the legacy local path `/Users/chenhaoan/Documents/jingyang-sales-app` or the old Developer checkout.
+- If multiple matching repos are found, stop and reject non-canonical locations unless the Owner has explicitly reassigned the project root for the current stage.
+- `deploy.py` must enforce the canonical cloud-drive repository root and keep `--check` dry-run mode free of clasp subprocesses, pushes, version creation, and deploys.
 
 ## TaskNotificationLog Safety
 
@@ -22,3 +23,12 @@
 - Frontend deploy is separate from Apps Script deploys.
 - Dry-run checks are required before deploy stages.
 - Cross-project guards stay enabled: cwd must be inside the repo root and clasp rootDir must remain inside its target directory.
+
+## Allocation Fulfillment Ledger
+
+- Stage 24-B3-B Owner decision: use Option B for `CANCEL_RELEASE` ledger semantics.
+- `CANCEL_RELEASE.quantity` equals the released quantity.
+- `CANCEL_RELEASE.remainingQuantity` remains audit context after release/cancel.
+- Stage 24-B3-C Owner decision: use an explicit semantic mapper for fulfillment ledger action naming.
+- Fulfillment ledger action mapper: `FULL_SHIP -> FULFILL_DEDUCT`, `PARTIAL_SHIP -> PARTIAL_FULFILL_DEDUCT`, `CANCEL_RELEASE -> CANCEL_RELEASE`.
+- This decision records the contract only. It does not authorize Stage 24-B4, production source changes, Google Sheet writes, LINE API calls, Apps Script production wrapper execution, deploy, commit, or push.

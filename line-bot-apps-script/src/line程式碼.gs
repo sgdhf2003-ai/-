@@ -1111,6 +1111,7 @@ function searchInventory(itemName, senderUserId) {
   }
 
   // 3-2. 拼接替代商品推薦資訊
+  var replyPart2 = "";
   if ((etaShortageState === "INSUFFICIENT_STOCK" || etaShortageState === "OUT_OF_STOCK") &&
       substituteResult &&
       Array.isArray(substituteResult.candidates) &&
@@ -1156,7 +1157,7 @@ function searchInventory(itemName, senderUserId) {
         subText += itemText;
       }
 
-      reply += subText;
+      replyPart2 += subText;
     }
   }
 
@@ -1170,22 +1171,30 @@ function searchInventory(itemName, senderUserId) {
   }
 
   // 加入底部的提示資訊
-    reply += "\n\n💡 查詢圖片：型號 + 單片/磚 / 實景";
-    reply += "\n💡 查詢範例：(例：" + modelBase + " 10箱/片)";
-    reply += "\n💡 貼心提醒：輸入「批號」（如 7X24）時，會直接顯示該批號的可用庫存數量喔！另外下方也附上超值的促銷按鈕，歡迎客倌點擊挑選便宜好貨！🎁✨";
+  replyPart2 += "\n\n💡 查詢圖片：型號 + 單片/磚 / 實景";
+  replyPart2 += "\n💡 查詢範例：(例：" + modelBase + " 10箱/片)";
+  replyPart2 += "\n💡 貼心提醒：輸入「批號」（如 7X24）時，會直接顯示該批號的可用庫存數量喔！另外下方也附上超值的促銷按鈕，歡迎客倌點擊挑選便宜好貨！🎁✨";
 
-  var replyMsg = reply.trim();
+  var replyMsgPart1 = reply.trim();
+  var replyMsgPart2 = replyPart2.trim();
+  var replyMsg = (replyMsgPart1 + "\n\n" + replyMsgPart2).trim();
 
   // 一般庫存查詢只回傳純文字，避免額外觸發 Drive 搜尋而拖慢 webhook
   if (!isImageSearch) {
     if (etaFlexMessage) {
-      return [
-        { "type": "text", "text": replyMsg },
-        etaFlexMessage
-      ];
+      var payload = [];
+      if (replyMsgPart1 !== "") {
+        payload.push({ "type": "text", "text": replyMsgPart1 });
+      }
+      payload.push(etaFlexMessage);
+      if (replyMsgPart2 !== "") {
+        payload.push({ "type": "text", "text": replyMsgPart2 });
+      }
+      return payload;
     }
     return { "type": "text", "text": replyMsg };
   }
+
 
   // === 5. 只有查圖片時才解析相關連結按鈕 ===
   var productFolderVal = idxProductImgFolder !== -1 && firstRow.length > idxProductImgFolder && firstRow[idxProductImgFolder] ? firstRow[idxProductImgFolder].toString().trim() : "";
