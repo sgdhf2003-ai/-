@@ -5,16 +5,16 @@
 - repo root: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 - branch: `main`
 - source of truth: Canonical cloud-drive checkout path above
-- HEAD: `6ccde24d9810436b34dcef2b872f0bed348613be`
-- origin/main: `6ccde24d9810436b34dcef2b872f0bed348613be`
+- HEAD: `4e157bd4bffae3cf6d96a0f32980eec4ebaed7bd`
+- origin/main: `4e157bd4bffae3cf6d96a0f32980eec4ebaed7bd`
 - ahead / behind vs origin/main: `0 / 0`
 
 ## Current Stage
 
-- current stage: Stage 24-C Fulfillment Ledger Production Contract Gate Completed
-- previous completed delivery: Stage 24-B11 Main Merge & Stage 24-B10 Live Controlled Single Hold Writeback Proof
-- latest pushed main commit: `6ccde24d9810436b34dcef2b872f0bed348613be`
-- backend deployed version: `85` (canonical deployment record)
+- current stage: Stage 24-D Production Post-Lock Handoff & Next Contract Planning Completed
+- previous completed delivery: Stage 24-C3 Production Lock Commit & Push (`4e157bd`)
+- latest pushed main commit: `4e157bd4bffae3cf6d96a0f32980eec4ebaed7bd`
+- backend deployed version: `87` (canonical deployment record - locked with pure READINESS_CHECK)
 - LINE Bot deployed version: `191` (canonical deployment record)
 - automated simulations: 178 / 178 PASS (`npm run simulate:all`)
 
