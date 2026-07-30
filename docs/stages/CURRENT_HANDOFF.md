@@ -3,21 +3,20 @@
 ## Repository
 
 - repo root: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
-- branch: `stage-24-b4-production-sheet-adapter`
+- branch: `main`
 - source of truth: Canonical cloud-drive checkout path above
-- HEAD: `3339fa036d06e10e90a1432e32f92c3f18336318`
-- origin/stage-24-b4-production-sheet-adapter: `3339fa036d06e10e90a1432e32f92c3f18336318`
-- origin/main base: `b32fad100afb3b0c926d9edc466fea2833e8ac45`
-- ahead / behind vs origin/stage-24-b4-production-sheet-adapter: `0 / 0`
+- HEAD: `6ccde24d9810436b34dcef2b872f0bed348613be`
+- origin/main: `6ccde24d9810436b34dcef2b872f0bed348613be`
+- ahead / behind vs origin/main: `0 / 0`
 
 ## Current Stage
 
-- current stage: Stage 24-B8 Live Production Adapter Runtime Proof Planning
-- previous completed delivery: Phase 7 Sales Assistant LINE OCR & Fulfillment Loop
-- latest pushed stage commit: `3339fa036d06e10e90a1432e32f92c3f18336318`
-- backend deployed version: `78` (canonical deployment record)
+- current stage: Stage 24-C Fulfillment Ledger Production Contract Gate Completed
+- previous completed delivery: Stage 24-B11 Main Merge & Stage 24-B10 Live Controlled Single Hold Writeback Proof
+- latest pushed main commit: `6ccde24d9810436b34dcef2b872f0bed348613be`
+- backend deployed version: `85` (canonical deployment record)
 - LINE Bot deployed version: `191` (canonical deployment record)
-- automated simulations: rerun for Stage 24-B8 planning closure
+- automated simulations: 178 / 178 PASS (`npm run simulate:all`)
 
 ## Product North Star
 
