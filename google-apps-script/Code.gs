@@ -5628,8 +5628,8 @@ function testB8ReadinessAction(data) {
     };
   }
 
-  const targetMode = req.mode === "SINGLE_HOLD_WRITEBACK" ? "SINGLE_HOLD_WRITEBACK" : "READINESS_CHECK";
-  return runAllocationProductionAdapterRuntimeProof_B8({ mode: targetMode, proofId: req.proofId });
+  const targetMode = req.mode === "READINESS_CHECK" || !req.mode ? "READINESS_CHECK" : req.mode;
+  return runAllocationProductionAdapterRuntimeProof_B8({ mode: targetMode });
 }
 
 /**
@@ -5731,87 +5731,6 @@ function runAllocationProductionAdapterRuntimeProof_B8(options) {
       resultSummary.ok = true;
       Logger.log("B8 Runtime Proof Readiness Summary: " + JSON.stringify(resultSummary));
       return resultSummary;
-    }
-
-    // 5. Execution mode handling
-    if (mode === "SINGLE_HOLD_WRITEBACK") {
-      const proofId = opts.proofId || "RES-PROV-B10-001";
-      const proofPayload = {
-        id: proofId,
-        reservationNumber: proofId,
-        storeId: "STORE_PROOF_001",
-        storeName: "【測試門市】勁揚總部驗證",
-        salesOwner: "JYAI_TEST_BOT",
-        item: "【測試單據】去保留驗證樣本",
-        quantity: 1,
-        reservationStatus: "CONFIRMED",
-        holdAddress: "台北市南港區園區街 3 號",
-        holdDate: "2026-07-30",
-        expiresAt: "2026-08-30T00:00:00.000Z",
-        status: "CONFIRMED",
-        reminderAt: "2026-08-29T00:00:00.000Z",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-
-      // Check existing rows for idempotency
-      const lastRow = holdsSheet.getLastRow();
-      let existingRow = null;
-      if (lastRow > 1) {
-        const rows = holdsSheet.getRange(2, 1, lastRow - 1, 15).getValues();
-        existingRow = rows.find(r => String(r[0] || "").trim() === proofId || String(r[1] || "").trim() === proofId);
-      }
-
-      if (existingRow) {
-        // Idempotent match: already exists
-        const readbackId = String(existingRow[0] || "").trim();
-        const readbackResNo = String(existingRow[1] || "").trim();
-        if (readbackId === proofId && readbackResNo === proofId) {
-          resultSummary.ok = true;
-          resultSummary.writebackSuccess = true;
-          resultSummary.readbackSuccess = true;
-          resultSummary.idempotencyGuarded = true;
-          resultSummary.touchedTabs = [holdsName];
-          return resultSummary;
-        }
-      }
-
-      // Write exactly 1 hold row
-      holdsSheet.appendRow([
-        proofPayload.id,
-        proofPayload.reservationNumber,
-        proofPayload.storeId,
-        proofPayload.storeName,
-        proofPayload.salesOwner,
-        proofPayload.item,
-        proofPayload.quantity,
-        proofPayload.reservationStatus,
-        proofPayload.holdAddress,
-        proofPayload.holdDate,
-        proofPayload.expiresAt,
-        proofPayload.status,
-        proofPayload.reminderAt,
-        proofPayload.createdAt,
-        proofPayload.updatedAt
-      ]);
-
-      // Readback check
-      const newLastRow = holdsSheet.getLastRow();
-      const readbackValues = holdsSheet.getRange(newLastRow, 1, 1, 15).getValues()[0];
-      const readbackId = String(readbackValues[0] || "").trim();
-      const readbackResNo = String(readbackValues[1] || "").trim();
-
-      if (readbackId === proofId && readbackResNo === proofId) {
-        resultSummary.ok = true;
-        resultSummary.writebackSuccess = true;
-        resultSummary.readbackSuccess = true;
-        resultSummary.idempotencyGuarded = true;
-        resultSummary.touchedTabs = [holdsName];
-        return resultSummary;
-      } else {
-        resultSummary.errorCode = "READBACK_ID_MISMATCH";
-        return resultSummary;
-      }
     }
 
     resultSummary.errorCode = "EXECUTION_MODE_REQUIRES_EXPLICIT_OWNER_AUTHORIZATION";
