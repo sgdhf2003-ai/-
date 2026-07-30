@@ -81,8 +81,8 @@ runTest('google-apps-script/Code.gs contains test_b8_readiness action route and 
   assert.ok(codeGsContent.includes('function testB8ReadinessAction(data)'));
   assert.ok(codeGsContent.includes('errorCode: "MISSING_EXECUTION_KEY"'));
   assert.ok(codeGsContent.includes('errorCode: "INVALID_EXECUTION_KEY"'));
-  assert.ok(!codeGsContent.includes('req.provisionSchema === true'));
-  assert.ok(codeGsContent.includes('return runAllocationProductionAdapterRuntimeProof_B8({ mode: "READINESS_CHECK" });'));
+  assert.ok(codeGsContent.includes('mode === "SINGLE_HOLD_WRITEBACK"'));
+  assert.ok(codeGsContent.includes('runAllocationProductionAdapterRuntimeProof_B8({ mode: targetMode, proofId: req.proofId })'));
 });
 
 console.log(`\nAllocation Production Wireup Simulation Summary: ${passedTests} / ${totalTests} PASS`);
