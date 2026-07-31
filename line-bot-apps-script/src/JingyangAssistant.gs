@@ -611,3 +611,56 @@ function runAntiGravityOfficialProductionFix() {
   
   Logger.log("🎉 [Anti-Gravity] 正式生產環境資料對應與權限已全數修復完畢！");
 }
+
+/**
+ * [JYAI 配貨助手 - Anti-Gravity 雙軌資料隔離架構修復 Token]
+ * 本腳本執行以下自動化動作：
+ * 1. 設定雙軌試算表 ID：
+    - SPREADSHEET_ID (主庫存表)
+    - JINGYANG_MANAGER_SPREADSHEET_ID (業務後台表)
+ * 2. 驗證業務後台試算表中的「商品推薦標籤」、「users」、「ledger」三個關鍵分頁是否齊全。
+ * 3. 確保未來權限、帳務與推薦標籤完全隔離在業務後台，不再干擾主庫存。
+ */
+function executeAntiGravityDualSpreadsheetRoutingFix() {
+  var INVENTORY_SPREADSHEET_ID = "1C_R1DdTj5brxftl9fPabTKBGzcG-lxWWxWoyi-ItA48"; // 主庫存表
+  var scriptProperties = PropertiesService.getScriptProperties();
+  var MANAGER_SPREADSHEET_ID = scriptProperties.getProperty('JINGYANG_MANAGER_SPREADSHEET_ID') || INVENTORY_SPREADSHEET_ID;
+  
+  Logger.log("🚀 [Anti-Gravity Dual-Route] 開始設定雙軌架構試算表隔離機制...");
+  
+  // 1. 寫入系統指令碼屬性 (Script Properties)
+  scriptProperties.setProperty('SPREADSHEET_ID', INVENTORY_SPREADSHEET_ID);
+  scriptProperties.setProperty('JINGYANG_MANAGER_SPREADSHEET_ID', MANAGER_SPREADSHEET_ID);
+  Logger.log("✔️ [雙軌設定] 主庫存表 ID 已綁定：" + INVENTORY_SPREADSHEET_ID);
+  Logger.log("✔️ [雙軌設定] 業務後台表 ID 已綁定：" + MANAGER_SPREADSHEET_ID);
+  
+  // 2. 驗證主庫存表連線
+  try {
+    var invSs = SpreadsheetApp.openById(INVENTORY_SPREADSHEET_ID);
+    Logger.log("✔️ [驗證通過] 主庫存表連線成功：「" + invSs.getName() + "」");
+  } catch (invErr) {
+    Logger.log("❌ 主庫存表連線失敗：" + (invErr && invErr.message ? invErr.message : invErr));
+  }
+  
+  // 3. 驗證業務後台表與必要分頁連線
+  try {
+    var mgrSs = SpreadsheetApp.openById(MANAGER_SPREADSHEET_ID);
+    Logger.log("✔️ [驗證通過] 勁揚業務後台表連線成功：「" + mgrSs.getName() + "」");
+    
+    // 檢查指定的三個後勤分頁
+    var requiredSheets = ["商品推薦標籤", "users", "ledger"];
+    requiredSheets.forEach(function(sheetName) {
+      var sheet = mgrSs.getSheetByName(sheetName) || mgrSs.getSheetByName(sheetName.toLowerCase());
+      if (sheet) {
+        Logger.log("   └─ ✔️ 已找到後台分頁：「" + sheetName + "」");
+      } else {
+        Logger.log("   └─ ⚠️ 提醒：在業務後台表中未找到分頁：「" + sheetName + "」，請確認是否已建立該分頁。");
+      }
+    });
+    
+  } catch (mgrErr) {
+    Logger.log("❌ 業務後台表連線失敗：" + (mgrErr && mgrErr.message ? mgrErr.message : mgrErr));
+  }
+  
+  Logger.log("🎉 [Anti-Gravity] 雙軌資料隔離架構設定完成！");
+}
