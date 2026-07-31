@@ -482,3 +482,94 @@ function JingyangAssistant_getLineAuthorizationHeaderOrNull_(token, context) {
 function JingyangAssistant_getLineToken_() {
   return JingyangAssistant_getLineTokenOrNull_() || "";
 }
+
+function JingyangAssistant_ingestAdminUserAuthorization_() {
+  var ssId = "1C_R1DdTj5brxftl9fPabTKBGzcG-lxWWxWoyi-ItA48";
+  try {
+    var propSsId = PropertiesService.getScriptProperties().getProperty("JINGYANG_MANAGER_SPREADSHEET_ID");
+    if (propSsId) ssId = propSsId;
+  } catch (err) {}
+  var ss = SpreadsheetApp.openById(ssId);
+  var sheet = ss.getSheetByName("Users");
+
+  if (!sheet) {
+    sheet = ss.insertSheet("Users");
+    sheet.appendRow(["id", "lineUserId", "displayName", "role", "mode", "status", "username", "salesOwner", "createdAt", "updatedAt"]);
+  }
+
+  var values = sheet.getDataRange().getValues();
+  var headers = (values[0] || []).map(function(h) { return String(h || "").trim(); });
+
+  var requiredHeaders = ["id", "lineUserId", "displayName", "role", "mode", "status"];
+  var headerChanged = false;
+
+  if (headers.length === 0) {
+    headers = requiredHeaders;
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    headerChanged = true;
+  } else {
+    requiredHeaders.forEach(function(reqHeader) {
+      if (headers.indexOf(reqHeader) === -1) {
+        headers.push(reqHeader);
+        headerChanged = true;
+      }
+    });
+    if (headerChanged) {
+      sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    }
+  }
+
+  var targetLineUserId = "U17700bab6816e65347549fa50965c892";
+  var lineUserIdIdx = headers.indexOf("lineUserId");
+  var displayNameIdx = headers.indexOf("displayName");
+  var roleIdx = headers.indexOf("role");
+  var modeIdx = headers.indexOf("mode");
+  var statusIdx = headers.indexOf("status");
+  var idIdx = headers.indexOf("id");
+
+  var nowIso = new Date().toISOString();
+  var targetRowIndex = -1;
+
+  for (var r = 1; r < values.length; r++) {
+    if (String(values[r][lineUserIdIdx] || "").trim() === targetLineUserId) {
+      targetRowIndex = r + 1;
+      break;
+    }
+  }
+
+  if (targetRowIndex > 0) {
+    if (roleIdx >= 0) sheet.getRange(targetRowIndex, roleIdx + 1).setValue("admin");
+    if (modeIdx >= 0) sheet.getRange(targetRowIndex, modeIdx + 1).setValue("staff");
+    if (displayNameIdx >= 0 && !sheet.getRange(targetRowIndex, displayNameIdx + 1).getValue()) {
+      sheet.getRange(targetRowIndex, displayNameIdx + 1).setValue("管理員");
+    }
+    if (statusIdx >= 0 && !sheet.getRange(targetRowIndex, statusIdx + 1).getValue()) {
+      sheet.getRange(targetRowIndex, statusIdx + 1).setValue("啟用");
+    }
+  } else {
+    var newRow = new Array(headers.length).fill("");
+    if (idIdx >= 0) newRow[idIdx] = "USR-ADMIN-001";
+    if (lineUserIdIdx >= 0) newRow[lineUserIdIdx] = targetLineUserId;
+    if (displayNameIdx >= 0) newRow[displayNameIdx] = "管理員";
+    if (roleIdx >= 0) newRow[roleIdx] = "admin";
+    if (modeIdx >= 0) newRow[modeIdx] = "staff";
+    if (statusIdx >= 0) newRow[statusIdx] = "啟用";
+    sheet.appendRow(newRow);
+  }
+
+  var readbackObjects = JingyangAssistant_sheetToObjects_(sheet);
+  var adminRecord = null;
+  for (var i = 0; i < readbackObjects.length; i++) {
+    if (String(readbackObjects[i].lineUserId || "").trim() === targetLineUserId) {
+      adminRecord = readbackObjects[i];
+      break;
+    }
+  }
+
+  return {
+    ok: !!adminRecord && adminRecord.role === "admin" && adminRecord.mode === "staff",
+    spreadsheetId: ssId,
+    headers: headers,
+    userRecord: adminRecord || null
+  };
+}

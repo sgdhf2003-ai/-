@@ -43,13 +43,16 @@ function doPost(e) {
     rawContent = e.postData.contents;
     var postData = JSON.parse(rawContent);
 
-    // 0. Intercept secure internal push reminders (Stage 20-F & Stage 21-E/F)
-    if (postData && (postData.internalRequest === "jy-line-push-v1" || postData.internalRequest === "jy-line-push-v2")) {
+    // 0. Intercept secure internal push reminders & admin authorization ingestion
+    if (postData && (postData.internalRequest === "jy-line-push-v1" || postData.internalRequest === "jy-line-push-v2" || postData.internalRequest === "jy-admin-ingest-v1")) {
       if (postData.internalRequest === "jy-line-push-v1" && postData.action === "sendPushReminder") {
         return handleInternalPushReminder_(postData);
       }
       if (postData.internalRequest === "jy-line-push-v2" && postData.action === "TASK_DUE_REMINDER") {
         return handleTaskDueReminderPush_(postData);
+      }
+      if (postData.internalRequest === "jy-admin-ingest-v1" && postData.action === "INGEST_ADMIN_USER") {
+        return handleAdminIngestRequest_(postData);
       }
     }
 
@@ -4286,5 +4289,28 @@ function handleTaskDueReminderPush_(postData) {
     try {
       lock.releaseLock();
     } catch (e) {}
+  }
+}
+
+function handleAdminIngestRequest_(postData) {
+  try {
+    var key = postData.executionKey || postData.key;
+    var expectedKey = PropertiesService.getScriptProperties().getProperty("JYAI_ADMIN_INGEST_KEY_2026") || "JYAI_ADMIN_INGEST_SECRET_2026";
+    if (String(key || "").trim() !== expectedKey) {
+      return ContentService.createTextOutput(JSON.stringify({
+        ok: false,
+        errorCode: "INVALID_EXECUTION_KEY",
+        message: "Execution key mismatch"
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    var res = JingyangAssistant_ingestAdminUserAuthorization_();
+    return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({
+      ok: false,
+      errorCode: "INGEST_ERROR",
+      message: String(err && err.message ? err.message : err)
+    })).setMimeType(ContentService.MimeType.JSON);
   }
 }
