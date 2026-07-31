@@ -5,18 +5,18 @@
 - repo root: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 - branch: `main`
 - source of truth: Canonical cloud-drive checkout path above
-- HEAD: `bb1a9ec7ea104c841e830b885178ab49cc7d3da3`
-- origin/main: `bb1a9ec7ea104c841e830b885178ab49cc7d3da3`
+- HEAD: `e8136f1af70ef2f3ed0ff44d5b93d97cfe0dde3f`
+- origin/main: `e8136f1af70ef2f3ed0ff44d5b93d97cfe0dde3f`
 - ahead / behind vs origin/main: `0 / 0`
 
 ## Current Stage
 
-- current stage: Stage 25 Production Fulfillment Loop Live Wiring Spec Definition Completed
-- previous completed delivery: Stage 24-D1 Post-Lock Planning Commit & Push (`bb1a9ec`)
-- latest pushed main commit: `bb1a9ec7ea104c841e830b885178ab49cc7d3da3`
-- backend deployed version: `87` (canonical deployment record - locked with pure READINESS_CHECK)
+- current stage: Stage 26-B0 Partial Fulfillment Production Contract Spec Completed
+- previous completed delivery: Stage 25-C3 Production Lock Cleanup Commit & Push (`e8136f1`)
+- latest pushed main commit: `e8136f1af70ef2f3ed0ff44d5b93d97cfe0dde3f`
+- backend deployed version: `89` (canonical deployment record - locked with pure READINESS_CHECK)
 - LINE Bot deployed version: `191` (canonical deployment record)
-- automated simulations: 178 / 178 PASS (`npm run simulate:all`)
+- automated simulations: 180 / 180 PASS (`npm run simulate:all`)
 
 ## Product North Star
 
