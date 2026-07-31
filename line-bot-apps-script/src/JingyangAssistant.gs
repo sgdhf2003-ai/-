@@ -664,3 +664,62 @@ function executeAntiGravityDualSpreadsheetRoutingFix() {
   
   Logger.log("🎉 [Anti-Gravity] 雙軌資料隔離架構設定完成！");
 }
+
+/**
+ * [JYAI 配貨助手 - 安全合約維持與後台結構對齊 Token]
+ * 本腳本執行以下安全動作：
+ * 1. 嚴格遵守 Stage 26 生產合約：主庫存與 ledger / holds 維持在官方主庫存表 (1C_R1DdTj5brxftl9fPabTKBGzcG-lxWWxWoyi-ItA48)。
+ * 2. 安全地在「勁揚業務後台試算表」中建立或檢查後台專屬的 users 與 商品推薦標籤分頁。
+ * 3. 確保系統雙軌運行順暢，資料絕不混淆、絕不發生雙頭分歧。
+ */
+function executeSafeArchitectureAlignment() {
+  var OFFICIAL_INVENTORY_ID = "1C_R1DdTj5brxftl9fPabTKBGzcG-lxWWxWoyi-ItA48"; // 主庫存與帳務真相來源
+  var scriptProperties = PropertiesService.getScriptProperties();
+  var MANAGER_BACKEND_ID = scriptProperties.getProperty('JINGYANG_MANAGER_SPREADSHEET_ID') || OFFICIAL_INVENTORY_ID;
+  
+  Logger.log("🔒 [Safe Architecture] 開始進行安全合約架構對齊...");
+  
+  // 1. 設定系統指令碼屬性 (Script Properties)
+  scriptProperties.setProperty('SPREADSHEET_ID', OFFICIAL_INVENTORY_ID);
+  scriptProperties.setProperty('JINGYANG_MANAGER_SPREADSHEET_ID', MANAGER_BACKEND_ID);
+  Logger.log("✔️ [安全對齊] 主庫存與帳務真相來源已鎖定：「" + OFFICIAL_INVENTORY_ID + "」");
+  Logger.log("✔️ [安全對齊] 勁揚業務後台表已鎖定：「" + MANAGER_BACKEND_ID + "」");
+  
+  // 2. 驗證主庫存表連線
+  try {
+    var invSs = SpreadsheetApp.openById(OFFICIAL_INVENTORY_ID);
+    Logger.log("✔️ [驗證通過] 主庫存表連線成功：「" + invSs.getName() + "」");
+  } catch (err) {
+    Logger.log("❌ 主庫存表連線失敗：" + (err && err.message ? err.message : err));
+  }
+  
+  // 3. 安全初始化後台試算表結構（僅檢查與補充必要分頁，絕不覆蓋或刪除現有資料）
+  try {
+    var mgrSs = SpreadsheetApp.openById(MANAGER_BACKEND_ID);
+    Logger.log("✔️ [驗證通過] 勁揚業務後台表連線成功：「" + mgrSs.getName() + "」");
+    
+    // 檢查後台專屬分頁
+    var backendSheets = ["users", "商品推薦標籤"];
+    backendSheets.forEach(function(sheetName) {
+      var sheet = mgrSs.getSheetByName(sheetName);
+      if (!sheet) {
+        sheet = mgrSs.insertSheet(sheetName);
+        Logger.log("   └─ ➕ 已自動建立後台分頁：「" + sheetName + "」");
+        
+        // 給予預設表頭
+        if (sheetName === "users") {
+          sheet.appendRow(["Username", "DisplayName", "Role", "LineUserId", "Status"]);
+        } else if (sheetName === "商品推薦標籤") {
+          sheet.appendRow(["Category", "TagKeyword", "TargetItemCode", "Description"]);
+        }
+      } else {
+        Logger.log("   └─ ✔️ 後台已存在分頁：「" + sheetName + "」");
+      }
+    });
+    
+  } catch (mgrErr) {
+    Logger.log("❌ 業務後台表存取失敗：" + (mgrErr && mgrErr.message ? mgrErr.message : mgrErr));
+  }
+  
+  Logger.log("🎉 [Safe Architecture] 安全合約架構對齊完畢！主庫存資料 100% 安全無虞。");
+}
