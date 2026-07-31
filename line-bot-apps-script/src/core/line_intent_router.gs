@@ -88,6 +88,11 @@ function isStaffCommand(text) {
   return /^(選單|menu|工作選單|員工選單|今日|今日工作|工作|今天工作|新增工作|新增|建立工作|交辦|記一件事|待處理|助理|助理工作|加工送貨|今日總覽|主管總覽|老闆總覽|異常提醒|業務進度|今日門市|今日摘要|工作中心)$/.test(value);
 }
 
+function isWhoamiCommand(text) {
+  var value = normalizeLineText(text);
+  return /^(whoami|id|我的id|我的身份|用戶id|使用者id)$/i.test(value);
+}
+
 function isCustomerCommand(text) {
   return /^(客服|聯絡客服|型錄|官網|說明|幫助|帮助|help|instructions?|歡迎|欢迎)$/.test(normalizeLineText(text));
 }
@@ -104,6 +109,12 @@ function detectLineIntent(text, userContext) {
     rawText: rawText,
     normalizedText: normalizedText
   };
+
+  if (isWhoamiCommand(rawText)) {
+    result.intent = "whoami";
+    result.confidence = 1;
+    return result;
+  }
 
   if (isInventoryLikeText(rawText)) {
     result.intent = "inventory";
@@ -358,6 +369,22 @@ function replyCustomerHelp(user) {
     "需要型錄、官網或人工協助時，請使用下方選單聯絡客服。";
 }
 
+function replyWhoamiInfo(userContext) {
+  var lineUserId = String(userContext && userContext.lineUserId || "N/A");
+  var mode = String(userContext && userContext.mode || "customer");
+  var role = String(userContext && userContext.role || "customer");
+  var name = String(userContext && (userContext.displayName || userContext.username) || "訪客");
+
+  var lines = [
+    "🆔 LINE 身份資訊 (Whoami)",
+    "・User ID: " + lineUserId,
+    "・權限模式: " + mode,
+    "・系統角色: " + role,
+    "・顯示名稱: " + name
+  ];
+  return lines.join("\n");
+}
+
 function LineIntent_getWorkCenterUrl_(view) {
   if (typeof JingyangAssistant_buildAppViewUrl_ === "function") {
     return JingyangAssistant_buildAppViewUrl_(view);
@@ -378,6 +405,7 @@ function LineIntent_defaultHandlers_() {
     replyAssistantAbnormal: replyAssistantAbnormal,
     replyBossOverview: replyBossOverview,
     replyCustomerHelp: replyCustomerHelp,
+    replyWhoamiInfo: replyWhoamiInfo,
     customerFallback: buildCustomerLineFallback,
     staffFallback: buildStaffLineFallback
   };
@@ -395,7 +423,8 @@ function routeLineIntent(intentResult, userContext, event, handlers) {
     return handlers.inventory ? handlers.inventory(intentResult, userContext, event) : false;
   }
 
-  if (intent === "staff_menu") handlerName = "replyStaffRoleMenu";
+  if (intent === "whoami") handlerName = "replyWhoamiInfo";
+  else if (intent === "staff_menu") handlerName = "replyStaffRoleMenu";
   else if (intent === "work_today") handlerName = "replyMyTasks";
   else if (intent === "work_create") handlerName = "startWorkCaptureFlow";
   else if (intent === "assistant_center") handlerName = "replyAssistantCenter";
