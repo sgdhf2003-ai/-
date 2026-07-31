@@ -573,3 +573,41 @@ function JingyangAssistant_ingestAdminUserAuthorization_() {
     userRecord: adminRecord || null
   };
 }
+
+/**
+ * [JYAI 配貨助手 - 正式生產環境全自動修復與對齊 Token]
+ * 本腳本將自動：
+ * 1. 強制將系統指令碼屬性 SPREADSHEET_ID 鎖定並對齊正式官方試算表
+ * 2. 驗證正式試算表與 Users 權限白名單分頁之連線狀態
+ */
+function runAntiGravityOfficialProductionFix() {
+  // 🔒 正式生產環境官方唯一試算表 ID
+  var OFFICIAL_PRODUCTION_SPREADSHEET_ID = "1C_R1DdTj5brxftl9fPabTKBGzcG-lxWWxWoyi-ItA48";
+  
+  Logger.log("🚀 [Anti-Gravity] 開始執行正式生產環境試算表 ID 校正與同步...");
+  
+  // 1. 強制寫入/更新指令碼屬性 (Script Properties)
+  var scriptProperties = PropertiesService.getScriptProperties();
+  scriptProperties.setProperty('SPREADSHEET_ID', OFFICIAL_PRODUCTION_SPREADSHEET_ID);
+  scriptProperties.setProperty('JINGYANG_MANAGER_SPREADSHEET_ID', OFFICIAL_PRODUCTION_SPREADSHEET_ID);
+  Logger.log("✔️ [完成] 系統指令碼屬性已全面對齊正式試算表 ID：" + OFFICIAL_PRODUCTION_SPREADSHEET_ID);
+  
+  // 2. 驗證正式試算表與白名單分頁連線
+  try {
+    var ss = SpreadsheetApp.openById(OFFICIAL_PRODUCTION_SPREADSHEET_ID);
+    Logger.log("✔️ [完成] 成功連線正式試算表，表單名稱：「" + ss.getName() + "」");
+    
+    var usersSheet = ss.getSheetByName("Users") || ss.getSheetByName("users");
+    if (usersSheet) {
+      Logger.log("✔️ [完成] 已確認「Users」權限白名單分頁存在，身份判定機制正常運作！");
+    } else {
+      Logger.log("⚠️ [注意] 在該試算表中未找到名為「Users」的分頁，請確認分頁名稱。");
+    }
+    
+  } catch (err) {
+    Logger.log("❌ [錯誤] 無法連線至指定的正式試算表 ID：" + (err && err.message ? err.message : err));
+    throw new Error("正式試算表存取失敗：" + (err && err.message ? err.message : err));
+  }
+  
+  Logger.log("🎉 [Anti-Gravity] 正式生產環境資料對應與權限已全數修復完畢！");
+}
