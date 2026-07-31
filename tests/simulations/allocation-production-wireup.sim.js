@@ -81,7 +81,7 @@ runTest('google-apps-script/Code.gs contains test_b8_readiness action route and 
   assert.ok(codeGsContent.includes('function testB8ReadinessAction(data)'));
   assert.ok(codeGsContent.includes('errorCode: "MISSING_EXECUTION_KEY"'));
   assert.ok(codeGsContent.includes('errorCode: "INVALID_EXECUTION_KEY"'));
-  assert.ok(!codeGsContent.includes('mode === "SINGLE_PARTIAL_FULFILLMENT_WRITEBACK"'));
+  assert.ok(!codeGsContent.includes('mode === "SINGLE_CANCEL_RELEASE_WRITEBACK"'));
   assert.ok(codeGsContent.includes('const targetMode = req.mode === "READINESS_CHECK" || !req.mode ? "READINESS_CHECK" : req.mode;'));
   assert.ok(codeGsContent.includes('return runAllocationProductionAdapterRuntimeProof_B8({ mode: targetMode });'));
 });
