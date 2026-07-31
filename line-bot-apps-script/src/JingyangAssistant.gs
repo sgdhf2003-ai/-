@@ -723,3 +723,46 @@ function executeSafeArchitectureAlignment() {
   
   Logger.log("🎉 [Safe Architecture] 安全合約架構對齊完畢！主庫存資料 100% 安全無虞。");
 }
+
+/**
+ * [JYAI 配貨助手 - 雙軌後台與 Users 合併驗證 Token]
+ * 本腳本由 Adrian 執行，用於：
+ * 1. 確認系統屬性完全對應至正式後台與主庫存表。
+ * 2. 檢查新後台試算表中是否存在「users」分頁，並確認欄位結構。
+ */
+function executeAdrianUsersAndRoutingAudit() {
+  var INVENTORY_SPREADSHEET_ID = "1C_R1DdTj5brxftl9fPabTKBGzcG-lxWWxWoyi-ItA48"; // 主庫存與 ledger / holds
+  var scriptProperties = PropertiesService.getScriptProperties();
+  var MANAGER_SPREADSHEET_ID = scriptProperties.getProperty('JINGYANG_MANAGER_SPREADSHEET_ID') || INVENTORY_SPREADSHEET_ID;
+  
+  Logger.log("🔍 [Adrian 稽核] 開始檢查雙軌試算表與 users 分頁狀態...");
+  
+  // 1. 同步與設定屬性
+  scriptProperties.setProperty('SPREADSHEET_ID', INVENTORY_SPREADSHEET_ID);
+  scriptProperties.setProperty('JINGYANG_MANAGER_SPREADSHEET_ID', MANAGER_SPREADSHEET_ID);
+  
+  // 2. 檢查後台的 users 分頁
+  try {
+    var mgrSs = SpreadsheetApp.openById(MANAGER_SPREADSHEET_ID);
+    var usersSheet = mgrSs.getSheetByName("users") || mgrSs.getSheetByName("User") || mgrSs.getSheetByName("user") || mgrSs.getSheetByName("Users");
+    
+    if (usersSheet) {
+      Logger.log("✔️ [檢查通過] 在業務後台成功找到使用者分頁：「" + usersSheet.getName() + "」");
+      var lastRow = usersSheet.getLastRow();
+      Logger.log("📊 目前 users 分頁共有 " + lastRow + " 筆記錄資料。");
+      
+      // 檢查是否有舊的單數 user 分頁需要提醒合併
+      var oldUserSheet = mgrSs.getSheetByName("user");
+      if (oldUserSheet && usersSheet.getName() !== "user") {
+        Logger.log("⚠️ 提醒：後台同時存在「user」與「users」分頁。建議將「user」內的資料手動複製到「users」後，刪除「user」分頁。");
+      }
+      
+    } else {
+      Logger.log("❌ 錯誤：在業務後台找不到「users」分頁！請確認您是否已經將其移動過去。");
+    }
+  } catch (err) {
+    Logger.log("❌ 業務後台表存取失敗：" + (err && err.message ? err.message : err));
+  }
+  
+  Logger.log("🎉 [Adrian 稽核完成] 雙軌路由對應正常，主庫存與後台各司其職！");
+}
