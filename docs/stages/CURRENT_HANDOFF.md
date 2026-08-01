@@ -5,23 +5,40 @@
 - repo root: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 - branch: `main`
 - source of truth: Canonical cloud-drive checkout path above
-- HEAD: `d51778374eb99091e35c06bb9041495b098ad617`
-- origin/main: `d51778374eb99091e35c06bb9041495b098ad617`
+- HEAD: `03f5740a7986d45cbf01d49c630c0692ea7098be`
+- origin/main: `03f5740a7986d45cbf01d49c630c0692ea7098be`
 - ahead / behind vs origin/main: `0 / 0`
 
 ## Current Stage
 
-- current stage: Stage 28-M LINE Webhook Switch Closure Record
+- current stage: Stage 29-C Milestone Documentation Closure
 - previous completed deliveries:
-  - Stage 28-D LINE Role Header Normalization Commit & Push (`a450e54`)
-  - Stage 28-H deploy.py Fail-Closed Patch Commit & Push (`b5301a1`)
-  - Stage 28-I Fresh Script ID Config Commit & Push (`e802872`)
-  - Stage 28-J Fresh LINE Bot Version 1 Deployment Commit & Push (`d517783`)
-  - Stage 28-L LINE Webhook Switch Executed & Verified (Verify 200 OK)
-- latest pushed main commit: `d51778374eb99091e35c06bb9041495b098ad617` (`build: record fresh LINE Bot initial deployment`)
-- backend deployed version: `96` (canonical deployment record - fail-closed containment)
+  - Stage 28-M LINE Webhook Switch Closure Record (`03f5740`)
+  - Stage 29-A Backend Web App Runtime & Version Headroom Audit (PASS)
+  - Stage 29-B Formal Hold Writeback & Fulfillment Ledger Contract Sweep (PASS)
+  - Stage 29-C Stage 29 Handoff & Milestone Documentation Closure
+- latest pushed main commit: `03f5740a7986d45cbf01d49c630c0692ea7098be` (`docs: record Stage 28-M LINE webhook switch completion`)
+- backend deployed version: `96` (canonical deployment record - 104 versions headroom remaining)
 - LINE Bot deployed version: `1` (canonical deployment record - fresh project Version 1)
 - automated simulations: 181 / 181 PASS (`npm run simulate:all`)
+
+## Stage 29 Summary & Production Hardening Audit State
+
+- **Stage 29 Status**: AUDIT & MILESTONE CLOSURE COMPLETE
+- **Stage 29-A Backend Audit**:
+  - Backend Web App Version: `96` / `200` (`104 versions headroom remaining`)
+  - Dry-Run Deployment Check: `python3 deploy.py backend --check` **VALID (Status: PASS)**
+  - Backend Script ID: `1vRepq_HNkjbs8vRQvbkkDE8unGPHfksfhOTrkrNZthFZHs2GSHO8Gasc`
+  - Backend Deployment ID: `AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw`
+- **Stage 29-B Contract Sweep Audit**:
+  - Reservation ID Contract: `RES-YYYYMMDD-XXX` format strictly verified **PASS**
+  - ID Equality Contract: `reservationNumber === holdRecord.id === rowData[0]` strictly verified **PASS**
+  - Ledger Timestamp Normalization: `timestamp: adjustment.timestamp || adjustment.updatedAt || new Date().toISOString()` **PASS**
+  - `CANCEL_RELEASE` Semantics: `releasedQuantity` / `remainingQuantity` context strictly verified **PASS**
+  - Fail-Closed Protections: Missing adapter/header mismatch fail-closed behavior verified **PASS**
+  - Schema Mismatches Found: `0`
+  - Production Side Effects: `0`
+- **Automated Verification**: `npm run check` PASS, `npm run simulate:all` **181 / 181 PASS**
 
 ## Stage 28 Summary & Production State
 
