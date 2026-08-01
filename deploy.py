@@ -290,9 +290,14 @@ def main():
     print("Creating new version...")
     res = subprocess.run(["clasp", "version", version_desc], cwd=target_dir, capture_output=True, text=True)
     if res.returncode != 0:
-        if "limit of 200 versions" in res.stderr:
-            print("Note: Script reached GAS limit of 200 versions. Reusing version 200 for deployment.")
-            version_num = "200"
+        err_msg = (res.stderr or "") + (res.stdout or "")
+        if "limit of 200 versions" in err_msg.lower() or "200 versions" in err_msg.lower():
+            fail(
+                "Google Apps Script project has reached the limit of 200 versions. "
+                "Deploying a stale version snapshot is forbidden. "
+                "Please migrate to a fresh Apps Script project.",
+                "SCRIPT_VERSION_LIMIT_REACHED"
+            )
         else:
             fail(f"clasp version failed: {res.stderr}", "CLASP_VERSION_FAILED")
     else:
