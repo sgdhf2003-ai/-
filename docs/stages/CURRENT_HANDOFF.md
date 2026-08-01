@@ -5,27 +5,34 @@
 - repo root: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 - branch: `main`
 - source of truth: Canonical cloud-drive checkout path above
-- HEAD: `a450e54c26b501cc02e4d48fafd6f13f82736484`
-- origin/main: `a450e54c26b501cc02e4d48fafd6f13f82736484`
+- HEAD: `d51778374eb99091e35c06bb9041495b098ad617`
+- origin/main: `d51778374eb99091e35c06bb9041495b098ad617`
 - ahead / behind vs origin/main: `0 / 0`
 
 ## Current Stage
 
-- current stage: Stage 28-E LINE Bot Role Header Normalization Deployed
+- current stage: Stage 28-M LINE Webhook Switch Closure Record
 - previous completed deliveries:
   - Stage 28-D LINE Role Header Normalization Commit & Push (`a450e54`)
-  - Stage 28-E LINE Bot Production Deployment (Version `200`)
-- latest pushed main commit: `a450e54c26b501cc02e4d48fafd6f13f82736484` (`fix: normalize LINE user role and header property resolution`)
+  - Stage 28-H deploy.py Fail-Closed Patch Commit & Push (`b5301a1`)
+  - Stage 28-I Fresh Script ID Config Commit & Push (`e802872`)
+  - Stage 28-J Fresh LINE Bot Version 1 Deployment Commit & Push (`d517783`)
+  - Stage 28-L LINE Webhook Switch Executed & Verified (Verify 200 OK)
+- latest pushed main commit: `d51778374eb99091e35c06bb9041495b098ad617` (`build: record fresh LINE Bot initial deployment`)
 - backend deployed version: `96` (canonical deployment record - fail-closed containment)
 - LINE Bot deployed version: `1` (canonical deployment record - fresh project Version 1)
 - automated simulations: 181 / 181 PASS (`npm run simulate:all`)
 
 ## Stage 28 Summary & Production State
 
-- **Stage 28-J Status**: INITIAL DEPLOYMENT COMPLETE (Fresh Apps Script Project Version 1 Deployed)
+- **Stage 28-M Status**: MIGRATION & WEBHOOK SWITCH COMPLETE
+- **Active Production Webhook URL**: `https://script.google.com/macros/s/AKfycbwskF_c2VpW6Cv3yR-wUevRXdrG754ZzxyYMorroqjwkjJZT10wp3DqIZ2kA-GrKK0a/exec`
+- **LINE Console Verification**: Success (HTTP 200 OK)
+- **Use Webhook Setting**: ON
+- **Rollback Needed**: NO
+- **Rollback Webhook Target URL**: `https://script.google.com/macros/s/AKfycbxioavjvzENr9duOtomZQRmbycbDtJOzKNAuSgcnE1ptNquTStiWMZwygLEHaYfPxOn/exec`
 - **Fresh LINE Bot Script ID**: `1C_5hZKIlWl_B9pdRrzcrA9ZAWD2Xuqwd0ZetQ-lIt2CFlxZ8yELcTLJf`
 - **Fresh LINE Bot Deployment ID**: `AKfycbwskF_c2VpW6Cv3yR-wUevRXdrG754ZzxyYMorroqjwkjJZT10wp3DqIZ2kA-GrKK0a`
-- **Fresh LINE Bot Exec URL**: `https://script.google.com/macros/s/AKfycbwskF_c2VpW6Cv3yR-wUevRXdrG754ZzxyYMorroqjwkjJZT10wp3DqIZ2kA-GrKK0a/exec`
 - **LINE Bot Production Version**: `1` (Immutable snapshot containing commit `a450e54`)
 - **Legacy LINE Bot Script ID**: `19rYFpT-RE77oT52QfFIpIBqjcXSWemKRs0ClExMXo0lImf_OFb_DJ_AD` (Version 200)
 - **Backend Production Version**: `96`
