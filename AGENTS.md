@@ -137,7 +137,7 @@ Whenever an AI model or session starts work, the agent must read the following f
 
 ## 3. Source-of-Truth Boundaries
 
-- **LINE Bot Source**: Located in `line-bot-apps-script/src/`. Deployments use Script ID: `19rYFpT-RE77oT52QfFIpIBqjcXSWemKRs0ClExMXo0lImf_OFb_DJ_AD`.
+- **LINE Bot Source**: Located in `line-bot-apps-script/src/`. Deployments use Script ID: `1C_5hZKIlWl_B9pdRrzcrA9ZAWD2Xuqwd0ZetQ-lIt2CFlxZ8yELcTLJf`.
 - **Backend Source**: Located in `google-apps-script/`. Deployments use Script ID: `1vRepq_HNkjbs8vRQvbkkDE8unGPHfksfhOTrkrNZthFZHs2GSHO8Gasc`.
 - **PWA Source**: Front-end website files located at repository root (`index.html`, `app.js`, etc.).
 - **Legacy Exclusion**: `line-bot-apps-script/legacy/` contains deprecated code and must never be uploaded or read as a source of truth.

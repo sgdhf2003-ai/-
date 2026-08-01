@@ -8,7 +8,7 @@
   "environment": "production",
   "lineBot": {
     "appsScriptSource": "line-bot-apps-script",
-    "scriptId": "19rYFpT-RE77oT52QfFIpIBqjcXSWemKRs0ClExMXo0lImf_OFb_DJ_AD",
+    "scriptId": "1C_5hZKIlWl_B9pdRrzcrA9ZAWD2Xuqwd0ZetQ-lIt2CFlxZ8yELcTLJf",
     "deploymentId": "AKfycbxioavjvzENr9duOtomZQRmbycbDtJOzKNAuSgcnE1ptNquTStiWMZwygLEHaYfPxOn",
     "webAppUrl": "https://script.google.com/macros/s/AKfycbxioavjvzENr9duOtomZQRmbycbDtJOzKNAuSgcnE1ptNquTStiWMZwygLEHaYfPxOn/exec"
   }

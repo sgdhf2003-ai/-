@@ -9,7 +9,7 @@ This document establishes the official boundaries for the Jingyang Sales Assista
   * **Role**: This is the **only** official repository for all source code. All modifications, testing, and deployments must be executed from this directory.
   * **Subdirectories**:
     * `google-apps-script/`: Source code for the PWA Backend Apps Script project (Script ID: `1vRepq_HNkjbs8vRQvbkkDE8unGPHfksfhOTrkrNZthFZHs2GSHO8Gasc`).
-    * `line-bot-apps-script/`: Source code for the LINE Bot Apps Script project (Script ID: `19rYFpT-RE77oT52QfFIpIBqjcXSWemKRs0ClExMXo0lImf_OFb_DJ_AD`).
+    * `line-bot-apps-script/`: Source code for the LINE Bot Apps Script project (Script ID: `1C_5hZKIlWl_B9pdRrzcrA9ZAWD2Xuqwd0ZetQ-lIt2CFlxZ8yELcTLJf`).
     * `line-bot-apps-script/legacy/`: Archive directory for previous implementations (excluded from deployments).
 
 * **Product Planning & Documentation**:

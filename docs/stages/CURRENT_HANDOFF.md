@@ -22,10 +22,9 @@
 
 ## Stage 28 Summary & Production State
 
-- **Stage 28-D/E Status**: DEPLOYED & SYNCED
-- **LINE Bot Script ID**: `19rYFpT-RE77oT52QfFIpIBqjcXSWemKRs0ClExMXo0lImf_OFb_DJ_AD`
-- **LINE Bot Deployment ID**: `AKfycbxioavjvzENr9duOtomZQRmbycbDtJOzKNAuSgcnE1ptNquTStiWMZwygLEHaYfPxOn`
-- **LINE Bot Production Version**: `200` (Code at commit `a450e54`)
+- **Stage 28-I Status**: MIGRATION IN PROGRESS (Fresh Apps Script Project Script ID updated)
+- **Fresh LINE Bot Script ID**: `1C_5hZKIlWl_B9pdRrzcrA9ZAWD2Xuqwd0ZetQ-lIt2CFlxZ8yELcTLJf`
+- **Legacy LINE Bot Script ID**: `19rYFpT-RE77oT52QfFIpIBqjcXSWemKRs0ClExMXo0lImf_OFb_DJ_AD` (Version 200)
 - **Backend Production Version**: `96`
 - **Automated Verification**: `npm run check` PASS, `npm run simulate:all` 181 / 181 PASS, `python3 deploy.py line-bot --check` VALID
 
