@@ -5,22 +5,41 @@
 - repo root: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 - branch: `main`
 - source of truth: Canonical cloud-drive checkout path above
-- HEAD: `9b409065b752d905832cad4047574ac27d5e5854`
-- origin/main: `9b409065b752d905832cad4047574ac27d5e5854`
+- HEAD: `f629cee81bae1662d72e3ca81c06ae10966c41c4`
+- origin/main: `f629cee81bae1662d72e3ca81c06ae10966c41c4`
 - ahead / behind vs origin/main: `0 / 0`
 
 ## Current Stage
 
-- current stage: Stage 31-C Controlled Fulfillment Closure Record
+- current stage: Stage 32-B Production Operating SOP Closure Record
 - previous completed deliveries:
-  - Stage 30-C Stage 30 Milestone Documentation Closure (`9b40906`)
-  - Stage 31-A Controlled Fulfillment Readiness Gate (PASS)
-  - Stage 31-B Controlled Fulfillment & Cancel Release Live Test (PASS)
-  - Stage 31-C Stage 31 Milestone Documentation Closure
-- latest pushed main commit: `9b409065b752d905832cad4047574ac27d5e5854` (`docs: record Stage 30 controlled live test and writeback closure`)
+  - Stage 31-C Stage 31 Milestone Documentation Closure (`f629cee`)
+  - Stage 32-A Production Workflow Readiness Gate (PASS)
+  - Stage 32-B Production Operating SOP Documentation Closure
+- latest pushed main commit: `f629cee81bae1662d72e3ca81c06ae10966c41c4` (`docs: record Stage 31 controlled fulfillment and cancel release closure`)
 - backend deployed version: `96` (canonical deployment record - 104 versions headroom remaining)
 - LINE Bot deployed version: `1` (canonical deployment record - fresh project Version 1)
 - automated simulations: 181 / 181 PASS (`npm run simulate:all`)
+
+## Stage 32 Summary & Production Operating SOP State
+
+- **Stage 32 Status**: PRODUCTION OPERATING SOP COMPLETE
+- **Created Documents**:
+  - `docs/allocation-assistant/OPERATING_SOP.md`
+  - `docs/allocation-assistant/CURRENT_HANDOFF.md`
+- **Documented Workflows**:
+  - Create formal hold (`RES-YYYYMMDD-XXX`, 15 `holds` cols)
+  - Partial fulfillment (`FULFILL_PARTIAL`, 7 `ledger` cols)
+  - Cancel release (`CANCEL_RELEASE`, 7 `ledger` cols)
+  - Readback / audit query
+  - Admin-only cleanup / correction (`role === "admin"`)
+- **Preserved Evidence**:
+  - Stage 30 Live Test: `RES-20260801-001` (PASS)
+  - Stage 31 Live Test: `RES-20260801-002` (PASS)
+  - ID Contract: `reservationNumber === holdRecord.id === rowData[0]` (PASS)
+  - LINE / OneSignal / Email Dispatches: `0`
+- **Fail-Closed Guards Documented**: `HOLD_SCHEMA_MISMATCH`, `LEDGER_SCHEMA_MISMATCH`, `HOLDS_SHEET_NOT_FOUND`, `LEDGER_SHEET_NOT_FOUND`, `HOLD_IDEMPOTENCY_CONFLICT`, `PRODUCTION_SHEET_PERMISSION_DENIED`, `PRODUCTION_SHEET_CLIENT_MISSING`
+- **Automated Verification**: `npm run check` PASS, `npm run simulate:all` **181 / 181 PASS**
 
 ## Stage 31 Summary & Controlled Fulfillment Live Test Record
 
