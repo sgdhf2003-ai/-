@@ -5,29 +5,29 @@
 - repo root: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 - branch: `main`
 - source of truth: Canonical cloud-drive checkout path above
-- HEAD: `b868bc1cb5e7ee3cdc93e446b4931f760b5ca0ee`
-- origin/main: `b868bc1cb5e7ee3cdc93e446b4931f760b5ca0ee`
+- HEAD: `a450e54c26b501cc02e4d48fafd6f13f82736484`
+- origin/main: `a450e54c26b501cc02e4d48fafd6f13f82736484`
 - ahead / behind vs origin/main: `0 / 0`
 
 ## Current Stage
 
-- current stage: Stage 27 Allocation Persistence Contract & Sweep Closed
+- current stage: Stage 28-E LINE Bot Role Header Normalization Deployed
 - previous completed deliveries:
-  - Stage 27-A Ledger Timestamp Normalization (`00b983a`)
-  - Stage 27-B Allocation Persistence Contract Sweep Batch (`b868bc1`)
-- latest pushed main commit: `b868bc1cb5e7ee3cdc93e446b4931f760b5ca0ee` (`fix: harden allocation persistence contract sweep`)
+  - Stage 28-D LINE Role Header Normalization Commit & Push (`a450e54`)
+  - Stage 28-E LINE Bot Production Deployment (Version `200`)
+- latest pushed main commit: `a450e54c26b501cc02e4d48fafd6f13f82736484` (`fix: normalize LINE user role and header property resolution`)
 - backend deployed version: `96` (canonical deployment record - fail-closed containment)
-- LINE Bot deployed version: `200` (canonical deployment record - fail-closed containment)
-- automated simulations: 180 / 180 PASS (`npm run simulate:all`)
+- LINE Bot deployed version: `200` (canonical deployment record - normalized role header resolution)
+- automated simulations: 181 / 181 PASS (`npm run simulate:all`)
 
-## Stage 27 Summary & Production State
+## Stage 28 Summary & Production State
 
-- **Stage 27 Status**: CLOSED
-- **Stage 27-A Delivery**: `00b983a` (`fix: normalize production ledger adjustment timestamp`)
-- **Stage 27-B Delivery**: `b868bc1` (`fix: harden allocation persistence contract sweep`)
+- **Stage 28-D/E Status**: DEPLOYED & SYNCED
+- **LINE Bot Script ID**: `19rYFpT-RE77oT52QfFIpIBqjcXSWemKRs0ClExMXo0lImf_OFb_DJ_AD`
+- **LINE Bot Deployment ID**: `AKfycbxioavjvzENr9duOtomZQRmbycbDtJOzKNAuSgcnE1ptNquTStiWMZwygLEHaYfPxOn`
+- **LINE Bot Production Version**: `200` (Code at commit `a450e54`)
 - **Backend Production Version**: `96`
-- **LINE Bot Production Version**: `200`
-- **Automated Verification**: `npm run check` PASS, `npm run simulate:all` 180 / 180 PASS, `git diff --check` PASS
+- **Automated Verification**: `npm run check` PASS, `npm run simulate:all` 181 / 181 PASS, `python3 deploy.py line-bot --check` VALID
 
 ## Stage 26 Containment Summary & Production State
 
