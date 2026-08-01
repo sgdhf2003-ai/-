@@ -17,13 +17,16 @@
   - Stage 28-E LINE Bot Production Deployment (Version `200`)
 - latest pushed main commit: `a450e54c26b501cc02e4d48fafd6f13f82736484` (`fix: normalize LINE user role and header property resolution`)
 - backend deployed version: `96` (canonical deployment record - fail-closed containment)
-- LINE Bot deployed version: `200` (canonical deployment record - normalized role header resolution)
+- LINE Bot deployed version: `1` (canonical deployment record - fresh project Version 1)
 - automated simulations: 181 / 181 PASS (`npm run simulate:all`)
 
 ## Stage 28 Summary & Production State
 
-- **Stage 28-I Status**: MIGRATION IN PROGRESS (Fresh Apps Script Project Script ID updated)
+- **Stage 28-J Status**: INITIAL DEPLOYMENT COMPLETE (Fresh Apps Script Project Version 1 Deployed)
 - **Fresh LINE Bot Script ID**: `1C_5hZKIlWl_B9pdRrzcrA9ZAWD2Xuqwd0ZetQ-lIt2CFlxZ8yELcTLJf`
+- **Fresh LINE Bot Deployment ID**: `AKfycbwskF_c2VpW6Cv3yR-wUevRXdrG754ZzxyYMorroqjwkjJZT10wp3DqIZ2kA-GrKK0a`
+- **Fresh LINE Bot Exec URL**: `https://script.google.com/macros/s/AKfycbwskF_c2VpW6Cv3yR-wUevRXdrG754ZzxyYMorroqjwkjJZT10wp3DqIZ2kA-GrKK0a/exec`
+- **LINE Bot Production Version**: `1` (Immutable snapshot containing commit `a450e54`)
 - **Legacy LINE Bot Script ID**: `19rYFpT-RE77oT52QfFIpIBqjcXSWemKRs0ClExMXo0lImf_OFb_DJ_AD` (Version 200)
 - **Backend Production Version**: `96`
 - **Automated Verification**: `npm run check` PASS, `npm run simulate:all` 181 / 181 PASS, `python3 deploy.py line-bot --check` VALID

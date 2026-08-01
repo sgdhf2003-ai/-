@@ -310,16 +310,31 @@ def main():
     # Deploy
     print(f"Deploying version {version_num} to deployment {expected_deploy_id}...")
     res = subprocess.run(["clasp", "deploy", "-i", expected_deploy_id, "-V", version_num, "-d", version_desc], cwd=target_dir, capture_output=True, text=True)
-    if res.returncode != 0:
-        fail(f"clasp deploy failed: {res.stderr}", "CLASP_DEPLOY_FAILED")
-    print(res.stdout)
     
+    actual_deploy_id = expected_deploy_id
+    if res.returncode != 0 and ("not found" in (res.stderr or "").lower() or "invalid" in (res.stderr or "").lower() or "deployment" in (res.stderr or "").lower()):
+        print("Note: Configured deployment ID not found in fresh script project. Creating a new deployment...")
+        res = subprocess.run(["clasp", "deploy", "-V", version_num, "-d", version_desc], cwd=target_dir, capture_output=True, text=True)
+        if res.returncode != 0:
+            fail(f"clasp deploy failed: {res.stderr}", "CLASP_DEPLOY_FAILED")
+        print(res.stdout)
+        deploy_line = [line for line in res.stdout.split("\n") if "Created deployment" in line or "Deployed" in line]
+        if deploy_line:
+            parts = deploy_line[0].split()
+            for part in parts:
+                if part.startswith("AKfyc"):
+                    actual_deploy_id = part
+    elif res.returncode != 0:
+        fail(f"clasp deploy failed: {res.stderr}", "CLASP_DEPLOY_FAILED")
+    else:
+        print(res.stdout)
+
     print("\n[DEPLOY_RESULT]")
     print("success=true")
     print(f"scriptId={expected_script_id}")
-    print(f"deploymentId={expected_deploy_id}")
+    print(f"deploymentId={actual_deploy_id}")
     print(f"version={version_num}")
-    print(f"webAppUrl=https://script.google.com/macros/s/{expected_deploy_id}/exec")
+    print(f"webAppUrl=https://script.google.com/macros/s/{actual_deploy_id}/exec")
 
 if __name__ == "__main__":
     main()
