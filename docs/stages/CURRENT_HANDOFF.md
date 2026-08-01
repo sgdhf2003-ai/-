@@ -5,18 +5,29 @@
 - repo root: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 - branch: `main`
 - source of truth: Canonical cloud-drive checkout path above
-- HEAD: `b5b261e8078790dd5056d74a2021ac8de2e52b57`
-- origin/main: `b5b261e8078790dd5056d74a2021ac8de2e52b57`
+- HEAD: `b868bc1cb5e7ee3cdc93e446b4931f760b5ca0ee`
+- origin/main: `b868bc1cb5e7ee3cdc93e446b4931f760b5ca0ee`
 - ahead / behind vs origin/main: `0 / 0`
 
 ## Current Stage
 
-- current stage: Stage 26 Production Fail-Closed Containment Complete (Stage 26-X7 / X8)
-- previous completed delivery: Stage 26-X7 Containment Patch Commit & Push (`b5b261e`)
-- latest pushed main commit: `b5b261e8078790dd5056d74a2021ac8de2e52b57` (`fix: deploy fail-closed containment guards`)
+- current stage: Stage 27 Allocation Persistence Contract & Sweep Closed
+- previous completed deliveries:
+  - Stage 27-A Ledger Timestamp Normalization (`00b983a`)
+  - Stage 27-B Allocation Persistence Contract Sweep Batch (`b868bc1`)
+- latest pushed main commit: `b868bc1cb5e7ee3cdc93e446b4931f760b5ca0ee` (`fix: harden allocation persistence contract sweep`)
 - backend deployed version: `96` (canonical deployment record - fail-closed containment)
 - LINE Bot deployed version: `200` (canonical deployment record - fail-closed containment)
 - automated simulations: 180 / 180 PASS (`npm run simulate:all`)
+
+## Stage 27 Summary & Production State
+
+- **Stage 27 Status**: CLOSED
+- **Stage 27-A Delivery**: `00b983a` (`fix: normalize production ledger adjustment timestamp`)
+- **Stage 27-B Delivery**: `b868bc1` (`fix: harden allocation persistence contract sweep`)
+- **Backend Production Version**: `96`
+- **LINE Bot Production Version**: `200`
+- **Automated Verification**: `npm run check` PASS, `npm run simulate:all` 180 / 180 PASS, `git diff --check` PASS
 
 ## Stage 26 Containment Summary & Production State
 
