@@ -300,6 +300,7 @@ runTest('Controlled test fulfillment persists full partial and cancel ledger sem
   ]);
   assert.deepStrictEqual(ledgerRows.map(row => row[3]), [10, 5, 6]);
   assert.strictEqual(ledgerRows[2][4], 6);
+  assert.ok(ledgerRows[0][5], 'Ledger timestamp should be non-empty');
 });
 
 console.log(`\nControlled Test Sheet Adapter Simulation Summary: ${passedTests} / ${totalTests} PASS`);

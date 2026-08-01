@@ -228,9 +228,14 @@ class ControlledTestSheetReservationAdapter {
       const headerCheck = this.validateHeaders(config.ledgerSheetName, LEDGER_HEADERS);
       if (!headerCheck.ok) return { success: false, persisted: false, errorCode: 'LEDGER_SCHEMA_MISMATCH' };
 
-      const result = this.sheetClient.appendLedgerEntry(config.ledgerSheetName, adjustment, LEDGER_HEADERS);
+      const normalizedAdjustment = {
+        timestamp: adjustment.timestamp || adjustment.updatedAt || new Date().toISOString(),
+        ...adjustment
+      };
+
+      const result = this.sheetClient.appendLedgerEntry(config.ledgerSheetName, normalizedAdjustment, LEDGER_HEADERS);
       return result && result.success === true && result.persisted === true
-        ? { ...result, adjustment: { ...adjustment } }
+        ? { ...result, adjustment: { ...normalizedAdjustment } }
         : {
             success: false,
             persisted: false,

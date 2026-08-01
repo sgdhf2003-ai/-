@@ -159,6 +159,7 @@ class MockFormalReservationAdapter extends FormalReservationAdapter {
 
   recordInventoryAdjustment(adjustment = {}) {
     const entry = {
+      timestamp: adjustment.timestamp || adjustment.updatedAt || new Date().toISOString(),
       ...adjustment,
       recordedAt: adjustment.recordedAt || new Date().toISOString()
     };
