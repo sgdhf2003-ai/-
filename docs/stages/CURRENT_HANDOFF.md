@@ -5,18 +5,30 @@
 - repo root: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 - branch: `main`
 - source of truth: Canonical cloud-drive checkout path above
-- HEAD: `2c868c370ec1e4018cacbffa35ea92bd71c9841f`
-- origin/main: `2c868c370ec1e4018cacbffa35ea92bd71c9841f`
+- HEAD: `b5b261e8078790dd5056d74a2021ac8de2e52b57`
+- origin/main: `b5b261e8078790dd5056d74a2021ac8de2e52b57`
 - ahead / behind vs origin/main: `0 / 0`
 
 ## Current Stage
 
-- current stage: Stage 26-C0 Cancel/Release Production Contract Spec Completed
-- previous completed delivery: Stage 26-B3 Partial Fulfillment Closure Commit & Push (`2c868c3`)
-- latest pushed main commit: `2c868c370ec1e4018cacbffa35ea92bd71c9841f`
-- backend deployed version: `91` (canonical deployment record - locked with pure READINESS_CHECK)
-- LINE Bot deployed version: `191` (canonical deployment record)
+- current stage: Stage 26 Production Fail-Closed Containment Complete (Stage 26-X7 / X8)
+- previous completed delivery: Stage 26-X7 Containment Patch Commit & Push (`b5b261e`)
+- latest pushed main commit: `b5b261e8078790dd5056d74a2021ac8de2e52b57` (`fix: deploy fail-closed containment guards`)
+- backend deployed version: `96` (canonical deployment record - fail-closed containment)
+- LINE Bot deployed version: `200` (canonical deployment record - fail-closed containment)
 - automated simulations: 180 / 180 PASS (`npm run simulate:all`)
+
+## Stage 26 Containment Summary & Production State
+
+- **Containment Deploy Status**: CLOSED & DEPLOYED
+- **Backend Production Version**: `96` (Script ID: `1vRepq_HNkjbs8vRQvbkkDE8unGPHfksfhOTrkrNZthFZHs2GSHO8Gasc`)
+- **LINE Bot Production Version**: `200` (Script ID: `19rYFpT-RE77oT52QfFIpIBqjcXSWemKRs0ClExMXo0lImf_OFb_DJ_AD`)
+- **Containment Protections**:
+  - Hardcoded token/secret literals (`JYAI-SECURE-TOKEN-2026-OPTIMIZED`, `ANTIGRAVITY-STRICT-AUDIT-2026-FIXED`, `JYAI_STAGE_24_B8_PROOF_KEY_2026`) completely removed from source.
+  - `runJyTokenExecution()` locked fail-closed with no embedded tokens and returns `EXECUTION_MODE_REQUIRES_EXPLICIT_OWNER_AUTHORIZATION` with `touchedTabs: []`.
+  - All 0-arg Apps Script mutation entrypoints (`runTargetSpreadsheetUserMigrationNow`, `runAntiGravityOfficialProductionFix`, `executeAntiGravityDualSpreadsheetRoutingFix`, `executeSafeArchitectureAlignment`) locked fail-closed with `touchedTabs: []`.
+  - Admin ingestion and migration handlers reject write modes fail-closed and return `readOnlyAudit: true` with `touchedTabs: []` on audit.
+- **Safety Record**: 0 Google Sheet writes, 0 LINE API calls, 0 token/secret outputs.
 
 ## Product North Star
 
@@ -70,4 +82,13 @@
 
 ## Required Next Step
 
-Review `docs/stages/stage-24-b8-live-runtime-proof-plan.md`, then request Owner approval for the exact B8 implementation/execution scope before any Apps Script runtime wrapper, deploy, wrapper execution, production Sheet write/readback, cleanup, LINE API call, token/secret or Script Property value access, commit, or push.
+Stage 26-X9 Owner-Approved Secret Rotation Gate (only if Owner confirms removed token literals were live operational secrets).
+
+Forbidden until Stage 26-X9 is explicitly approved:
+- no token/secret/property access
+- no token rotation
+- no Apps Script function execution
+- no Google Sheet write/append/update/delete/clear
+- no LINE / OneSignal call
+- no deploy
+- no commit/push
