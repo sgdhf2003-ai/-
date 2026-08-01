@@ -360,9 +360,20 @@ function JingyangAssistant_getHeaders_(sheet) {
 }
 
 function JingyangAssistant_findUserByLineId_(data, lineUserId) {
-  var users = data.users || [];
+  var users = (data && data.users) || [];
+  var targetId = String(lineUserId || "").trim();
   for (var i = 0; i < users.length; i++) {
-    if (String(users[i].lineUserId || "").trim() === String(lineUserId || "").trim()) {
+    var u = users[i] || {};
+    var uLineId = String(
+      u.lineUserId ||
+      u["Line User ID"] ||
+      u["LINE User ID"] ||
+      u["line_user_id"] ||
+      u["LineUserId"] ||
+      u["LINE_USER_ID"] ||
+      ""
+    ).trim();
+    if (uLineId === targetId) {
       return users[i];
     }
   }

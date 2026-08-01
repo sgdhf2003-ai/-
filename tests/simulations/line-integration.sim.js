@@ -66,16 +66,27 @@ const vm = require("vm");
 function createRouterSandbox(userMock = null) {
   const sandbox = {
     Logger: { log: () => {} },
+    PropertiesService: {
+      getScriptProperties: () => ({
+        getProperty: () => ""
+      })
+    },
     JingyangAssistant_readUsers_: () => (userMock ? [userMock] : []),
     JingyangAssistant_buildAppViewUrl_: (v) => `https://app.test/${v}`,
     replyToLine: () => {}
   };
+  const assistantCode = fs.readFileSync(
+    path.join(__dirname, "../../line-bot-apps-script/src/JingyangAssistant.gs"),
+    "utf8"
+  );
   const routerCode = fs.readFileSync(
     path.join(__dirname, "../../line-bot-apps-script/src/core/line_intent_router.gs"),
     "utf8"
   );
   vm.createContext(sandbox);
+  vm.runInContext(assistantCode, sandbox);
   vm.runInContext(routerCode, sandbox);
+  sandbox.JingyangAssistant_readUsers_ = () => (userMock ? [userMock] : []);
   return sandbox;
 }
 
@@ -178,6 +189,28 @@ runSuite("line-integration", [
 
       const customerIntent = sandbox.detectLineIntent("選單", customerContext);
       assert(customerIntent.intent !== "staff_menu", "customer should NOT route to staff_menu");
+    }
+  },
+  {
+    name: "getLineUserContext and isStaffUser resolve staff roles across header variants (Line User ID, line_user_id, LineUserId, Role, Status)",
+    run() {
+      const variants = [
+        { "Line User ID": "U17700bab6816e65347549fa50965c892", Role: "admin", Status: "啟用", ID: "USR-A1", Username: "admin1" },
+        { "LINE User ID": "U17700bab6816e65347549fa50965c892", ROLE: "assistant", STATUS: "enabled", Id: "USR-A2", Username: "assistant2" },
+        { "line_user_id": "U17700bab6816e65347549fa50965c892", Role: "sales", Status: "active", id: "USR-A3", username: "sales3" },
+        { "LineUserId": "U17700bab6816e65347549fa50965c892", role: "retail", status: "啟用", id: "USR-A4", username: "retail4" }
+      ];
+
+      variants.forEach((varUser, idx) => {
+        const sandbox = createRouterSandbox(varUser);
+        const ctx = sandbox.getLineUserContext("U17700bab6816e65347549fa50965c892");
+        assert(ctx.mode === "staff", `variant ${idx} expected staff mode`);
+        assert(ctx.lineUserId === "U17700bab6816e65347549fa50965c892", `variant ${idx} expected matching lineUserId`);
+        assert(ctx.role !== "customer", `variant ${idx} expected staff role, got ${ctx.role}`);
+
+        const foundUser = sandbox.JingyangAssistant_findUserByLineId_({ users: [varUser] }, "U17700bab6816e65347549fa50965c892");
+        assert(foundUser !== null, `variant ${idx} expected JingyangAssistant_findUserByLineId_ to match`);
+      });
     }
   }
 ]);

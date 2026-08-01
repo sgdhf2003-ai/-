@@ -23,11 +23,46 @@ function normalizeLineModelText(text) {
   return normalizeLineText(text).replace(/[^a-z0-9\u3400-\u9fff]/g, "");
 }
 
+function LineIntent_getUserField_(user, fieldName) {
+  if (!user) return "";
+  if (fieldName === "lineUserId") {
+    return String(
+      user.lineUserId ||
+      user["Line User ID"] ||
+      user["LINE User ID"] ||
+      user["line_user_id"] ||
+      user["LineUserId"] ||
+      user["LINE_USER_ID"] ||
+      ""
+    ).trim();
+  }
+  if (fieldName === "role") {
+    return String(user.role || user.Role || user.ROLE || "").trim();
+  }
+  if (fieldName === "status") {
+    return String(user.status || user.Status || user.STATUS || "").trim();
+  }
+  if (fieldName === "id") {
+    return String(user.id || user.ID || user.Id || "").trim();
+  }
+  if (fieldName === "username") {
+    return String(user.username || user.Username || user.USERNAME || "").trim();
+  }
+  if (fieldName === "displayName") {
+    return String(user.displayName || user.DisplayName || user["Display Name"] || user.username || user.Username || "").trim();
+  }
+  if (fieldName === "salesOwner") {
+    return String(user.salesOwner || user.SalesOwner || user["Sales Owner"] || "").trim();
+  }
+  return String(user[fieldName] || "").trim();
+}
+
 function isStaffUser(user) {
   if (!user) return false;
-  var status = String(user.status || "").trim().toLowerCase();
+  var status = LineIntent_getUserField_(user, "status").toLowerCase();
   if (status === "停用" || status === "disabled" || status === "inactive") return false;
-  return LINE_STAFF_ROLES[String(user.role || "").trim()] === true;
+  var role = LineIntent_getUserField_(user, "role");
+  return LINE_STAFF_ROLES[role] === true;
 }
 
 function getLineUserContext(lineUserId) {
@@ -46,21 +81,23 @@ function getLineUserContext(lineUserId) {
   try {
     if (typeof JingyangAssistant_readUsers_ !== "function") return fallback;
     var users = JingyangAssistant_readUsers_() || [];
+    var targetLineId = String(lineUserId || "").trim();
     for (var i = 0; i < users.length; i++) {
       var user = users[i] || {};
-      if (String(user.lineUserId || "").trim() !== String(lineUserId || "").trim()) continue;
+      var userLineId = LineIntent_getUserField_(user, "lineUserId");
+      if (userLineId !== targetLineId) continue;
 
       if (!isStaffUser(user)) return fallback;
       return {
         ok: true,
         mode: "staff",
-        userId: String(user.id || ""),
-        lineUserId: String(lineUserId || ""),
-        username: String(user.username || ""),
-        displayName: String(user.displayName || ""),
-        role: String(user.role || ""),
-        salesOwner: String(user.salesOwner || ""),
-        status: String(user.status || "")
+        userId: LineIntent_getUserField_(user, "id"),
+        lineUserId: targetLineId,
+        username: LineIntent_getUserField_(user, "username"),
+        displayName: LineIntent_getUserField_(user, "displayName"),
+        role: LineIntent_getUserField_(user, "role"),
+        salesOwner: LineIntent_getUserField_(user, "salesOwner"),
+        status: LineIntent_getUserField_(user, "status")
       };
     }
   } catch (err) {
