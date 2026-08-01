@@ -5,22 +5,41 @@
 - repo root: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 - branch: `main`
 - source of truth: Canonical cloud-drive checkout path above
-- HEAD: `8b5099800a674a09b5b8bdecc3c52d20f5e99b22`
-- origin/main: `8b5099800a674a09b5b8bdecc3c52d20f5e99b22`
+- HEAD: `9b409065b752d905832cad4047574ac27d5e5854`
+- origin/main: `9b409065b752d905832cad4047574ac27d5e5854`
 - ahead / behind vs origin/main: `0 / 0`
 
 ## Current Stage
 
-- current stage: Stage 30-C Controlled Live Test Closure Record
+- current stage: Stage 31-C Controlled Fulfillment Closure Record
 - previous completed deliveries:
-  - Stage 29-C Stage 29 Handoff & Milestone Documentation Closure (`8b50998`)
-  - Stage 30-A Controlled Live Test Readiness Gate (PASS)
-  - Stage 30-B Controlled Production Sheet Live Writeback & Cleanup (PASS)
-  - Stage 30-C Stage 30 Milestone Documentation Closure
-- latest pushed main commit: `8b5099800a674a09b5b8bdecc3c52d20f5e99b22` (`docs: complete Stage 29 production hardening handoff closure`)
+  - Stage 30-C Stage 30 Milestone Documentation Closure (`9b40906`)
+  - Stage 31-A Controlled Fulfillment Readiness Gate (PASS)
+  - Stage 31-B Controlled Fulfillment & Cancel Release Live Test (PASS)
+  - Stage 31-C Stage 31 Milestone Documentation Closure
+- latest pushed main commit: `9b409065b752d905832cad4047574ac27d5e5854` (`docs: record Stage 30 controlled live test and writeback closure`)
 - backend deployed version: `96` (canonical deployment record - 104 versions headroom remaining)
 - LINE Bot deployed version: `1` (canonical deployment record - fresh project Version 1)
 - automated simulations: 181 / 181 PASS (`npm run simulate:all`)
+
+## Stage 31 Summary & Controlled Fulfillment Live Test Record
+
+- **Stage 31 Status**: CONTROLLED FULFILLMENT & CANCEL RELEASE LIVE TEST COMPLETE
+- **Reservation ID Generated**: `RES-20260801-002`
+- **Test Store ID**: `TEST-STORE-999`
+- **Test SKU / Item**: `TEST-SKU-STAGE31`
+- **Hold Lifecycle Transition**: `ACTIVE` → `PARTIAL_FULFILLED` → `CANCELLED` → `TEST_CLEANUP_DELETED`
+- **Writeback & Readback Verification**: `PASS`
+- **ID Contract Verification**: `PASS` (`reservationNumber === holdRecord.id === rowData[0]`)
+- **Fulfillment & Cancel Release Semantics**: `PASS`
+- **Status After Cleanup**: `TEST_CLEANUP_DELETED`
+- **Side Effect Summary**:
+  - Google Sheet Rows Created: Exactly 1 test row (`RES-20260801-002`), marked `TEST_CLEANUP_DELETED`
+  - LINE Messages Sent: `0`
+  - OneSignal Push Notifications: `0`
+  - Email Dispatches: `0`
+  - Real Inventory Deductions: `0`
+- **Automated Verification**: `npm run check` PASS, `npm run simulate:all` **181 / 181 PASS**
 
 ## Stage 30 Summary & Controlled Live Test Record
 
