@@ -348,6 +348,17 @@ function JingyangAssistant_sheetToObjects_(sheet) {
   return rows;
 }
 
+function JingyangAssistant_getHeaders(sheet) {
+  if (!sheet) return [];
+  var values = sheet.getDataRange().getValues();
+  if (!values || values.length === 0) return [];
+  return (values[0] || []).map(function(h) { return String(h || "").trim(); });
+}
+
+function JingyangAssistant_getHeaders_(sheet) {
+  return JingyangAssistant_getHeaders(sheet);
+}
+
 function JingyangAssistant_findUserByLineId_(data, lineUserId) {
   var users = data.users || [];
   for (var i = 0; i < users.length; i++) {
@@ -765,4 +776,120 @@ function executeAdrianUsersAndRoutingAudit() {
   }
   
   Logger.log("🎉 [Adrian 稽核完成] 雙軌路由對應正常，主庫存與後台各司其職！");
+}
+
+/**
+ * [JYAI 配貨助手 - 雙軌後台與 Users 自動合併與移除非必要分頁 Helper]
+ */
+function JingyangAssistant_mergeAndMigrateUsersSheet_(targetSsId) {
+  var ssId = targetSsId;
+  if (!ssId) {
+    try {
+      ssId = PropertiesService.getScriptProperties().getProperty("JINGYANG_MANAGER_SPREADSHEET_ID");
+    } catch (err) {}
+  }
+  if (!ssId) {
+    ssId = "1C_R1DdTj5brxftl9fPabTKBGzcG-lxWWxWoyi-ItA48";
+  }
+
+  var ss = SpreadsheetApp.openById(ssId);
+  var oldUserSheet = ss.getSheetByName("user") || ss.getSheetByName("User");
+  var usersSheet = ss.getSheetByName("users") || ss.getSheetByName("Users") || ss.getSheetByName("line_users");
+
+  if (!usersSheet) {
+    usersSheet = ss.insertSheet("users");
+    usersSheet.appendRow(["id", "lineUserId", "displayName", "role", "mode", "status", "username", "salesOwner", "createdAt", "updatedAt"]);
+  }
+
+  var usersValues = usersSheet.getDataRange().getValues();
+  var headers = (usersValues[0] || []).map(function(h) { return String(h || "").trim(); });
+  var requiredHeaders = ["id", "lineUserId", "displayName", "role", "mode", "status"];
+  var headerChanged = false;
+
+  if (headers.length === 0) {
+    headers = requiredHeaders;
+    usersSheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  } else {
+    requiredHeaders.forEach(function(reqHeader) {
+      if (headers.indexOf(reqHeader) === -1) {
+        headers.push(reqHeader);
+        headerChanged = true;
+      }
+    });
+    if (headerChanged) {
+      usersSheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    }
+  }
+  var existingObjects = JingyangAssistant_sheetToObjects_(usersSheet);
+  var existingMap = {};
+  for (var i = 0; i < existingObjects.length; i++) {
+    var key = String(existingObjects[i].lineUserId || existingObjects[i].LineUserId || "").trim();
+    if (key) {
+      existingMap[key] = true;
+    }
+  }
+
+  var migratedCount = 0;
+  if (oldUserSheet) {
+    var oldObjects = JingyangAssistant_sheetToObjects_(oldUserSheet);
+    for (var j = 0; j < oldObjects.length; j++) {
+      var oldRow = oldObjects[j];
+      var lUid = String(oldRow.lineUserId || oldRow.LineUserId || oldRow.line_user_id || oldRow.userId || "").trim();
+      if (lUid && !existingMap[lUid]) {
+        var idIdx = headers.indexOf("id");
+        var lineUserIdIdx = headers.indexOf("lineUserId");
+        var displayNameIdx = headers.indexOf("displayName");
+        var roleIdx = headers.indexOf("role");
+        var modeIdx = headers.indexOf("mode");
+        var statusIdx = headers.indexOf("status");
+        var usernameIdx = headers.indexOf("username");
+        var salesOwnerIdx = headers.indexOf("salesOwner");
+
+        var newRow = new Array(headers.length).fill("");
+        if (idIdx >= 0) newRow[idIdx] = oldRow.id || oldRow.Id || ("USR-MIGRATED-" + (migratedCount + 1));
+        if (lineUserIdIdx >= 0) newRow[lineUserIdIdx] = lUid;
+        if (displayNameIdx >= 0) newRow[displayNameIdx] = oldRow.displayName || oldRow.DisplayName || oldRow.name || "使用者";
+        if (roleIdx >= 0) newRow[roleIdx] = oldRow.role || oldRow.Role || "staff";
+        if (modeIdx >= 0) newRow[modeIdx] = oldRow.mode || oldRow.Mode || "staff";
+        if (statusIdx >= 0) newRow[statusIdx] = oldRow.status || oldRow.Status || "啟用";
+        if (usernameIdx >= 0) newRow[usernameIdx] = oldRow.username || oldRow.Username || "";
+        if (salesOwnerIdx >= 0) newRow[salesOwnerIdx] = oldRow.salesOwner || oldRow.SalesOwner || "";
+
+        usersSheet.appendRow(newRow);
+        existingMap[lUid] = true;
+        migratedCount++;
+      }
+    }
+
+    try {
+      ss.deleteSheet(oldUserSheet);
+    } catch (delErr) {
+      Logger.log("Delete old user sheet warning: " + delErr);
+    }
+  }
+
+  var finalObjects = JingyangAssistant_sheetToObjects_(usersSheet);
+  return {
+    ok: true,
+    spreadsheetId: ssId,
+    targetSheetName: usersSheet.getName(),
+    migratedCount: migratedCount,
+    totalRecords: finalObjects.length,
+    oldSheetDeleted: !!oldUserSheet
+  };
+}
+
+/**
+ * [JYAI 配貨助手 - 業務後台 users 分頁自動合併與移除非必要分頁 Token]
+ * 執行目標：對試算表進行：
+ * 1. 讀取舊 user 分頁 LINE 綁定資料
+ * 2. 合併寫入 users 分頁
+ * 3. 移除舊版 user 分頁
+ */
+function runTargetSpreadsheetUserMigrationNow() {
+  var targetId = PropertiesService.getScriptProperties().getProperty("JINGYANG_MANAGER_SPREADSHEET_ID");
+  Logger.log("🚀 [User Sheet Migration] 開始執行試算表之 users 合併與清理...");
+  var res = JingyangAssistant_mergeAndMigrateUsersSheet_(targetId);
+  Logger.log("🎉 [User Sheet Migration 完成] 結果：" + JSON.stringify(res));
+  return res;
 }

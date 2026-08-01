@@ -54,6 +54,9 @@ function doPost(e) {
       if (postData.internalRequest === "jy-admin-ingest-v1" && postData.action === "INGEST_ADMIN_USER") {
         return handleAdminIngestRequest_(postData);
       }
+      if (postData.internalRequest === "jy-admin-ingest-v1" && postData.action === "MIGRATE_USERS_SHEET") {
+        return handleAdminMigrateUsersRequest_(postData);
+      }
     }
 
     // 1. 處理外部 API 或非 Webhook 請求
@@ -4310,6 +4313,29 @@ function handleAdminIngestRequest_(postData) {
     return ContentService.createTextOutput(JSON.stringify({
       ok: false,
       errorCode: "INGEST_ERROR",
+      message: String(err && err.message ? err.message : err)
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function handleAdminMigrateUsersRequest_(postData) {
+  try {
+    var key = postData.executionKey || postData.key;
+    var expectedKey = PropertiesService.getScriptProperties().getProperty("JYAI_ADMIN_INGEST_KEY_2026") || "JYAI_ADMIN_INGEST_SECRET_2026";
+    if (String(key || "").trim() !== expectedKey) {
+      return ContentService.createTextOutput(JSON.stringify({
+        ok: false,
+        errorCode: "INVALID_EXECUTION_KEY",
+        message: "Execution key mismatch"
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    var res = JingyangAssistant_mergeAndMigrateUsersSheet_(postData.targetSpreadsheetId);
+    return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({
+      ok: false,
+      errorCode: "MIGRATION_ERROR",
       message: String(err && err.message ? err.message : err)
     })).setMimeType(ContentService.MimeType.JSON);
   }

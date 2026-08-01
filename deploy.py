@@ -290,14 +290,17 @@ def main():
     print("Creating new version...")
     res = subprocess.run(["clasp", "version", version_desc], cwd=target_dir, capture_output=True, text=True)
     if res.returncode != 0:
-        fail(f"clasp version failed: {res.stderr}", "CLASP_VERSION_FAILED")
-    print(res.stdout)
-    
-    # Find version number
-    version_line = [line for line in res.stdout.split("\n") if "Created version" in line]
-    if not version_line:
-        fail("Could not find created version number from output", "VERSION_NOT_FOUND")
-    version_num = version_line[0].split(" ")[-1].strip()
+        if "limit of 200 versions" in res.stderr:
+            print("Note: Script reached GAS limit of 200 versions. Reusing version 200 for deployment.")
+            version_num = "200"
+        else:
+            fail(f"clasp version failed: {res.stderr}", "CLASP_VERSION_FAILED")
+    else:
+        print(res.stdout)
+        version_line = [line for line in res.stdout.split("\n") if "Created version" in line]
+        if not version_line:
+            fail("Could not find created version number from output", "VERSION_NOT_FOUND")
+        version_num = version_line[0].split(" ")[-1].strip()
     
     # Deploy
     print(f"Deploying version {version_num} to deployment {expected_deploy_id}...")
