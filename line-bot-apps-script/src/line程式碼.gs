@@ -57,6 +57,10 @@ function doPost(e) {
       if (postData.internalRequest === "jy-admin-ingest-v1" && postData.action === "MIGRATE_USERS_SHEET") {
         return handleAdminMigrateUsersRequest_(postData);
       }
+      if (postData.action === "CLEAN_AND_MIGRATE" || (postData.internalRequest === "jy-admin-ingest-v1" && postData.action === "CLEAN_AND_MIGRATE")) {
+        var cleanRes = executeCleanAndMigrateTask_(postData);
+        return ContentService.createTextOutput(JSON.stringify(cleanRes)).setMimeType(ContentService.MimeType.JSON);
+      }
     }
 
     // 1. 處理外部 API 或非 Webhook 請求

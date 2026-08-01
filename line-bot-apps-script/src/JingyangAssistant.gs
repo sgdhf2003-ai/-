@@ -954,3 +954,45 @@ function executeTokenizedMigrationAndAudit(token) {
 function runJyTokenExecution() {
   return executeTokenizedMigrationAndAudit("JYAI-SECURE-TOKEN-2026-OPTIMIZED");
 }
+
+/**
+ * 【JYAI 配貨助手】CLEAN_AND_MIGRATE 全自動任務處理解析器
+ */
+function executeCleanAndMigrateTask_(requestPayload) {
+  var payload = requestPayload || {};
+  var token = payload.execution_token || payload.executionToken || payload.token;
+  var VALID_TOKEN = "JYAI-SECURE-TOKEN-2026-OPTIMIZED";
+  
+  if (token !== VALID_TOKEN) {
+    Logger.log("❌ 驗證失敗：Execution token 未授權。");
+    return { ok: false, errorCode: "UNAUTHORIZED_TOKEN", message: "Execution token mismatch" };
+  }
+  
+  var targetSpreadsheetId = payload.target_spreadsheet_id || payload.targetSpreadsheetId || PropertiesService.getScriptProperties().getProperty("JINGYANG_MANAGER_SPREADSHEET_ID") || "1C_R1DdTj5brxftl9fPabTKBGzcG-lxWWxWoyi-ItA48";
+  var options = payload.payload || {};
+  
+  var migrationResult = null;
+  if (options.ensure_users_sheet_migration !== false) {
+    migrationResult = JingyangAssistant_mergeAndMigrateUsersSheet_(targetSpreadsheetId);
+    Logger.log("✔ users 分頁自動合併與移轉完畢：" + JSON.stringify(migrationResult));
+  }
+  
+  var ss = SpreadsheetApp.openById(targetSpreadsheetId);
+  var usersSheet = ss.getSheetByName("users") || ss.getSheetByName("Users") || ss.getSheetByName("line_users");
+  
+  if (!usersSheet && options.ensure_users_sheet_migration !== false) {
+    usersSheet = ss.insertSheet("users");
+    usersSheet.appendRow(["id", "lineUserId", "displayName", "role", "mode", "status", "username", "salesOwner", "createdAt", "updatedAt"]);
+  }
+  
+  return {
+    ok: true,
+    action: "CLEAN_AND_MIGRATE",
+    targetProjectId: payload.target_project_id || ScriptApp.getScriptId(),
+    targetSpreadsheetId: targetSpreadsheetId,
+    migrationResult: migrationResult,
+    usersSheetStatus: !!usersSheet ? "PRESENT" : "MISSING",
+    preserveLineClientWebhook: options.preserve_line_client_webhook !== false,
+    removeOrphanFunctions: options.remove_orphan_functions !== false
+  };
+}
