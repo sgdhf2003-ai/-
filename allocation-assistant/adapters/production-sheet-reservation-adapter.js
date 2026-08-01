@@ -321,7 +321,12 @@ class ProductionSheetReservationAdapter {
       const headerCheck = this.validateHeaders(config, config.ledgerSheetName, LEDGER_HEADERS, 'LEDGER_SCHEMA_MISMATCH');
       if (!headerCheck.success) return headerCheck;
 
-      const result = this.sheetClient.appendLedgerEntry(config.ledgerSheetName, adjustment, LEDGER_HEADERS, {
+      const normalizedAdjustment = {
+        timestamp: adjustment.timestamp || adjustment.updatedAt || new Date().toISOString(),
+        ...adjustment
+      };
+
+      const result = this.sheetClient.appendLedgerEntry(config.ledgerSheetName, normalizedAdjustment, LEDGER_HEADERS, {
         spreadsheetId: config.spreadsheetId
       });
       if (!result || result.success !== true || result.persisted !== true) {
