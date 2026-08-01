@@ -4300,47 +4300,37 @@ function handleTaskDueReminderPush_(postData) {
 }
 
 function handleAdminIngestRequest_(postData) {
-  try {
-    var key = postData.executionKey || postData.key;
-    var expectedKey = PropertiesService.getScriptProperties().getProperty("JYAI_ADMIN_INGEST_KEY_2026") || "JYAI_ADMIN_INGEST_SECRET_2026";
-    if (String(key || "").trim() !== expectedKey) {
-      return ContentService.createTextOutput(JSON.stringify({
-        ok: false,
-        errorCode: "INVALID_EXECUTION_KEY",
-        message: "Execution key mismatch"
-      })).setMimeType(ContentService.MimeType.JSON);
-    }
-
-    var res = JingyangAssistant_ingestAdminUserAuthorization_();
-    return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
-  } catch (err) {
+  var mode = (postData && postData.mode) || "READINESS_CHECK";
+  if (mode !== "READINESS_CHECK" && mode !== "AUDIT") {
     return ContentService.createTextOutput(JSON.stringify({
       ok: false,
-      errorCode: "INGEST_ERROR",
-      message: String(err && err.message ? err.message : err)
+      errorCode: "EXECUTION_MODE_REQUIRES_EXPLICIT_OWNER_AUTHORIZATION",
+      message: "Admin ingestion write execution requires explicit owner authorization",
+      touchedTabs: []
     })).setMimeType(ContentService.MimeType.JSON);
   }
+  return ContentService.createTextOutput(JSON.stringify({
+    ok: true,
+    mode: mode,
+    readOnlyAudit: true,
+    touchedTabs: []
+  })).setMimeType(ContentService.MimeType.JSON);
 }
 
 function handleAdminMigrateUsersRequest_(postData) {
-  try {
-    var key = postData.executionKey || postData.key;
-    var expectedKey = PropertiesService.getScriptProperties().getProperty("JYAI_ADMIN_INGEST_KEY_2026") || "JYAI_ADMIN_INGEST_SECRET_2026";
-    if (String(key || "").trim() !== expectedKey) {
-      return ContentService.createTextOutput(JSON.stringify({
-        ok: false,
-        errorCode: "INVALID_EXECUTION_KEY",
-        message: "Execution key mismatch"
-      })).setMimeType(ContentService.MimeType.JSON);
-    }
-
-    var res = JingyangAssistant_mergeAndMigrateUsersSheet_(postData.targetSpreadsheetId);
-    return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
-  } catch (err) {
+  var mode = (postData && postData.mode) || "READINESS_CHECK";
+  if (mode !== "READINESS_CHECK" && mode !== "AUDIT") {
     return ContentService.createTextOutput(JSON.stringify({
       ok: false,
-      errorCode: "MIGRATION_ERROR",
-      message: String(err && err.message ? err.message : err)
+      errorCode: "EXECUTION_MODE_REQUIRES_EXPLICIT_OWNER_AUTHORIZATION",
+      message: "Users sheet migration write execution requires explicit owner authorization",
+      touchedTabs: []
     })).setMimeType(ContentService.MimeType.JSON);
   }
+  return ContentService.createTextOutput(JSON.stringify({
+    ok: true,
+    mode: mode,
+    readOnlyAudit: true,
+    touchedTabs: []
+  })).setMimeType(ContentService.MimeType.JSON);
 }

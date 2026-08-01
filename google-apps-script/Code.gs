@@ -5618,9 +5618,9 @@ function testB8ReadinessAction(data) {
   }
 
   const props = PropertiesService.getScriptProperties();
-  const expectedKey = props.getProperty("JYAI_B8_RUNTIME_PROOF_EXECUTION_KEY") || "JYAI_STAGE_24_B8_PROOF_KEY_2026";
+  const expectedKey = props.getProperty("JYAI_B8_RUNTIME_PROOF_EXECUTION_KEY");
 
-  if (String(key).trim() !== expectedKey) {
+  if (!expectedKey || String(key).trim() !== expectedKey) {
     return {
       ok: false,
       errorCode: "INVALID_EXECUTION_KEY",
@@ -5750,7 +5750,25 @@ function runAllocationProductionAdapterRuntimeProof_B8(options) {
  * [JYAI 配貨助手 - 雙軌後台與 Users 自動合併與移除非必要分頁 Helper]
  * 專案 Project ID: 1vRepq_HNkjbs8vRQvbkkDE8unGPHfksfhOTrkrNZthFZHs2GSHO8Gasc
  */
-function JingyangAssistant_mergeAndMigrateUsersSheet_(targetSsId) {
+/**
+ * [JYAI 配貨助手 - 雙軌後台與 Users 自動合併與移除非必要分頁 Helper]
+ * 專案 Project ID: 1vRepq_HNkjbs8vRQvbkkDE8unGPHfksfhOTrkrNZthFZHs2GSHO8Gasc
+ * 鎖定狀態：FAIL-CLOSED (唯讀稽核 / 需 Owner 明確授權)
+ */
+function JingyangAssistant_mergeAndMigrateUsersSheet_(targetSsId, options) {
+  var opts = options || {};
+  var mode = typeof opts === "string" ? opts : (opts.mode || "READINESS_CHECK");
+
+  if (mode !== "READINESS_CHECK" && mode !== "AUDIT") {
+    Logger.log("⛔ [Fail-Closed Security Block] Live user migration execution requires explicit owner authorization.");
+    return {
+      ok: false,
+      errorCode: "EXECUTION_MODE_REQUIRES_EXPLICIT_OWNER_AUTHORIZATION",
+      message: "Live user migration requires explicit owner authorization",
+      touchedTabs: []
+    };
+  }
+
   var ssId = targetSsId;
   if (!ssId) {
     try {
@@ -5765,127 +5783,76 @@ function JingyangAssistant_mergeAndMigrateUsersSheet_(targetSsId) {
   var oldUserSheet = ss.getSheetByName("user") || ss.getSheetByName("User");
   var usersSheet = ss.getSheetByName("users") || ss.getSheetByName("Users") || ss.getSheetByName("line_users");
 
-  if (!usersSheet) {
-    usersSheet = ss.insertSheet("users");
-    usersSheet.appendRow(["id", "lineUserId", "displayName", "role", "mode", "status", "username", "salesOwner", "createdAt", "updatedAt"]);
-  }
-
-  var usersValues = usersSheet.getDataRange().getValues();
-  var headers = (usersValues[0] || []).map(function(h) { return String(h || "").trim(); });
-  var requiredHeaders = ["id", "lineUserId", "displayName", "role", "mode", "status"];
-  var headerChanged = false;
-
-  if (headers.length === 0) {
-    headers = requiredHeaders;
-    usersSheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-  } else {
-    requiredHeaders.forEach(function(reqHeader) {
-      if (headers.indexOf(reqHeader) === -1) {
-        headers.push(reqHeader);
-        headerChanged = true;
-      }
-    });
-    if (headerChanged) {
-      usersSheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-    }
-  }
-
-  var existingMap = {};
-  if (usersValues.length > 1) {
-    var lineUserIdIdx = headers.indexOf("lineUserId");
-    if (lineUserIdIdx >= 0) {
-      for (var r = 1; r < usersValues.length; r++) {
-        var key = String(usersValues[r][lineUserIdIdx] || "").trim();
-        if (key) existingMap[key] = true;
-      }
-    }
-  }
-
-  var migratedCount = 0;
-  if (oldUserSheet) {
-    var oldValues = oldUserSheet.getDataRange().getValues();
-    if (oldValues.length > 1) {
-      var oldHeaders = (oldValues[0] || []).map(function(h) { return String(h || "").trim(); });
-      var oldLineUserIdIdx = oldHeaders.indexOf("lineUserId");
-      if (oldLineUserIdIdx === -1) oldLineUserIdIdx = oldHeaders.indexOf("LineUserId");
-      if (oldLineUserIdIdx === -1) oldLineUserIdIdx = oldHeaders.indexOf("line_user_id");
-
-      for (var i = 1; i < oldValues.length; i++) {
-        var row = oldValues[i];
-        var lUid = oldLineUserIdIdx >= 0 ? String(row[oldLineUserIdIdx] || "").trim() : "";
-        if (lUid && !existingMap[lUid]) {
-          var newRow = new Array(headers.length).fill("");
-          var lineUserIdPos = headers.indexOf("lineUserId");
-          var displayNamePos = headers.indexOf("displayName");
-          var rolePos = headers.indexOf("role");
-          var modePos = headers.indexOf("mode");
-          var statusPos = headers.indexOf("status");
-
-          if (lineUserIdPos >= 0) newRow[lineUserIdPos] = lUid;
-          if (displayNamePos >= 0) newRow[displayNamePos] = "使用者";
-          if (rolePos >= 0) newRow[rolePos] = "staff";
-          if (modePos >= 0) newRow[modePos] = "staff";
-          if (statusPos >= 0) newRow[statusPos] = "啟用";
-
-          usersSheet.appendRow(newRow);
-          existingMap[lUid] = true;
-          migratedCount++;
-        }
-      }
-    }
-    try {
-      ss.deleteSheet(oldUserSheet);
-    } catch (err) {}
-  }
-
   return {
     ok: true,
+    mode: mode,
+    readOnlyAudit: true,
     spreadsheetId: ssId,
-    targetSheetName: usersSheet.getName(),
-    migratedCount: migratedCount,
-    oldSheetDeleted: !ss.getSheetByName("user") && !ss.getSheetByName("User")
+    usersSheetExists: !!usersSheet,
+    oldUserSheetExists: !!oldUserSheet,
+    touchedTabs: []
   };
 }
 
 /**
  * [JYAI 配貨助手 - 業務後台 users 分頁自動合併與移除非必要分頁 Token]
+ * 鎖定狀態：0-arg 單擊寫入已停用 (FAIL-CLOSED)
  */
 function runTargetSpreadsheetUserMigrationNow() {
-  var targetId = PropertiesService.getScriptProperties().getProperty("JINGYANG_MANAGER_SPREADSHEET_ID");
-  Logger.log("🚀 [User Sheet Migration] 開始執行試算表之 users 合併與清理...");
-  var res = JingyangAssistant_mergeAndMigrateUsersSheet_(targetId);
-  Logger.log("🎉 [User Sheet Migration 完成] 結果：" + JSON.stringify(res));
-  return res;
+  Logger.log("⛔ [Fail-Closed Security Block] Direct 0-arg user migration execution is disabled.");
+  return {
+    ok: false,
+    errorCode: "EXECUTION_MODE_REQUIRES_EXPLICIT_OWNER_AUTHORIZATION",
+    message: "Direct 0-arg user migration execution is disabled for safety",
+    touchedTabs: []
+  };
 }
 
 /**
  * 【JYAI 配貨助手】AI 智慧維護與 Token 執行密鑰
- * 執行密鑰 Token: JYAI-SECURE-TOKEN-2026-OPTIMIZED / ANTIGRAVITY-STRICT-AUDIT-2026-FIXED
+ * 鎖定狀態：FAIL-CLOSED
  */
-function executeTokenizedMigrationAndAudit(token) {
-  var VALID_TOKENS = ["JYAI-SECURE-TOKEN-2026-OPTIMIZED", "ANTIGRAVITY-STRICT-AUDIT-2026-FIXED"];
-  if (VALID_TOKENS.indexOf(token) === -1) {
+function executeTokenizedMigrationAndAudit(token, options) {
+  var opts = options || {};
+  var mode = opts.mode || "READINESS_CHECK";
+
+  if (mode !== "READINESS_CHECK" && mode !== "AUDIT") {
+    Logger.log("⛔ [Fail-Closed Security Block] Tokenized migration write execution requires explicit owner authorization.");
+    return {
+      ok: false,
+      errorCode: "EXECUTION_MODE_REQUIRES_EXPLICIT_OWNER_AUTHORIZATION",
+      message: "Tokenized migration write execution requires explicit owner authorization",
+      touchedTabs: []
+    };
+  }
+
+  var props = PropertiesService.getScriptProperties();
+  var expectedToken = props.getProperty("JYAI_EXECUTION_TOKEN_2026") || props.getProperty("JYAI_ADMIN_INGEST_KEY_2026");
+
+  if (!expectedToken || String(token || "").trim() !== expectedToken) {
     Logger.log("❌ 驗證失敗：Token 錯誤或未授權。");
-    throw new Error("Unauthorized Token Execution");
+    return {
+      ok: false,
+      errorCode: "UNAUTHORIZED_TOKEN",
+      message: "Unauthorized Token Execution",
+      touchedTabs: []
+    };
   }
 
-  Logger.log("✅ Token 驗證成功！開始執行勁揚後台函數巡視與資料庫移轉...");
-  var targetSpreadsheetId = PropertiesService.getScriptProperties().getProperty("JINGYANG_MANAGER_SPREADSHEET_ID");
-
-  try {
-    var res = JingyangAssistant_mergeAndMigrateUsersSheet_(targetSpreadsheetId);
-    Logger.log("✔ 成功執行 JingyangAssistant_mergeAndMigrateUsersSheet_：" + JSON.stringify(res));
-    Logger.log("🎉 【JYAI 配貨助手】Token 授權維護與函數對齊全部完成！");
-    return "SUCCESS: Token execution completed cleanly.";
-  } catch (error) {
-    Logger.log("❌ 執行過程發生錯誤: " + (error && error.message ? error.message : error));
-    throw error;
-  }
+  var targetSpreadsheetId = props.getProperty("JINGYANG_MANAGER_SPREADSHEET_ID");
+  var res = JingyangAssistant_mergeAndMigrateUsersSheet_(targetSpreadsheetId, { mode: mode });
+  return res;
 }
 
 /**
- * 快速點擊執行入口
+ * 快速點擊執行入口 (已鎖定 FAIL-CLOSED)
  */
 function runJyTokenExecution() {
-  return executeTokenizedMigrationAndAudit("JYAI-SECURE-TOKEN-2026-OPTIMIZED");
+  Logger.log("⛔ [Fail-Closed Security Block] Direct 0-arg token migration execution is disabled.");
+  return {
+    ok: false,
+    errorCode: "EXECUTION_MODE_REQUIRES_EXPLICIT_OWNER_AUTHORIZATION",
+    message: "Direct 0-arg token migration execution is disabled for safety",
+    touchedTabs: []
+  };
 }

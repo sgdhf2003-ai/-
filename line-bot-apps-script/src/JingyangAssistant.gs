@@ -494,294 +494,99 @@ function JingyangAssistant_getLineToken_() {
   return JingyangAssistant_getLineTokenOrNull_() || "";
 }
 
-function JingyangAssistant_ingestAdminUserAuthorization_() {
+function JingyangAssistant_ingestAdminUserAuthorization_(options) {
+  var opts = options || {};
+  var mode = typeof opts === "string" ? opts : (opts.mode || "READINESS_CHECK");
+
+  if (mode !== "READINESS_CHECK" && mode !== "AUDIT") {
+    Logger.log("⛔ [Fail-Closed Security Block] Admin authorization ingestion write execution requires explicit owner authorization.");
+    return {
+      ok: false,
+      errorCode: "EXECUTION_MODE_REQUIRES_EXPLICIT_OWNER_AUTHORIZATION",
+      message: "Admin authorization ingestion write execution requires explicit owner authorization",
+      touchedTabs: []
+    };
+  }
+
   var ssId = "1C_R1DdTj5brxftl9fPabTKBGzcG-lxWWxWoyi-ItA48";
   try {
     var propSsId = PropertiesService.getScriptProperties().getProperty("JINGYANG_MANAGER_SPREADSHEET_ID");
     if (propSsId) ssId = propSsId;
   } catch (err) {}
+
   var ss = SpreadsheetApp.openById(ssId);
-  var sheet = ss.getSheetByName("Users");
-
-  if (!sheet) {
-    sheet = ss.insertSheet("Users");
-    sheet.appendRow(["id", "lineUserId", "displayName", "role", "mode", "status", "username", "salesOwner", "createdAt", "updatedAt"]);
-  }
-
-  var values = sheet.getDataRange().getValues();
-  var headers = (values[0] || []).map(function(h) { return String(h || "").trim(); });
-
-  var requiredHeaders = ["id", "lineUserId", "displayName", "role", "mode", "status"];
-  var headerChanged = false;
-
-  if (headers.length === 0) {
-    headers = requiredHeaders;
-    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-    headerChanged = true;
-  } else {
-    requiredHeaders.forEach(function(reqHeader) {
-      if (headers.indexOf(reqHeader) === -1) {
-        headers.push(reqHeader);
-        headerChanged = true;
-      }
-    });
-    if (headerChanged) {
-      sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-    }
-  }
-
-  var targetLineUserId = "U17700bab6816e65347549fa50965c892";
-  var lineUserIdIdx = headers.indexOf("lineUserId");
-  var displayNameIdx = headers.indexOf("displayName");
-  var roleIdx = headers.indexOf("role");
-  var modeIdx = headers.indexOf("mode");
-  var statusIdx = headers.indexOf("status");
-  var idIdx = headers.indexOf("id");
-
-  var nowIso = new Date().toISOString();
-  var targetRowIndex = -1;
-
-  for (var r = 1; r < values.length; r++) {
-    if (String(values[r][lineUserIdIdx] || "").trim() === targetLineUserId) {
-      targetRowIndex = r + 1;
-      break;
-    }
-  }
-
-  if (targetRowIndex > 0) {
-    if (roleIdx >= 0) sheet.getRange(targetRowIndex, roleIdx + 1).setValue("admin");
-    if (modeIdx >= 0) sheet.getRange(targetRowIndex, modeIdx + 1).setValue("staff");
-    if (displayNameIdx >= 0 && !sheet.getRange(targetRowIndex, displayNameIdx + 1).getValue()) {
-      sheet.getRange(targetRowIndex, displayNameIdx + 1).setValue("管理員");
-    }
-    if (statusIdx >= 0 && !sheet.getRange(targetRowIndex, statusIdx + 1).getValue()) {
-      sheet.getRange(targetRowIndex, statusIdx + 1).setValue("啟用");
-    }
-  } else {
-    var newRow = new Array(headers.length).fill("");
-    if (idIdx >= 0) newRow[idIdx] = "USR-ADMIN-001";
-    if (lineUserIdIdx >= 0) newRow[lineUserIdIdx] = targetLineUserId;
-    if (displayNameIdx >= 0) newRow[displayNameIdx] = "管理員";
-    if (roleIdx >= 0) newRow[roleIdx] = "admin";
-    if (modeIdx >= 0) newRow[modeIdx] = "staff";
-    if (statusIdx >= 0) newRow[statusIdx] = "啟用";
-    sheet.appendRow(newRow);
-  }
-
-  var readbackObjects = JingyangAssistant_sheetToObjects_(sheet);
-  var adminRecord = null;
-  for (var i = 0; i < readbackObjects.length; i++) {
-    if (String(readbackObjects[i].lineUserId || "").trim() === targetLineUserId) {
-      adminRecord = readbackObjects[i];
-      break;
-    }
-  }
+  var sheet = ss.getSheetByName("Users") || ss.getSheetByName("users");
 
   return {
-    ok: !!adminRecord && adminRecord.role === "admin" && adminRecord.mode === "staff",
+    ok: true,
+    mode: mode,
+    readOnlyAudit: true,
     spreadsheetId: ssId,
-    headers: headers,
-    userRecord: adminRecord || null
+    usersSheetExists: !!sheet,
+    touchedTabs: []
   };
 }
 
 /**
  * [JYAI 配貨助手 - 正式生產環境全自動修復與對齊 Token]
- * 本腳本將自動：
- * 1. 強制將系統指令碼屬性 SPREADSHEET_ID 鎖定並對齊正式官方試算表
- * 2. 驗證正式試算表與 Users 權限白名單分頁之連線狀態
+ * 鎖定狀態：0-arg 單擊寫入已停用 (FAIL-CLOSED)
  */
 function runAntiGravityOfficialProductionFix() {
-  // 🔒 正式生產環境官方唯一試算表 ID
-  var OFFICIAL_PRODUCTION_SPREADSHEET_ID = "1C_R1DdTj5brxftl9fPabTKBGzcG-lxWWxWoyi-ItA48";
-  
-  Logger.log("🚀 [Anti-Gravity] 開始執行正式生產環境試算表 ID 校正與同步...");
-  
-  // 1. 強制寫入/更新指令碼屬性 (Script Properties)
-  var scriptProperties = PropertiesService.getScriptProperties();
-  scriptProperties.setProperty('SPREADSHEET_ID', OFFICIAL_PRODUCTION_SPREADSHEET_ID);
-  scriptProperties.setProperty('JINGYANG_MANAGER_SPREADSHEET_ID', OFFICIAL_PRODUCTION_SPREADSHEET_ID);
-  Logger.log("✔️ [完成] 系統指令碼屬性已全面對齊正式試算表 ID：" + OFFICIAL_PRODUCTION_SPREADSHEET_ID);
-  
-  // 2. 驗證正式試算表與白名單分頁連線
-  try {
-    var ss = SpreadsheetApp.openById(OFFICIAL_PRODUCTION_SPREADSHEET_ID);
-    Logger.log("✔️ [完成] 成功連線正式試算表，表單名稱：「" + ss.getName() + "」");
-    
-    var usersSheet = ss.getSheetByName("Users") || ss.getSheetByName("users");
-    if (usersSheet) {
-      Logger.log("✔️ [完成] 已確認「Users」權限白名單分頁存在，身份判定機制正常運作！");
-    } else {
-      Logger.log("⚠️ [注意] 在該試算表中未找到名為「Users」的分頁，請確認分頁名稱。");
-    }
-    
-  } catch (err) {
-    Logger.log("❌ [錯誤] 無法連線至指定的正式試算表 ID：" + (err && err.message ? err.message : err));
-    throw new Error("正式試算表存取失敗：" + (err && err.message ? err.message : err));
-  }
-  
-  Logger.log("🎉 [Anti-Gravity] 正式生產環境資料對應與權限已全數修復完畢！");
+  Logger.log("⛔ [Fail-Closed Security Block] Direct 0-arg production fix execution is disabled.");
+  return {
+    ok: false,
+    errorCode: "EXECUTION_MODE_REQUIRES_EXPLICIT_OWNER_AUTHORIZATION",
+    message: "Direct 0-arg production fix execution is disabled for safety",
+    touchedTabs: []
+  };
 }
 
 /**
  * [JYAI 配貨助手 - Anti-Gravity 雙軌資料隔離架構修復 Token]
- * 本腳本執行以下自動化動作：
- * 1. 設定雙軌試算表 ID：
-    - SPREADSHEET_ID (主庫存表)
-    - JINGYANG_MANAGER_SPREADSHEET_ID (業務後台表)
- * 2. 驗證業務後台試算表中的「商品推薦標籤」、「users」、「ledger」三個關鍵分頁是否齊全。
- * 3. 確保未來權限、帳務與推薦標籤完全隔離在業務後台，不再干擾主庫存。
+ * 鎖定狀態：0-arg 單擊寫入已停用 (FAIL-CLOSED)
  */
 function executeAntiGravityDualSpreadsheetRoutingFix() {
-  var INVENTORY_SPREADSHEET_ID = "1C_R1DdTj5brxftl9fPabTKBGzcG-lxWWxWoyi-ItA48"; // 主庫存表
-  var scriptProperties = PropertiesService.getScriptProperties();
-  var MANAGER_SPREADSHEET_ID = scriptProperties.getProperty('JINGYANG_MANAGER_SPREADSHEET_ID') || INVENTORY_SPREADSHEET_ID;
-  
-  Logger.log("🚀 [Anti-Gravity Dual-Route] 開始設定雙軌架構試算表隔離機制...");
-  
-  // 1. 寫入系統指令碼屬性 (Script Properties)
-  scriptProperties.setProperty('SPREADSHEET_ID', INVENTORY_SPREADSHEET_ID);
-  scriptProperties.setProperty('JINGYANG_MANAGER_SPREADSHEET_ID', MANAGER_SPREADSHEET_ID);
-  Logger.log("✔️ [雙軌設定] 主庫存表 ID 已綁定：" + INVENTORY_SPREADSHEET_ID);
-  Logger.log("✔️ [雙軌設定] 業務後台表 ID 已綁定：" + MANAGER_SPREADSHEET_ID);
-  
-  // 2. 驗證主庫存表連線
-  try {
-    var invSs = SpreadsheetApp.openById(INVENTORY_SPREADSHEET_ID);
-    Logger.log("✔️ [驗證通過] 主庫存表連線成功：「" + invSs.getName() + "」");
-  } catch (invErr) {
-    Logger.log("❌ 主庫存表連線失敗：" + (invErr && invErr.message ? invErr.message : invErr));
-  }
-  
-  // 3. 驗證業務後台表與必要分頁連線
-  try {
-    var mgrSs = SpreadsheetApp.openById(MANAGER_SPREADSHEET_ID);
-    Logger.log("✔️ [驗證通過] 勁揚業務後台表連線成功：「" + mgrSs.getName() + "」");
-    
-    // 檢查指定的三個後勤分頁
-    var requiredSheets = ["商品推薦標籤", "users", "ledger"];
-    requiredSheets.forEach(function(sheetName) {
-      var sheet = mgrSs.getSheetByName(sheetName) || mgrSs.getSheetByName(sheetName.toLowerCase());
-      if (sheet) {
-        Logger.log("   └─ ✔️ 已找到後台分頁：「" + sheetName + "」");
-      } else {
-        Logger.log("   └─ ⚠️ 提醒：在業務後台表中未找到分頁：「" + sheetName + "」，請確認是否已建立該分頁。");
-      }
-    });
-    
-  } catch (mgrErr) {
-    Logger.log("❌ 業務後台表連線失敗：" + (mgrErr && mgrErr.message ? mgrErr.message : mgrErr));
-  }
-  
-  Logger.log("🎉 [Anti-Gravity] 雙軌資料隔離架構設定完成！");
+  Logger.log("⛔ [Fail-Closed Security Block] Direct 0-arg dual-spreadsheet routing fix execution is disabled.");
+  return {
+    ok: false,
+    errorCode: "EXECUTION_MODE_REQUIRES_EXPLICIT_OWNER_AUTHORIZATION",
+    message: "Direct 0-arg dual-spreadsheet routing fix execution is disabled for safety",
+    touchedTabs: []
+  };
 }
 
 /**
- * [JYAI 配貨助手 - 安全合約維持與後台結構對齊 Token]
- * 本腳本執行以下安全動作：
- * 1. 嚴格遵守 Stage 26 生產合約：主庫存與 ledger / holds 維持在官方主庫存表 (1C_R1DdTj5brxftl9fPabTKBGzcG-lxWWxWoyi-ItA48)。
- * 2. 安全地在「勁揚業務後台試算表」中建立或檢查後台專屬的 users 與 商品推薦標籤分頁。
- * 3. 確保系統雙軌運行順暢，資料絕不混淆、絕不發生雙頭分歧。
+ * [JYAI 配貨助手 - 安全合約維持與後台結構對齊 Entrypoint]
+ * 鎖定狀態：FAIL-CLOSED
  */
 function executeSafeArchitectureAlignment() {
-  var OFFICIAL_INVENTORY_ID = "1C_R1DdTj5brxftl9fPabTKBGzcG-lxWWxWoyi-ItA48"; // 主庫存與帳務真相來源
-  var scriptProperties = PropertiesService.getScriptProperties();
-  var MANAGER_BACKEND_ID = scriptProperties.getProperty('JINGYANG_MANAGER_SPREADSHEET_ID') || OFFICIAL_INVENTORY_ID;
-  
-  Logger.log("🔒 [Safe Architecture] 開始進行安全合約架構對齊...");
-  
-  // 1. 設定系統指令碼屬性 (Script Properties)
-  scriptProperties.setProperty('SPREADSHEET_ID', OFFICIAL_INVENTORY_ID);
-  scriptProperties.setProperty('JINGYANG_MANAGER_SPREADSHEET_ID', MANAGER_BACKEND_ID);
-  Logger.log("✔️ [安全對齊] 主庫存與帳務真相來源已鎖定：「" + OFFICIAL_INVENTORY_ID + "」");
-  Logger.log("✔️ [安全對齊] 勁揚業務後台表已鎖定：「" + MANAGER_BACKEND_ID + "」");
-  
-  // 2. 驗證主庫存表連線
-  try {
-    var invSs = SpreadsheetApp.openById(OFFICIAL_INVENTORY_ID);
-    Logger.log("✔️ [驗證通過] 主庫存表連線成功：「" + invSs.getName() + "」");
-  } catch (err) {
-    Logger.log("❌ 主庫存表連線失敗：" + (err && err.message ? err.message : err));
-  }
-  
-  // 3. 安全初始化後台試算表結構（僅檢查與補充必要分頁，絕不覆蓋或刪除現有資料）
-  try {
-    var mgrSs = SpreadsheetApp.openById(MANAGER_BACKEND_ID);
-    Logger.log("✔️ [驗證通過] 勁揚業務後台表連線成功：「" + mgrSs.getName() + "」");
-    
-    // 檢查後台專屬分頁
-    var backendSheets = ["users", "商品推薦標籤"];
-    backendSheets.forEach(function(sheetName) {
-      var sheet = mgrSs.getSheetByName(sheetName);
-      if (!sheet) {
-        sheet = mgrSs.insertSheet(sheetName);
-        Logger.log("   └─ ➕ 已自動建立後台分頁：「" + sheetName + "」");
-        
-        // 給予預設表頭
-        if (sheetName === "users") {
-          sheet.appendRow(["Username", "DisplayName", "Role", "LineUserId", "Status"]);
-        } else if (sheetName === "商品推薦標籤") {
-          sheet.appendRow(["Category", "TagKeyword", "TargetItemCode", "Description"]);
-        }
-      } else {
-        Logger.log("   └─ ✔️ 後台已存在分頁：「" + sheetName + "」");
-      }
-    });
-    
-  } catch (mgrErr) {
-    Logger.log("❌ 業務後台表存取失敗：" + (mgrErr && mgrErr.message ? mgrErr.message : mgrErr));
-  }
-  
-  Logger.log("🎉 [Safe Architecture] 安全合約架構對齊完畢！主庫存資料 100% 安全無虞。");
-}
-
-/**
- * [JYAI 配貨助手 - 雙軌後台與 Users 合併驗證 Token]
- * 本腳本由 Adrian 執行，用於：
- * 1. 確認系統屬性完全對應至正式後台與主庫存表。
- * 2. 檢查新後台試算表中是否存在「users」分頁，並確認欄位結構。
- */
-function executeAdrianUsersAndRoutingAudit() {
-  var INVENTORY_SPREADSHEET_ID = "1C_R1DdTj5brxftl9fPabTKBGzcG-lxWWxWoyi-ItA48"; // 主庫存與 ledger / holds
-  var scriptProperties = PropertiesService.getScriptProperties();
-  var MANAGER_SPREADSHEET_ID = scriptProperties.getProperty('JINGYANG_MANAGER_SPREADSHEET_ID') || INVENTORY_SPREADSHEET_ID;
-  
-  Logger.log("🔍 [Adrian 稽核] 開始檢查雙軌試算表與 users 分頁狀態...");
-  
-  // 1. 同步與設定屬性
-  scriptProperties.setProperty('SPREADSHEET_ID', INVENTORY_SPREADSHEET_ID);
-  scriptProperties.setProperty('JINGYANG_MANAGER_SPREADSHEET_ID', MANAGER_SPREADSHEET_ID);
-  
-  // 2. 檢查後台的 users 分頁
-  try {
-    var mgrSs = SpreadsheetApp.openById(MANAGER_SPREADSHEET_ID);
-    var usersSheet = mgrSs.getSheetByName("users") || mgrSs.getSheetByName("User") || mgrSs.getSheetByName("user") || mgrSs.getSheetByName("Users");
-    
-    if (usersSheet) {
-      Logger.log("✔️ [檢查通過] 在業務後台成功找到使用者分頁：「" + usersSheet.getName() + "」");
-      var lastRow = usersSheet.getLastRow();
-      Logger.log("📊 目前 users 分頁共有 " + lastRow + " 筆記錄資料。");
-      
-      // 檢查是否有舊的單數 user 分頁需要提醒合併
-      var oldUserSheet = mgrSs.getSheetByName("user");
-      if (oldUserSheet && usersSheet.getName() !== "user") {
-        Logger.log("⚠️ 提醒：後台同時存在「user」與「users」分頁。建議將「user」內的資料手動複製到「users」後，刪除「user」分頁。");
-      }
-      
-    } else {
-      Logger.log("❌ 錯誤：在業務後台找不到「users」分頁！請確認您是否已經將其移動過去。");
-    }
-  } catch (err) {
-    Logger.log("❌ 業務後台表存取失敗：" + (err && err.message ? err.message : err));
-  }
-  
-  Logger.log("🎉 [Adrian 稽核完成] 雙軌路由對應正常，主庫存與後台各司其職！");
+  Logger.log("⛔ [Fail-Closed Security Block] Direct 0-arg safe architecture alignment execution is disabled.");
+  return {
+    ok: false,
+    errorCode: "EXECUTION_MODE_REQUIRES_EXPLICIT_OWNER_AUTHORIZATION",
+    message: "Direct 0-arg safe architecture alignment execution is disabled for safety",
+    touchedTabs: []
+  };
 }
 
 /**
  * [JYAI 配貨助手 - 雙軌後台與 Users 自動合併與移除非必要分頁 Helper]
+ * 鎖定狀態：FAIL-CLOSED (唯讀稽核 / 需 Owner 明確授權)
  */
-function JingyangAssistant_mergeAndMigrateUsersSheet_(targetSsId) {
+function JingyangAssistant_mergeAndMigrateUsersSheet_(targetSsId, options) {
+  var opts = options || {};
+  var mode = typeof opts === "string" ? opts : (opts.mode || "READINESS_CHECK");
+
+  if (mode !== "READINESS_CHECK" && mode !== "AUDIT") {
+    Logger.log("⛔ [Fail-Closed Security Block] Live user migration execution requires explicit owner authorization.");
+    return {
+      ok: false,
+      errorCode: "EXECUTION_MODE_REQUIRES_EXPLICIT_OWNER_AUTHORIZATION",
+      message: "Live user migration requires explicit owner authorization",
+      touchedTabs: []
+    };
+  }
+
   var ssId = targetSsId;
   if (!ssId) {
     try {
@@ -796,203 +601,13 @@ function JingyangAssistant_mergeAndMigrateUsersSheet_(targetSsId) {
   var oldUserSheet = ss.getSheetByName("user") || ss.getSheetByName("User");
   var usersSheet = ss.getSheetByName("users") || ss.getSheetByName("Users") || ss.getSheetByName("line_users");
 
-  if (!usersSheet) {
-    usersSheet = ss.insertSheet("users");
-    usersSheet.appendRow(["id", "lineUserId", "displayName", "role", "mode", "status", "username", "salesOwner", "createdAt", "updatedAt"]);
-  }
-
-  var usersValues = usersSheet.getDataRange().getValues();
-  var headers = (usersValues[0] || []).map(function(h) { return String(h || "").trim(); });
-  var requiredHeaders = ["id", "lineUserId", "displayName", "role", "mode", "status"];
-  var headerChanged = false;
-
-  if (headers.length === 0) {
-    headers = requiredHeaders;
-    usersSheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-  } else {
-    requiredHeaders.forEach(function(reqHeader) {
-      if (headers.indexOf(reqHeader) === -1) {
-        headers.push(reqHeader);
-        headerChanged = true;
-      }
-    });
-    if (headerChanged) {
-      usersSheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-    }
-  }
-  var existingObjects = JingyangAssistant_sheetToObjects_(usersSheet);
-  var existingMap = {};
-  for (var i = 0; i < existingObjects.length; i++) {
-    var key = String(existingObjects[i].lineUserId || existingObjects[i].LineUserId || "").trim();
-    if (key) {
-      existingMap[key] = true;
-    }
-  }
-
-  var migratedCount = 0;
-  if (oldUserSheet) {
-    var oldObjects = JingyangAssistant_sheetToObjects_(oldUserSheet);
-    for (var j = 0; j < oldObjects.length; j++) {
-      var oldRow = oldObjects[j];
-      var lUid = String(oldRow.lineUserId || oldRow.LineUserId || oldRow.line_user_id || oldRow.userId || "").trim();
-      if (lUid && !existingMap[lUid]) {
-        var idIdx = headers.indexOf("id");
-        var lineUserIdIdx = headers.indexOf("lineUserId");
-        var displayNameIdx = headers.indexOf("displayName");
-        var roleIdx = headers.indexOf("role");
-        var modeIdx = headers.indexOf("mode");
-        var statusIdx = headers.indexOf("status");
-        var usernameIdx = headers.indexOf("username");
-        var salesOwnerIdx = headers.indexOf("salesOwner");
-
-        var newRow = new Array(headers.length).fill("");
-        if (idIdx >= 0) newRow[idIdx] = oldRow.id || oldRow.Id || ("USR-MIGRATED-" + (migratedCount + 1));
-        if (lineUserIdIdx >= 0) newRow[lineUserIdIdx] = lUid;
-        if (displayNameIdx >= 0) newRow[displayNameIdx] = oldRow.displayName || oldRow.DisplayName || oldRow.name || "使用者";
-        if (roleIdx >= 0) newRow[roleIdx] = oldRow.role || oldRow.Role || "staff";
-        if (modeIdx >= 0) newRow[modeIdx] = oldRow.mode || oldRow.Mode || "staff";
-        if (statusIdx >= 0) newRow[statusIdx] = oldRow.status || oldRow.Status || "啟用";
-        if (usernameIdx >= 0) newRow[usernameIdx] = oldRow.username || oldRow.Username || "";
-        if (salesOwnerIdx >= 0) newRow[salesOwnerIdx] = oldRow.salesOwner || oldRow.SalesOwner || "";
-
-        usersSheet.appendRow(newRow);
-        existingMap[lUid] = true;
-        migratedCount++;
-      }
-    }
-
-    try {
-      ss.deleteSheet(oldUserSheet);
-    } catch (delErr) {
-      Logger.log("Delete old user sheet warning: " + delErr);
-    }
-  }
-
-  var finalObjects = JingyangAssistant_sheetToObjects_(usersSheet);
   return {
     ok: true,
+    mode: mode,
+    readOnlyAudit: true,
     spreadsheetId: ssId,
-    targetSheetName: usersSheet.getName(),
-    migratedCount: migratedCount,
-    totalRecords: finalObjects.length,
-    oldSheetDeleted: !!oldUserSheet
-  };
-}
-
-/**
- * [JYAI 配貨助手 - 業務後台 users 分頁自動合併與移除非必要分頁 Token]
- * 執行目標：對試算表進行：
- * 1. 讀取舊 user 分頁 LINE 綁定資料
- * 2. 合併寫入 users 分頁
- * 3. 移除舊版 user 分頁
- */
-function runTargetSpreadsheetUserMigrationNow() {
-  var targetId = PropertiesService.getScriptProperties().getProperty("JINGYANG_MANAGER_SPREADSHEET_ID");
-  Logger.log("🚀 [User Sheet Migration] 開始執行試算表之 users 合併與清理...");
-  var res = JingyangAssistant_mergeAndMigrateUsersSheet_(targetId);
-  Logger.log("🎉 [User Sheet Migration 完成] 結果：" + JSON.stringify(res));
-  return res;
-}
-
-/**
- * 【JYAI 配貨助手】AI 智慧維護與 Token 執行密鑰
- * 執行密鑰 Token: JYAI-SECURE-TOKEN-2026-OPTIMIZED
- */
-function executeTokenizedMigrationAndAudit(token) {
-  var VALID_TOKEN = "JYAI-SECURE-TOKEN-2026-OPTIMIZED";
-  
-  if (token !== VALID_TOKEN) {
-    Logger.log("❌ 驗證失敗：Token 錯誤或未授權。");
-    throw new Error("Unauthorized Token Execution");
-  }
-  
-  Logger.log("✅ Token 驗證成功！開始執行勁揚後台函數巡視與資料庫移轉...");
-  
-  var targetSpreadsheetId = PropertiesService.getScriptProperties().getProperty("JINGYANG_MANAGER_SPREADSHEET_ID") || "1C_R1DdTj5brxftl9fPabTKBGzcG-lxWWxWoyi-ItA48";
-  
-  try {
-    // 1. 執行核心：合併舊版 user 權限並轉移至 users
-    if (typeof JingyangAssistant_mergeAndMigrateUsersSheet_ === 'function') {
-      JingyangAssistant_mergeAndMigrateUsersSheet_(targetSpreadsheetId);
-      Logger.log("✔ 成功執行：JingyangAssistant_mergeAndMigrateUsersSheet_");
-    } else {
-      Logger.log("⚠️ 提示：JingyangAssistant_mergeAndMigrateUsersSheet_ 已內嵌於主模組中。");
-    }
-    
-    // 2. 檢查目標試算表架構與雙軌分流
-    var ss = SpreadsheetApp.openById(targetSpreadsheetId);
-    var sheets = ss.getSheets();
-    var usersExists = false;
-    
-    sheets.forEach(function(sheet) {
-      var name = sheet.getName();
-      Logger.log("檢視分頁: " + name);
-      if (name.toLowerCase() === 'users' || name.toLowerCase() === 'line_users') {
-        usersExists = true;
-      }
-    });
-    
-    if (usersExists) {
-      Logger.log("✅ 架構確認：目標後台表已正確包含 users 權限分頁。");
-    } else {
-      Logger.log("⚠️ 警告：未找到 users 分頁，將自動建立標準白名單結構。");
-      ss.insertSheet('users');
-    }
-    
-    Logger.log("🎉 【JYAI 配貨助手】Token 授權維護與函數對齊全部完成！");
-    return "SUCCESS: Token execution completed cleanly.";
-    
-  } catch (error) {
-    Logger.log("❌ 執行過程發生錯誤: " + (error && error.message ? error.message : error));
-    throw error;
-  }
-}
-
-/**
- * 快速點擊執行入口
- */
-function runJyTokenExecution() {
-  return executeTokenizedMigrationAndAudit("JYAI-SECURE-TOKEN-2026-OPTIMIZED");
-}
-
-/**
- * 【JYAI 配貨助手】CLEAN_AND_MIGRATE 全自動任務處理解析器
- */
-function executeCleanAndMigrateTask_(requestPayload) {
-  var payload = requestPayload || {};
-  var token = payload.execution_token || payload.executionToken || payload.token;
-  var VALID_TOKEN = "JYAI-SECURE-TOKEN-2026-OPTIMIZED";
-  
-  if (token !== VALID_TOKEN) {
-    Logger.log("❌ 驗證失敗：Execution token 未授權。");
-    return { ok: false, errorCode: "UNAUTHORIZED_TOKEN", message: "Execution token mismatch" };
-  }
-  
-  var targetSpreadsheetId = payload.target_spreadsheet_id || payload.targetSpreadsheetId || PropertiesService.getScriptProperties().getProperty("JINGYANG_MANAGER_SPREADSHEET_ID") || "1C_R1DdTj5brxftl9fPabTKBGzcG-lxWWxWoyi-ItA48";
-  var options = payload.payload || {};
-  
-  var migrationResult = null;
-  if (options.ensure_users_sheet_migration !== false) {
-    migrationResult = JingyangAssistant_mergeAndMigrateUsersSheet_(targetSpreadsheetId);
-    Logger.log("✔ users 分頁自動合併與移轉完畢：" + JSON.stringify(migrationResult));
-  }
-  
-  var ss = SpreadsheetApp.openById(targetSpreadsheetId);
-  var usersSheet = ss.getSheetByName("users") || ss.getSheetByName("Users") || ss.getSheetByName("line_users");
-  
-  if (!usersSheet && options.ensure_users_sheet_migration !== false) {
-    usersSheet = ss.insertSheet("users");
-    usersSheet.appendRow(["id", "lineUserId", "displayName", "role", "mode", "status", "username", "salesOwner", "createdAt", "updatedAt"]);
-  }
-  
-  return {
-    ok: true,
-    action: "CLEAN_AND_MIGRATE",
-    targetProjectId: payload.target_project_id || ScriptApp.getScriptId(),
-    targetSpreadsheetId: targetSpreadsheetId,
-    migrationResult: migrationResult,
-    usersSheetStatus: !!usersSheet ? "PRESENT" : "MISSING",
-    preserveLineClientWebhook: options.preserve_line_client_webhook !== false,
-    removeOrphanFunctions: options.remove_orphan_functions !== false
+    usersSheetExists: !!usersSheet,
+    oldUserSheetExists: !!oldUserSheet,
+    touchedTabs: []
   };
 }
