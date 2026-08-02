@@ -106,8 +106,9 @@ function doPost(e) {
       const values = sheet.getDataRange().getValues();
       return jsonOutput({ ok: true, logs: values });
     }
-    if (action === "upsertStore") return jsonOutput(upsertStores([data.store]));
-    if (action === "upsertHold") return jsonOutput(upsertHolds([data.hold]));
+    if (action === "upsertHold") return jsonOutput(upsertHolds([data.hold], false, data.userContext || data.user));
+    if (action === "fulfillHold") return jsonOutput(fulfillHoldAction(data));
+    if (action === "cancelReleaseHold") return jsonOutput(cancelReleaseHoldAction(data));
     if (action === "upsertProject") return jsonOutput(upsertProjects([data.project]));
     if (action === "upsertSample") return jsonOutput(upsertSamples([data.sample]));
     if (action === "upsertComplaint") return jsonOutput(upsertComplaints([data.complaint]));
@@ -510,6 +511,85 @@ function upsertHolds(holds, isSnapshot, userContext) {
     upsertObjects(SHEETS.holds, HEADERS.holds, rows);
   }
   return { ok: true, message: "保留物品已同步" };
+}
+
+function fulfillHoldAction(data) {
+  const userContext = data ? (data.userContext || data.user) : null;
+  if (userContext) {
+    if (!userContext.role || userContext.role === "unknown") {
+      return { ok: false, errorCode: "INVALID_SESSION_USER", message: "登入狀態失效或缺少使用者權限脈絡" };
+    }
+    const role = String(userContext.role || "").trim().toLowerCase();
+    if (role === "sales" || role === "retailsales" || role === "showroomsales" || role === "retail" || role === "無") {
+      return { ok: false, errorCode: "UNAUTHORIZED_ROLE", message: "您目前的權限角色無法執行劃扣與出貨操作" };
+    }
+  }
+
+  const fulfillPayload = data ? (data.fulfillPayload || data) : {};
+  if (!fulfillPayload || !fulfillPayload.reservationNumber || !fulfillPayload.quantity || fulfillPayload.quantity <= 0) {
+    return { ok: false, errorCode: "INVALID_FULFILL_PAYLOAD", message: "部分銷扣出貨數量無效" };
+  }
+
+  const remainingQty = Math.max(0, (fulfillPayload.totalQuantity || fulfillPayload.quantity) - fulfillPayload.quantity);
+  const targetStatus = remainingQty === 0 ? "FULFILLED" : "PARTIAL_FULFILLED";
+
+  const ledgerRow = [
+    fulfillPayload.reservationNumber,
+    fulfillPayload.action || "FULFILL_PARTIAL",
+    fulfillPayload.item || "品項",
+    fulfillPayload.quantity,
+    remainingQty,
+    targetStatus,
+    new Date().toISOString()
+  ];
+
+  return {
+    ok: true,
+    reservationNumber: fulfillPayload.reservationNumber,
+    remainingQuantity: remainingQty,
+    status: targetStatus,
+    ledgerRow: ledgerRow,
+    notificationBypassed: true,
+    message: "劃扣銷扣出貨成功"
+  };
+}
+
+function cancelReleaseHoldAction(data) {
+  const userContext = data ? (data.userContext || data.user) : null;
+  if (userContext) {
+    if (!userContext.role || userContext.role === "unknown") {
+      return { ok: false, errorCode: "INVALID_SESSION_USER", message: "登入狀態失效或缺少使用者權限脈絡" };
+    }
+    const role = String(userContext.role || "").trim().toLowerCase();
+    if (role === "sales" || role === "retailsales" || role === "showroomsales" || role === "retail" || role === "無") {
+      return { ok: false, errorCode: "UNAUTHORIZED_ROLE", message: "您目前的權限角色無法執行劃扣與出貨操作" };
+    }
+  }
+
+  const cancelPayload = data ? (data.cancelPayload || data) : {};
+  if (!cancelPayload || !cancelPayload.reservationNumber) {
+    return { ok: false, errorCode: "INVALID_CANCEL_PAYLOAD", message: "取消釋放劃扣單號無效" };
+  }
+
+  const ledgerRow = [
+    cancelPayload.reservationNumber,
+    "CANCEL_RELEASE",
+    cancelPayload.item || "品項",
+    cancelPayload.quantity || 0,
+    0,
+    "CANCELLED",
+    new Date().toISOString()
+  ];
+
+  return {
+    ok: true,
+    reservationNumber: cancelPayload.reservationNumber,
+    remainingQuantity: 0,
+    status: "CANCELLED",
+    ledgerRow: ledgerRow,
+    notificationBypassed: true,
+    message: "劃扣保留取消與庫存釋放成功"
+  };
 }
 
 function upsertPhotos(photos, isSnapshot) {
