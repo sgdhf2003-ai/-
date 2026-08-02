@@ -40,13 +40,19 @@
   - 受控生產寫入證明完好執行並清理 (`RES-20260802-TEST01` -> `TEST_CLEANUP_DELETED`)。
 
 ### Stage 38: Admin Operation Flow UI Endpoint Integration Gate
-* **狀態**: 完成並記錄 (Stage 38 Milestone Complete)
-* **最新同步 Commit**: `8f292dbc5c87f913c9fdd05beb73c0cc025e9bd9` (`feat: add explicit doPost action dispatchers for fulfillHold and cancelReleaseHold in backend Code.gs`)
+* **狀態**: 完成並記錄 (`0f7ec24`)
 * **交付與驗證內容**:
-  - **合約審查**: 審查並確認 `AllocationSandboxView` 與 `AllocationGatewayClient` 之 4 大劃扣操作流程合約與安全防護機制。
-  - **後端派發器補強**: 在 `google-apps-script/Code.gs` 為 `fulfillHold` 與 `cancelReleaseHold` 補強顯式 `doPost` action 派發器與角色驗證。
-  - **Stage 38-D 受控部署**: 在 Owner 授權下成功部署 Backend Web App 至 **Version 98** (`AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw`)。
-  - **線上端點驗證**: 驗證線上 Web App 端點 (HTTP 200 OK) 並確認 `fulfillHoldAction` 與 `cancelReleaseHoldAction` 存在於線上函式清單。
+  - 後端 `google-apps-script/Code.gs` 為 `fulfillHold` 與 `cancelReleaseHold` 補強顯式 `doPost` action 派發器。
+  - Backend Web App 成功部署至 **Version 98** (`AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw`)。
+
+### Stage 39: Sales Admin Daily Operational Flow Readiness Audit
+* **狀態**: 完成並記錄 (Stage 39 Milestone Complete)
+* **最新同步 Commit**: `0f7ec24c13dfaf3cb7ca3d4695aa4a9a8a64b231` (`docs: record Stage 38 milestone closure, Version 98 deployment and explicit action dispatcher integration`)
+* **準備度審查結果**: **Readiness Classification: PASS**
+* **審查內容**:
+  - **4 大日常作業流程**: 建立正式劃扣、部分/全額銷扣出貨、取消釋放劃扣、作業讀回與審查全數通過驗證。
+  - **權限與去敏感化**: `admin`/`boss`/`assistant` 允許操作；`sales`/`retail` 拒絕寫入與審查 (`READBACK_QUERY_DENIED`)；助理讀回去敏感化 (`readbackRedacted === true`)。
+  - **線上 Web App 基線**: 保留 **Backend Web App Version 98** 為當前作業基線。
   - 0 次未授權 Google Sheet 寫入、0 次 LINE API 發送、0 次 Token 讀取。
 
 ## 4. 自動化驗證基線 (Automated Verification Baseline)
@@ -56,6 +62,7 @@
 - `python3 deploy.py line-bot --check`: **VALID** (LINE Bot Apps Script dry-run safe)
 - `git diff --check`: **PASS** (0 空白字元錯誤)
 - **生產環境部署記錄**: Backend Web App Version 98, LINE Bot Project Version 1 完好保留。
+
 
 
 
