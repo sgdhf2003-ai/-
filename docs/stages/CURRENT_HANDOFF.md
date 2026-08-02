@@ -5,22 +5,42 @@
 - repo root: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 - branch: `main`
 - source of truth: Canonical cloud-drive checkout path above
-- HEAD: `9eb9f859bed6e622ee4e35bc927003a0ab478826`
-- origin/main: `9eb9f859bed6e622ee4e35bc927003a0ab478826`
+- HEAD: `fa6b8732f65d8d9571449ce4d2942ec6a234823b`
+- origin/main: `fa6b8732f65d8d9571449ce4d2942ec6a234823b`
 - ahead / behind vs origin/main: `0 / 0`
 
 ## Current Stage
 
-- current stage: Stage 34-C Stage 34 Handoff & Operation UI Readiness Record
+- current stage: Stage 35-C Stage 35 Handoff & Operation Handler Integration Record
 - previous completed deliveries:
-  - Stage 33-E Readback Redaction Contract & Tests (`8ddac76`)
-  - Stage 34-A Admin Operation Flow UI Readiness Audit (PASS)
-  - Stage 34-B Admin Operation UI Role-Aware Control Patch (`9eb9f85`)
-  - Stage 34-C Stage 34 Handoff & Operation UI Readiness Record
-- latest pushed main commit: `9eb9f859bed6e622ee4e35bc927003a0ab478826` (`feat: add role-aware UI control rendering for allocation assistant admin operations`)
+  - Stage 34-C Stage 34 Handoff & Operation UI Readiness Record (`602e1cc`)
+  - Stage 35-A Operation Control Integration Contract Gate (PASS)
+  - Stage 35-B Operation Control Handler Test-First Wiring (`fa6b873`)
+  - Stage 35-C Stage 35 Handoff & Operation Handler Integration Record
+- latest pushed main commit: `fa6b8732f65d8d9571449ce4d2942ec6a234823b` (`feat: wire operation handlers with role guards and readback redaction in AllocationGatewayClient`)
 - backend deployed version: `96` (canonical deployment record - 104 versions headroom remaining)
 - LINE Bot deployed version: `1` (canonical deployment record - fresh project Version 1)
-- automated simulations: 197 / 197 PASS (`npm run simulate:all`)
+- automated simulations: 201 / 201 PASS (`npm run simulate:all`)
+
+## Stage 35 Summary & Operation Handler Wiring Record
+
+- **Stage 35 Status**: OPERATION CONTROL HANDLER WIRING COMPLETE & HANDOFF RECORDED
+- **Stage 35-A Contract Gate**: Defined proof of success, fail-closed rules, ID contracts, mock boundaries, and side-effect dispatches for all 4 main operation loop actions.
+- **Stage 35-B Handler Wiring (`fa6b873`)**:
+  - Implemented 4 core operation handlers in `AllocationGatewayClient`: `createFormalHold`, `fulfillHold`, `cancelReleaseHold`, `queryReadbackAudit`.
+  - Authorized roles (`admin`, `boss`, `assistant`): Permitted operation invocation, returning `{ ok: true, reservationNumber, notificationBypassed: true }`.
+  - Unauthorized roles (`sales`, `retail`): Failed closed with `UNAUTHORIZED_ROLE` or `READBACK_QUERY_DENIED`.
+  - Unauthenticated / missing session users: Failed closed with `INVALID_SESSION_USER`.
+  - Added 4 automated simulation test cases in `tests/simulations/allocation-gateway-client.sim.js`.
+- **Side Effect Summary**:
+  - Google Sheet Writes: `0`
+  - LINE API Calls: `0`
+  - Deployments Executed: `0`
+  - Secrets / Token Access: `0`
+  - Notification Boundary: `notificationBypassed: true` enforced on all operation handlers.
+- **Automated Verification**: `npm run check` PASS, `npm run simulate:allocation-gateway-client` **8 / 8 PASS**, `npm run simulate:all` **201 / 201 PASS**, backend/LINE dry-run PASS.
+- **Recommended Next Gate**: `Stage 36-A: Production Operation Readback & Controlled UI Integration Gate`
+
 
 ## Stage 34 Summary & UI Control Readiness Record
 
