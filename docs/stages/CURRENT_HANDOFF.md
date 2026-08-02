@@ -5,23 +5,41 @@
 - repo root: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 - branch: `main`
 - source of truth: Canonical cloud-drive checkout path above
-- HEAD: `30ea9cc345f2a03c5e2ffdcc80dbf9659efff063`
-- origin/main: `30ea9cc345f2a03c5e2ffdcc80dbf9659efff063`
+- HEAD: `9eb9f859bed6e622ee4e35bc927003a0ab478826`
+- origin/main: `9eb9f859bed6e622ee4e35bc927003a0ab478826`
 - ahead / behind vs origin/main: `0 / 0`
 
 ## Current Stage
 
-- current stage: Stage 33-D Stage 33 Handoff & UI Integration Readiness Record
+- current stage: Stage 34-C Stage 34 Handoff & Operation UI Readiness Record
 - previous completed deliveries:
-  - Stage 32-B Production Operating SOP Closure Record (`9d9ee78`)
-  - Stage 33-A Admin-Only Web App UI Endpoint Audit (PASS)
-  - Stage 33-B Admin UI Write-Action Contract Spec (PASS)
-  - Stage 33-C Server-Side Role Guard Test-First Patch (`30ea9cc`)
-  - Stage 33-D Stage 33 Handoff & UI Integration Readiness Record
-- latest pushed main commit: `30ea9cc345f2a03c5e2ffdcc80dbf9659efff063` (`feat: add server side role validation guard and permission deny codes`)
+  - Stage 33-E Readback Redaction Contract & Tests (`8ddac76`)
+  - Stage 34-A Admin Operation Flow UI Readiness Audit (PASS)
+  - Stage 34-B Admin Operation UI Role-Aware Control Patch (`9eb9f85`)
+  - Stage 34-C Stage 34 Handoff & Operation UI Readiness Record
+- latest pushed main commit: `9eb9f859bed6e622ee4e35bc927003a0ab478826` (`feat: add role-aware UI control rendering for allocation assistant admin operations`)
 - backend deployed version: `96` (canonical deployment record - 104 versions headroom remaining)
 - LINE Bot deployed version: `1` (canonical deployment record - fresh project Version 1)
-- automated simulations: 188 / 188 PASS (`npm run simulate:all`)
+- automated simulations: 197 / 197 PASS (`npm run simulate:all`)
+
+## Stage 34 Summary & UI Control Readiness Record
+
+- **Stage 34 Status**: ADMIN OPERATION UI ROLE-AWARE CONTROL PATCH COMPLETE & HANDOFF RECORDED
+- **Stage 34-A Read-Only UI Mapping**: Mapped 4 core operation loop actions (Create formal hold, Partial fulfillment, Cancel release, Readback audit) against UI entrypoints and server guards.
+- **Stage 34-B UI Role Control Patch (`9eb9f85`)**:
+  - Implemented `renderWarningBanner(userRole)` and `renderSandboxControls(userRole)` in `AllocationSandboxView`.
+  - Authorized roles (`admin`, `boss`, `assistant`): Enabled controls (`btn-enabled`) with green authorized badge and `[notificationBypassed: true]` disclaimer.
+  - Unauthorized roles (`sales`, `retail`, `unauthenticated`): Disabled locked controls (`btn-disabled`, `disabled read-only`) with locked disclaimer badge.
+  - Added 4 automated simulation test cases in `tests/simulations/allocation-ui-state.sim.js`.
+- **Side Effect Summary**:
+  - Google Sheet Writes: `0`
+  - LINE API Calls: `0`
+  - Deployments Executed: `0`
+  - Secrets / Token Access: `0`
+  - Notification Boundary: `notificationBypassed: true` enforced on all UI control rendering.
+- **Automated Verification**: `npm run check` PASS, `npm run simulate:all` **197 / 197 PASS**, backend/LINE dry-run PASS.
+- **Recommended Next Gate**: `Stage 35-A: Operation Control Integration Gate`
+
 
 ## Stage 33 Summary & Role Guard Safety Record
 
