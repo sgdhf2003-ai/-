@@ -216,9 +216,78 @@ function evaluateUserPermission(role, action, targetStatus) {
   return { allowed: true, notificationBypassed: true };
 }
 
+/**
+ * Sanitizes and redacts readback audit record fields according to user role contract.
+ * Pure function: does not mutate the input record object.
+ *
+ * @param {Object} record Input audit/readback record object
+ * @param {string} userRole User role code (admin, boss, assistant, sales, retail, etc.)
+ * @return {{ ok: boolean, record?: Object, errorCode?: string, message?: string }} Redaction result
+ */
+function sanitizeReadbackAuditRecord(record, userRole) {
+  if (!userRole || userRole === 'null' || userRole === 'undefined' || userRole === 'unknown') {
+    return {
+      ok: false,
+      errorCode: 'INVALID_SESSION_USER',
+      message: '登入狀態失效或缺少使用者權限脈絡'
+    };
+  }
+
+  const normRole = String(userRole || '').trim().toLowerCase();
+
+  // 1. Sales / Retail roles query deny contract
+  if (normRole === 'sales' || normRole === 'retailsales' || normRole === 'showroomsales' || normRole === 'retail' || normRole === '無') {
+    return {
+      ok: false,
+      errorCode: 'READBACK_QUERY_DENIED',
+      message: '無存取讀回紀錄權限'
+    };
+  }
+
+  if (!record || typeof record !== 'object') {
+    return { ok: true, record: null };
+  }
+
+  // 2. Admin & Boss receive full unredacted audit details
+  if (normRole === 'admin' || normRole === 'boss') {
+    return { ok: true, record: { ...record } };
+  }
+
+  // 3. Assistant receives operational fields, omitting sensitive internal logs/properties
+  if (normRole === 'assistant') {
+    const sanitized = { ...record };
+
+    // Sensitive fields to redact/delete for non-admin
+    const sensitiveFields = [
+      'internalLogs',
+      'rawAdapterPayload',
+      'systemProperties',
+      'supplierInternals',
+      'debugPayloads',
+      'tokenNames',
+      'tokenValues',
+      'adapterConfiguration',
+      'cleanupCorrectionNotes'
+    ];
+
+    sensitiveFields.forEach(field => {
+      delete sanitized[field];
+    });
+
+    sanitized.readbackRedacted = true;
+    return { ok: true, record: sanitized };
+  }
+
+  return {
+    ok: false,
+    errorCode: 'UNAUTHORIZED_ROLE',
+    message: '未授權的角色讀回請求'
+  };
+}
 
 module.exports = {
   OCR_CONFIDENCE_THRESHOLD,
   evaluateAllocationRules,
-  evaluateUserPermission
+  evaluateUserPermission,
+  sanitizeReadbackAuditRecord
 };

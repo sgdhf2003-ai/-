@@ -3,7 +3,8 @@
  */
 
 const assert = require('assert');
-const { evaluateAllocationRules, OCR_CONFIDENCE_THRESHOLD, evaluateUserPermission } = require('../../allocation-assistant/index');
+const { evaluateAllocationRules, OCR_CONFIDENCE_THRESHOLD, evaluateUserPermission, sanitizeReadbackAuditRecord } = require('../../allocation-assistant/index');
+
 
 
 let totalTests = 0;
@@ -194,6 +195,96 @@ runTest('permission check preserves notificationBypassed flag as true by default
   const perm = evaluateUserPermission('admin', 'upsertHold');
   assert.strictEqual(perm.allowed, true);
   assert.strictEqual(perm.notificationBypassed, true);
+});
+
+// 13. Readback Redaction: Assistant Role Keeps Operational Fields and Omits Sensitive Payload
+runTest('assistant readback keeps operational fields and redacts internal logs and properties', () => {
+  const rawAuditRecord = {
+    reservationNumber: 'RES-20260801-001',
+    status: 'ACTIVE',
+    quantity: 10,
+    remainingQuantity: 5,
+    item: 'EQA-6522',
+    storeId: 'STORE_001',
+    storeName: '台北門市',
+    createdAt: '2026-08-01T10:00:00Z',
+    updatedAt: '2026-08-01T10:05:00Z',
+    actionSummary: 'PARTIAL_FULFILLMENT',
+    internalLogs: 'DB_TRACE_LINE_99_KEY_EXPOSURE',
+    rawAdapterPayload: { secretToken: '123' },
+    systemProperties: { scriptId: 'abc' },
+    supplierInternals: { cost: 500 },
+    debugPayloads: { trace: 'stack' }
+  };
+
+  const res = sanitizeReadbackAuditRecord(rawAuditRecord, 'assistant');
+  assert.strictEqual(res.ok, true);
+  assert.strictEqual(res.record.reservationNumber, 'RES-20260801-001');
+  assert.strictEqual(res.record.status, 'ACTIVE');
+  assert.strictEqual(res.record.quantity, 10);
+  assert.strictEqual(res.record.remainingQuantity, 5);
+  assert.strictEqual(res.record.item, 'EQA-6522');
+  assert.strictEqual(res.record.storeId, 'STORE_001');
+  assert.strictEqual(res.record.readbackRedacted, true);
+  assert.strictEqual(res.record.internalLogs, undefined);
+  assert.strictEqual(res.record.rawAdapterPayload, undefined);
+  assert.strictEqual(res.record.systemProperties, undefined);
+  assert.strictEqual(res.record.supplierInternals, undefined);
+  assert.strictEqual(res.record.debugPayloads, undefined);
+});
+
+// 14. Readback Redaction: Sales / Retail Query Denied
+runTest('sales or retail role readback query returns READBACK_QUERY_DENIED', () => {
+  const rawAuditRecord = { reservationNumber: 'RES-20260801-001', status: 'ACTIVE' };
+
+  const resSales = sanitizeReadbackAuditRecord(rawAuditRecord, 'sales');
+  assert.strictEqual(resSales.ok, false);
+  assert.strictEqual(resSales.errorCode, 'READBACK_QUERY_DENIED');
+
+  const resRetail = sanitizeReadbackAuditRecord(rawAuditRecord, 'retail');
+  assert.strictEqual(resRetail.ok, false);
+  assert.strictEqual(resRetail.errorCode, 'READBACK_QUERY_DENIED');
+});
+
+// 15. Readback Redaction: Admin / Boss Full Audit Access
+runTest('admin and boss roles receive full unredacted audit details', () => {
+  const rawAuditRecord = {
+    reservationNumber: 'RES-20260801-001',
+    internalLogs: 'FULL_LOG_DETAIL',
+    systemProperties: { scriptId: '1vRepq' }
+  };
+
+  const resAdmin = sanitizeReadbackAuditRecord(rawAuditRecord, 'admin');
+  assert.strictEqual(resAdmin.ok, true);
+  assert.strictEqual(resAdmin.record.internalLogs, 'FULL_LOG_DETAIL');
+
+  const resBoss = sanitizeReadbackAuditRecord(rawAuditRecord, 'boss');
+  assert.strictEqual(resBoss.ok, true);
+  assert.strictEqual(resBoss.record.internalLogs, 'FULL_LOG_DETAIL');
+});
+
+// 16. Readback Redaction: Invalid / Missing Role Fails Closed
+runTest('missing or invalid role returns INVALID_SESSION_USER', () => {
+  const rawAuditRecord = { reservationNumber: 'RES-20260801-001' };
+
+  const resNull = sanitizeReadbackAuditRecord(rawAuditRecord, null);
+  assert.strictEqual(resNull.ok, false);
+  assert.strictEqual(resNull.errorCode, 'INVALID_SESSION_USER');
+
+  const resUnknown = sanitizeReadbackAuditRecord(rawAuditRecord, 'unknown');
+  assert.strictEqual(resUnknown.ok, false);
+  assert.strictEqual(resUnknown.errorCode, 'INVALID_SESSION_USER');
+});
+
+// 17. Readback Redaction: Non-Mutating Pure Function
+runTest('sanitizeReadbackAuditRecord does not mutate the original record object', () => {
+  const originalRecord = {
+    reservationNumber: 'RES-20260801-001',
+    internalLogs: 'DO_NOT_DELETE_FROM_ORIGINAL'
+  };
+
+  sanitizeReadbackAuditRecord(originalRecord, 'assistant');
+  assert.strictEqual(originalRecord.internalLogs, 'DO_NOT_DELETE_FROM_ORIGINAL');
 });
 
 console.log(`\nAllocation Rules Engine Simulation Summary: ${passedTests} / ${totalTests} PASS`);

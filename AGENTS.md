@@ -333,7 +333,32 @@ Every time an AI model or session takes over the project:
 3. **進行多輪詰問辯論**：經由交鋒提煉出兼顧安全與價值的「最佳進化方案 (Option A+ / Optimized Master Plan)」。
 4. **輸出決策摘要**：向 Owner 呈報對比總覽、紅藍辯論突破口、優缺點分析與最終建議，待 Owner 確認後方可發送實作 Token。
 
+## 18.5. Main-Axis Recovery Rule
+
+The main product axis is the Allocation Assistant daily operation loop:
+
+```text
+Create formal hold -> fulfill or partially fulfill -> cancel/release -> readback/audit
+```
+
+When an interruption, safety fix, Git/GitHub correction, documentation update, permission guard, deployment check, or other side task appears:
+
+1. Classify whether it blocks the Allocation Assistant daily operation loop.
+2. If it blocks the loop, perform only the smallest safe fix needed to unblock the loop, then return to the main axis.
+3. If it does not block the loop, pause it and record it as backlog or a later gate instead of expanding the current stage.
+4. After every interruption, report:
+
+```text
+Interruption closed.
+Blocks main axis: yes/no.
+Return target: <current Allocation Assistant stage>.
+Deferred items: <none or short list>.
+```
+
+Governance, security, and documentation work should support the Allocation Assistant loop. They must not become the product main axis unless the owner explicitly changes the project direction.
+
 ## 19. Handoff Report Template
+
 
 ```text
 【Project Context Gate】
