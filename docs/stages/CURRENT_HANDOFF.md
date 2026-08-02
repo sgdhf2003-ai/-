@@ -5,23 +5,35 @@
 - repo root: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 - branch: `main`
 - source of truth: Canonical cloud-drive checkout path above
-- HEAD: `aa1f191ba754ae200f3d23f9d826244361937af0`
-- origin/main: `aa1f191ba754ae200f3d23f9d826244361937af0`
+- HEAD: `8f292dbc5c87f913c9fdd05beb73c0cc025e9bd9`
+- origin/main: `8f292dbc5c87f913c9fdd05beb73c0cc025e9bd9`
 - ahead / behind vs origin/main: `0 / 0`
 
 ## Current Stage
 
-- current stage: Stage 37-C Stage 37 Milestone Handoff & Memory Closure Record
+- current stage: Stage 38-E Stage 38 Milestone Handoff & Memory Closure Record
 - previous completed deliveries:
-  - Stage 36 Production Operation Readback & Controlled Integration Package (`d697cfb`)
-  - Stage 37-A Backend Deploy Readiness & Approval Package (Version 97 Deployed)
-  - Stage 37-B Controlled Production Verification Gate (Proof Executed)
-  - Stage 37-C Stage 37 Milestone Handoff & Memory Closure Record
-- latest pushed main commit: `aa1f191ba754ae200f3d23f9d826244361937af0` (`docs: record Stage 37-A backend Version 97 deployment in project handoff and memory`)
-- backend deployed version: `97` (canonical deployment record - 103 versions headroom remaining)
+  - Stage 37 Production Verification Gate & Version 97 Deployment (`3879b58`)
+  - Stage 38 Admin Operation Flow UI Endpoint Integration & Version 98 Deployment (`8f292db`)
+  - Stage 38-E Stage 38 Milestone Handoff & Memory Closure Record
+- latest pushed main commit: `8f292dbc5c87f913c9fdd05beb73c0cc025e9bd9` (`feat: add explicit doPost action dispatchers for fulfillHold and cancelReleaseHold in backend Code.gs`)
+- backend deployed version: `98` (canonical deployment record - 102 versions headroom remaining)
 - LINE Bot deployed version: `1` (canonical deployment record - fresh project Version 1)
 - automated simulations: 202 / 202 PASS (`npm run simulate:all`)
 - Web App URL: `https://script.google.com/macros/s/AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw/exec`
+
+## Stage 38 Summary & Backend Version 98 Integration Record
+
+- **Stage 38 Status**: ADMIN OPERATION FLOW UI ENDPOINT INTEGRATION & VERSION 98 DEPLOYMENT COMPLETE
+- **Backend Code Alignment (`8f292db`)**: Added explicit `doPost` action dispatchers for `fulfillHold` and `cancelReleaseHold` in `google-apps-script/Code.gs`.
+- **Backend Deployment (Version 98)**: Pushed 4 backend source files and created Version 98 (`AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw`). Verified HTTP 200 live endpoint response and confirmed `fulfillHoldAction` & `cancelReleaseHoldAction` in live function registry.
+- **Side Effect Summary**:
+  - Google Sheet Writes: `0`
+  - LINE API Calls: `0` (`notificationBypassed: true` preserved)
+  - Secrets / Token Access: `0`
+- **Automated Verification**: `npm run check` PASS, `npm run simulate:all` **202 / 202 PASS**, backend/LINE dry-run PASS, `git diff --check` PASS.
+- **Recommended Next Gate**: `Stage 39: Sales Admin Daily Operational Flow Readiness Audit`
+
 
 ## Stage 37 Summary & Production Verification Record
 

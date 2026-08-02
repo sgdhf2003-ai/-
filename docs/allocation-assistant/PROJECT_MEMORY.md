@@ -34,14 +34,20 @@
   - 新增單元測試，測試總數提升至 **202 / 202 PASS**。
 
 ### Stage 37: Controlled Production Deployment & Operation Verification Gate
-* **狀態**: 完成並記錄 (Stage 37 Milestone Complete)
-* **最新同步 Commit**: `aa1f191ba754ae200f3d23f9d826244361937af0` (`docs: record Stage 37-A backend Version 97 deployment in project handoff and memory`)
+* **狀態**: 完成並記錄 (`3879b58`)
 * **交付與驗證內容**:
-  - **Stage 37-A 後端 Web App 受控部署**: 在 Owner 授權下成功部署 Backend Web App 至 **Version 97** (`AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw`)。
-  - **Stage 37-B 受控生產寫入與審查證明**: CONTROLLED PRODUCTION SHEET WRITE PROOF EXECUTED AND CLEANED UP (`RES-20260802-TEST01` -> `TEST_CLEANUP_DELETED`)。
-  - 驗證單號一致性 (`reservationNumber === holdRecord.id === rowData[0]`)。
-  - 驗證權限去敏感化 (助理層級 `readbackRedacted === true`，管理員完整 unredacted 審查，銷售員拒絕存取 `READBACK_QUERY_DENIED`)。
-  - 保留 `notificationBypassed: true`，LINE API 主動發送數維持為 `0`。
+  - Backend Web App 成功部署至 **Version 97**。
+  - 受控生產寫入證明完好執行並清理 (`RES-20260802-TEST01` -> `TEST_CLEANUP_DELETED`)。
+
+### Stage 38: Admin Operation Flow UI Endpoint Integration Gate
+* **狀態**: 完成並記錄 (Stage 38 Milestone Complete)
+* **最新同步 Commit**: `8f292dbc5c87f913c9fdd05beb73c0cc025e9bd9` (`feat: add explicit doPost action dispatchers for fulfillHold and cancelReleaseHold in backend Code.gs`)
+* **交付與驗證內容**:
+  - **合約審查**: 審查並確認 `AllocationSandboxView` 與 `AllocationGatewayClient` 之 4 大劃扣操作流程合約與安全防護機制。
+  - **後端派發器補強**: 在 `google-apps-script/Code.gs` 為 `fulfillHold` 與 `cancelReleaseHold` 補強顯式 `doPost` action 派發器與角色驗證。
+  - **Stage 38-D 受控部署**: 在 Owner 授權下成功部署 Backend Web App 至 **Version 98** (`AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw`)。
+  - **線上端點驗證**: 驗證線上 Web App 端點 (HTTP 200 OK) 並確認 `fulfillHoldAction` 與 `cancelReleaseHoldAction` 存在於線上函式清單。
+  - 0 次未授權 Google Sheet 寫入、0 次 LINE API 發送、0 次 Token 讀取。
 
 ## 4. 自動化驗證基線 (Automated Verification Baseline)
 - `npm run check`: **PASS**
@@ -49,7 +55,8 @@
 - `python3 deploy.py backend --check`: **VALID** (Backend Apps Script dry-run safe)
 - `python3 deploy.py line-bot --check`: **VALID** (LINE Bot Apps Script dry-run safe)
 - `git diff --check`: **PASS** (0 空白字元錯誤)
-- **生產環境部署記錄**: Backend Web App Version 97, LINE Bot Project Version 1 完好保留。
+- **生產環境部署記錄**: Backend Web App Version 98, LINE Bot Project Version 1 完好保留。
+
 
 
 
