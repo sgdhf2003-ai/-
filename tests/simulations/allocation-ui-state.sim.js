@@ -137,6 +137,51 @@ runTest('AllocationSandboxView container includes role context and notification 
   assert.strictEqual(html.includes('LINE通知已關閉'), true);
 });
 
+// 9. Readback Audit Card Rendering & Redaction Notice
+runTest('AllocationSandboxView renders redacted audit card for assistant and full card for admin', () => {
+  const sandboxView = new AllocationSandboxView();
+
+  // Assistant redacted audit card
+  const resAssistant = {
+    ok: true,
+    record: {
+      reservationNumber: 'RES-20260801-001',
+      status: 'ACTIVE',
+      updatedAt: '2026-08-02T12:00:00Z',
+      readbackRedacted: true
+    }
+  };
+  const htmlAssistant = sandboxView.renderReadbackAuditCard(resAssistant, 'assistant');
+  assert.strictEqual(htmlAssistant.includes('audit-card-redacted'), true);
+  assert.strictEqual(htmlAssistant.includes('去敏感化審查紀錄'), true);
+  assert.strictEqual(htmlAssistant.includes('RES-20260801-001'), true);
+
+  // Admin full audit card
+  const resAdmin = {
+    ok: true,
+    record: {
+      reservationNumber: 'RES-20260801-001',
+      status: 'ACTIVE',
+      internalLogs: 'RAW_DB_LOG',
+      readbackRedacted: false
+    }
+  };
+  const htmlAdmin = sandboxView.renderReadbackAuditCard(resAdmin, 'admin');
+  assert.strictEqual(htmlAdmin.includes('audit-card-full'), true);
+  assert.strictEqual(htmlAdmin.includes('完整系統審查紀錄'), true);
+  assert.strictEqual(htmlAdmin.includes('RAW_DB_LOG'), true);
+
+  // Sales access denied card
+  const resDenied = {
+    ok: false,
+    errorCode: 'READBACK_QUERY_DENIED',
+    message: '無存取讀回紀錄權限'
+  };
+  const htmlDenied = sandboxView.renderReadbackAuditCard(resDenied, 'sales');
+  assert.strictEqual(htmlDenied.includes('audit-card-denied'), true);
+  assert.strictEqual(htmlDenied.includes('READBACK_QUERY_DENIED'), true);
+});
+
 console.log(`\nAllocation UI State Simulation Summary: ${passedTests} / ${totalTests} PASS`);
 if (passedTests !== totalTests) {
   process.exit(1);

@@ -82,6 +82,47 @@ class AllocationSandboxView {
   }
 
 
+  renderReadbackAuditCard(readbackResult, userRole) {
+    const normRole = String(userRole || '').trim().toLowerCase();
+    if (!readbackResult || !readbackResult.ok) {
+      const errCode = readbackResult ? readbackResult.errorCode : 'UNKNOWN_ERROR';
+      return `
+        <div class="readback-audit-card audit-card-denied" data-error-code="${errCode}">
+          <span class="audit-badge audit-badge-denied">存取被拒 (${errCode})</span>
+          <p class="audit-msg">${readbackResult ? readbackResult.message : '無存取讀回紀錄權限'}</p>
+        </div>
+      `.trim();
+    }
+
+    const record = readbackResult.record || readbackResult;
+    const isRedacted = Boolean(record.readbackRedacted);
+
+    if (isRedacted) {
+      return `
+        <div class="readback-audit-card audit-card-redacted" data-redacted="true" data-role="${normRole}">
+          <span class="audit-badge audit-badge-redacted">去敏感化審查紀錄 (助理層級)</span>
+          <div class="audit-fields">
+            <span class="field-item">單號: ${record.reservationNumber || 'N/A'}</span>
+            <span class="field-item">狀態: ${record.status || 'N/A'}</span>
+            <span class="field-item">更新時間: ${record.updatedAt || 'N/A'}</span>
+          </div>
+          <p class="audit-redaction-note">[敏感除錯記錄與系統屬性已自動遮蔽]</p>
+        </div>
+      `.trim();
+    }
+
+    return `
+      <div class="readback-audit-card audit-card-full" data-redacted="false" data-role="${normRole}">
+        <span class="audit-badge audit-badge-full">完整系統審查紀錄 (管理員層級)</span>
+        <div class="audit-fields">
+          <span class="field-item">單號: ${record.reservationNumber || 'N/A'}</span>
+          <span class="field-item">狀態: ${record.status || 'N/A'}</span>
+          <span class="field-item">內部日誌: ${record.internalLogs || 'N/A'}</span>
+        </div>
+      </div>
+    `.trim();
+  }
+
   switchTab(tabId) {
     this.activeTabId = tabId;
 

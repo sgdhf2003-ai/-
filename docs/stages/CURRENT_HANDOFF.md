@@ -5,22 +5,38 @@
 - repo root: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 - branch: `main`
 - source of truth: Canonical cloud-drive checkout path above
-- HEAD: `fa6b8732f65d8d9571449ce4d2942ec6a234823b`
-- origin/main: `fa6b8732f65d8d9571449ce4d2942ec6a234823b`
+- HEAD: `bd1e841b08e6fe9c516dc896841486cf17974409`
+- origin/main: `bd1e841b08e6fe9c516dc896841486cf17974409`
 - ahead / behind vs origin/main: `0 / 0`
 
 ## Current Stage
 
-- current stage: Stage 35-C Stage 35 Handoff & Operation Handler Integration Record
+- current stage: Stage 36 Production Operation Readback & Controlled Integration Package
 - previous completed deliveries:
-  - Stage 34-C Stage 34 Handoff & Operation UI Readiness Record (`602e1cc`)
-  - Stage 35-A Operation Control Integration Contract Gate (PASS)
-  - Stage 35-B Operation Control Handler Test-First Wiring (`fa6b873`)
-  - Stage 35-C Stage 35 Handoff & Operation Handler Integration Record
-- latest pushed main commit: `fa6b8732f65d8d9571449ce4d2942ec6a234823b` (`feat: wire operation handlers with role guards and readback redaction in AllocationGatewayClient`)
+  - Stage 35-C Stage 35 Handoff & Operation Handler Integration Record (`bd1e841`)
+  - Stage 36 Production Operation Readback & Controlled Integration Package
+- latest pushed main commit: `bd1e841b08e6fe9c516dc896841486cf17974409` (`docs: record Stage 35 handoff and operation handler integration`)
 - backend deployed version: `96` (canonical deployment record - 104 versions headroom remaining)
 - LINE Bot deployed version: `1` (canonical deployment record - fresh project Version 1)
-- automated simulations: 201 / 201 PASS (`npm run simulate:all`)
+- automated simulations: 202 / 202 PASS (`npm run simulate:all`)
+
+## Stage 36 Summary & Controlled Integration Record
+
+- **Stage 36 Status**: PRODUCTION OPERATION READBACK & CONTROLLED INTEGRATION COMPLETE
+- **Stage 36 Contract & Wiring**:
+  - Proved safe connection of Allocation Assistant operation loop (`Create formal hold -> Fulfill/partial fulfill -> Cancel/release -> Readback audit`).
+  - Added `renderReadbackAuditCard(readbackResult, userRole)` UI renderer in `AllocationSandboxView`.
+  - Enforced role-aware redaction (`readbackRedacted === true`) for `assistant` level audit views while allowing unredacted access for `admin`/`boss`.
+  - Added Test 9 in `tests/simulations/allocation-ui-state.sim.js`.
+- **Side Effect Summary**:
+  - Google Sheet Writes: `0`
+  - LINE API Calls: `0`
+  - Deployments Executed: `0`
+  - Secrets / Token Access: `0`
+  - Notification Boundary: `notificationBypassed: true` enforced across all operation handlers and UI views.
+- **Automated Verification**: `npm run check` PASS, `npm run simulate:all` **202 / 202 PASS**, backend/LINE dry-run PASS.
+- **Recommended Next Stage**: `Stage 37: Controlled Production Deployment & Operation Verification Gate`
+
 
 ## Stage 35 Summary & Operation Handler Wiring Record
 
