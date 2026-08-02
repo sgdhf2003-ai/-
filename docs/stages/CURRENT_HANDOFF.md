@@ -5,20 +5,22 @@
 - repo root: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 - branch: `main`
 - source of truth: Canonical cloud-drive checkout path above
-- HEAD: `bd1e841b08e6fe9c516dc896841486cf17974409`
-- origin/main: `bd1e841b08e6fe9c516dc896841486cf17974409`
+- HEAD: `4296e10d9acff4ba1050a645475a858c4936a789`
+- origin/main: `4296e10d9acff4ba1050a645475a858c4936a789`
 - ahead / behind vs origin/main: `0 / 0`
 
 ## Current Stage
 
-- current stage: Stage 36 Production Operation Readback & Controlled Integration Package
+- current stage: Stage 37-A Backend Deploy Readiness & Approval Package (Deployed)
 - previous completed deliveries:
-  - Stage 35-C Stage 35 Handoff & Operation Handler Integration Record (`bd1e841`)
-  - Stage 36 Production Operation Readback & Controlled Integration Package
-- latest pushed main commit: `bd1e841b08e6fe9c516dc896841486cf17974409` (`docs: record Stage 35 handoff and operation handler integration`)
-- backend deployed version: `96` (canonical deployment record - 104 versions headroom remaining)
+  - Stage 36 Production Operation Readback & Controlled Integration Package (`d697cfb`)
+  - Stage 37-A Backend Deploy Readiness & Approval Package (Version 97 Deployed)
+- latest pushed main commit: `4296e10d9acff4ba1050a645475a858c4936a789` (`docs: create PROJECT_MEMORY.md for allocation assistant build history and governance`)
+- backend deployed version: `97` (canonical deployment record - 103 versions headroom remaining)
 - LINE Bot deployed version: `1` (canonical deployment record - fresh project Version 1)
 - automated simulations: 202 / 202 PASS (`npm run simulate:all`)
+- Web App URL: `https://script.google.com/macros/s/AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw/exec`
+
 
 ## Stage 36 Summary & Controlled Integration Record
 

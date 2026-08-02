@@ -34,9 +34,11 @@
   - 新增單元測試，測試總數提升至 **202 / 202 PASS**。
 
 ### Stage 37: Controlled Production Deployment & Operation Verification Gate
-* **狀態**: 當前受控審查關卡 (Contract Defined & Dry-Run Verified)
-* **最新同步 Commit**: `d697cfb4d15b792f1443c0a86c277d4900a45365` (`feat: add production operation readback integration package for allocation assistant`)
-* **當前記錄**: 0 程式碼變更、0 次生產環境部署、0 次 Google Sheet 寫入、0 次 LINE API 發送、0 次 Token 讀取。
+* **狀態**: Stage 37-A 後端 Web App 受控部署完成 (Version 97 Deployed)
+* **最新同步 Commit**: `4296e10d9acff4ba1050a645475a858c4936a789` (`docs: create PROJECT_MEMORY.md for allocation assistant build history and governance`)
+* **當前記錄**:
+  - 後端 Web App 成功部署至 **Version 97** (`AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw`)。
+  - 0 次未授權 Google Sheet 寫入、0 次 LINE API 發送、0 次 Token 讀取。
 
 ## 4. 自動化驗證基線 (Automated Verification Baseline)
 - `npm run check`: **PASS**
@@ -44,7 +46,8 @@
 - `python3 deploy.py backend --check`: **VALID** (Backend Apps Script dry-run safe)
 - `python3 deploy.py line-bot --check`: **VALID** (LINE Bot Apps Script dry-run safe)
 - `git diff --check`: **PASS** (0 空白字元錯誤)
-- **生產環境部署記錄**: Fresh Apps Script Project Version 1 完好保留。
+- **生產環境部署記錄**: Backend Web App Version 97, LINE Bot Project Version 1 完好保留。
+
 
 ## 5. 安全邊界與禁止行為 (Safety Boundaries & Prohibitions)
 未經 Owner 明確獨立授權前，嚴禁執行以下事項：

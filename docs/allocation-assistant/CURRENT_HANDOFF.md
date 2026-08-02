@@ -4,8 +4,8 @@
 * **交接日期**: 2026-08-02
 * **執行目錄**: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 * **目前分支**: `main`
-* **HEAD Hash**: `bd1e841b08e6fe9c516dc896841486cf17974409`
-* **origin/main Hash**: `bd1e841b08e6fe9c516dc896841486cf17974409`
+* **HEAD Hash**: `4296e10d9acff4ba1050a645475a858c4936a789`
+* **origin/main Hash**: `4296e10d9acff4ba1050a645475a858c4936a789`
 * **分支關係**: `0 ahead / 0 behind` (完全同步)
 * **Working Tree 狀態**: Clean
 
@@ -14,12 +14,14 @@
 * 完成 Stage 32 建立生產環境 Standard Operating Procedure (`docs/allocation-assistant/OPERATING_SOP.md`)。
 * 完成 Stage 33-C 伺服端角色權限防護層 (`30ea9cc`) 與 Stage 33-E 讀回遮蔽合約 (`8ddac76`)。
 * 完成 Stage 34 角色權限 UI 控制項渲染 (`9eb9f85`) 與 Stage 35 操作處理器接線 (`fa6b873`)。
-* 完成 Stage 36 生產環境劃扣作業讀回與受控整合套件 (Package Complete):
-  - 驗證配貨助手 4 大作業環節全流程整合。
-  - 實作 `AllocationSandboxView` 之 `renderReadbackAuditCard(readbackResult, userRole)` 審查紀錄卡片渲染器。
-  - 貫徹角色去敏感化 (`readbackRedacted === true`) 與專用防護標籤。
-  - 測試總數提升至 **202 / 202 PASS**。
+* 完成 Stage 36 生產環境劃扣作業讀回與受控整合套件 (`d697cfb`)。
+* 完成 Stage 37-A 後端 Web App 受控部署:
+  - 在 Owner 明確授權下成功部署 Backend Web App **Version 97**。
+  - Script ID: `1vRepq_HNkjbs8vRQvbkkDE8unGPHfksfhOTrkrNZthFZHs2GSHO8Gasc`
+  - Deployment ID: `AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw`
+  - 測試總數保持 **202 / 202 PASS**。
 * 本機檢查、模擬測試與部署 Dry Run 全數通過 (`npm run check`, `npm run simulate:all`, `deploy.py --check` PASS)。
+
 
 ## 3. 未完成內容與未啟用功能 (Deactivated Features)
 * LINE API 主動 Push/Send 維持關閉 (`notificationBypassed: true`)。
