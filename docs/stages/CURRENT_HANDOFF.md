@@ -5,21 +5,45 @@
 - repo root: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 - branch: `main`
 - source of truth: Canonical cloud-drive checkout path above
-- HEAD: `f629cee81bae1662d72e3ca81c06ae10966c41c4`
-- origin/main: `f629cee81bae1662d72e3ca81c06ae10966c41c4`
+- HEAD: `30ea9cc345f2a03c5e2ffdcc80dbf9659efff063`
+- origin/main: `30ea9cc345f2a03c5e2ffdcc80dbf9659efff063`
 - ahead / behind vs origin/main: `0 / 0`
 
 ## Current Stage
 
-- current stage: Stage 32-B Production Operating SOP Closure Record
+- current stage: Stage 33-D Stage 33 Handoff & UI Integration Readiness Record
 - previous completed deliveries:
-  - Stage 31-C Stage 31 Milestone Documentation Closure (`f629cee`)
-  - Stage 32-A Production Workflow Readiness Gate (PASS)
-  - Stage 32-B Production Operating SOP Documentation Closure
-- latest pushed main commit: `f629cee81bae1662d72e3ca81c06ae10966c41c4` (`docs: record Stage 31 controlled fulfillment and cancel release closure`)
+  - Stage 32-B Production Operating SOP Closure Record (`9d9ee78`)
+  - Stage 33-A Admin-Only Web App UI Endpoint Audit (PASS)
+  - Stage 33-B Admin UI Write-Action Contract Spec (PASS)
+  - Stage 33-C Server-Side Role Guard Test-First Patch (`30ea9cc`)
+  - Stage 33-D Stage 33 Handoff & UI Integration Readiness Record
+- latest pushed main commit: `30ea9cc345f2a03c5e2ffdcc80dbf9659efff063` (`feat: add server side role validation guard and permission deny codes`)
 - backend deployed version: `96` (canonical deployment record - 104 versions headroom remaining)
 - LINE Bot deployed version: `1` (canonical deployment record - fresh project Version 1)
-- automated simulations: 181 / 181 PASS (`npm run simulate:all`)
+- automated simulations: 188 / 188 PASS (`npm run simulate:all`)
+
+## Stage 33 Summary & Role Guard Safety Record
+
+- **Stage 33 Status**: SERVER-SIDE ROLE GUARD PATCH COMPLETE & HANDOFF RECORDED
+- **Stage 33-A Audit**: Audited PWA/Apps Script UI entrypoints (`index.html`, `app.js`, `AllocationAssistantView.html`, `allocation-sandbox-view.js`).
+- **Stage 33-B Contract Spec**: Defined authorization role matrix (`admin`, `boss`, `assistant`, `sales`, `retail`) and permission deny codes.
+- **Stage 33-C Code Patch (`30ea9cc`)**:
+  - Implemented `evaluateUserPermission` rule evaluator helper.
+  - Implemented server-side `upsertHolds` role validation guards in `google-apps-script/Code.gs`.
+  - Added 7 automated unit test cases in `tests/simulations/allocation-rules.sim.js`.
+- **Verified Deny Codes**:
+  - `UNAUTHORIZED_ROLE`: Returned when `sales`/`retail` roles attempt write actions (`upsertHold`, `fulfillHold`, `cancelRelease`).
+  - `ADMIN_ROLE_REQUIRED`: Returned when `assistant` role attempts admin-only cleanup (`TEST_CLEANUP_DELETED`, `CORRECTED`).
+  - `INVALID_SESSION_USER`: Returned when `userContext` / `role` is null, undefined, or unknown.
+- **Side Effect Summary**:
+  - Google Sheet Writes: `0`
+  - LINE API Calls: `0`
+  - Deployments Executed: `0`
+  - Secrets / Token Access: `0`
+  - Notification Boundary: `notificationBypassed: true` enforced on all write checks.
+- **Automated Verification**: `npm run check` PASS, `npm run simulate:all` **188 / 188 PASS**, backend/LINE dry-run PASS.
+- **Recommended Next Gate**: `Stage 33-E: Readback Redaction Contract & Tests`
 
 ## Stage 32 Summary & Production Operating SOP State
 
