@@ -3,7 +3,8 @@
  */
 
 const assert = require('assert');
-const { AllocationUIState } = require('../../allocation-assistant/index');
+const { AllocationUIState, AllocationSandboxView } = require('../../allocation-assistant/index');
+
 
 let totalTests = 0;
 let passedTests = 0;
@@ -95,6 +96,45 @@ runTest('cancel transitions state to CANCELLED and blocks invalid transitions', 
   assert.throws(() => {
     uiState.confirm();
   }, /INVALID_STATE_TRANSITION/);
+});
+
+// 6. Role-Aware UI Control: Authorized Admin / Assistant Enabled Controls
+runTest('AllocationSandboxView renders enabled operation controls for authorized admin boss assistant roles', () => {
+  const sandboxView = new AllocationSandboxView();
+
+  ['admin', 'boss', 'assistant'].forEach(role => {
+    const controlsHtml = sandboxView.renderSandboxControls(role);
+    assert.strictEqual(controlsHtml.includes('btn-enabled'), true);
+    assert.strictEqual(controlsHtml.includes('disabled'), false);
+    assert.strictEqual(controlsHtml.includes(`data-user-role="${role}"`), true);
+
+    const bannerHtml = sandboxView.renderWarningBanner(role);
+    assert.strictEqual(bannerHtml.includes('sandbox-badge-authorized'), true);
+  });
+});
+
+// 7. Role-Aware UI Control: Unauthorized Sales / Retail Disabled Controls
+runTest('AllocationSandboxView renders disabled controls with locked warning for sales retail unauthenticated roles', () => {
+  const sandboxView = new AllocationSandboxView();
+
+  ['sales', 'retail', 'unauthenticated', null].forEach(role => {
+    const controlsHtml = sandboxView.renderSandboxControls(role);
+    assert.strictEqual(controlsHtml.includes('btn-disabled'), true);
+    assert.strictEqual(controlsHtml.includes('disabled read-only'), true);
+
+    const bannerHtml = sandboxView.renderWarningBanner(role);
+    assert.strictEqual(bannerHtml.includes('唯讀沙盒模式'), true);
+  });
+});
+
+
+// 8. Role-Aware Container Rendering & Notification Boundary
+runTest('AllocationSandboxView container includes role context and notification bypass notice', () => {
+  const sandboxView = new AllocationSandboxView();
+  const html = sandboxView.renderSandboxContainer('assistant');
+
+  assert.strictEqual(html.includes('配貨試算 (assistant)'), true);
+  assert.strictEqual(html.includes('LINE通知已關閉'), true);
 });
 
 console.log(`\nAllocation UI State Simulation Summary: ${passedTests} / ${totalTests} PASS`);
