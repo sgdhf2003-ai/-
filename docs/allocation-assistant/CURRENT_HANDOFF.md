@@ -4,8 +4,8 @@
 * **交接日期**: 2026-08-02
 * **執行目錄**: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 * **目前分支**: `main`
-* **HEAD Hash**: `4296e10d9acff4ba1050a645475a858c4936a789`
-* **origin/main Hash**: `4296e10d9acff4ba1050a645475a858c4936a789`
+* **HEAD Hash**: `aa1f191ba754ae200f3d23f9d826244361937af0`
+* **origin/main Hash**: `aa1f191ba754ae200f3d23f9d826244361937af0`
 * **分支關係**: `0 ahead / 0 behind` (完全同步)
 * **Working Tree 狀態**: Clean
 
@@ -15,12 +15,13 @@
 * 完成 Stage 33-C 伺服端角色權限防護層 (`30ea9cc`) 與 Stage 33-E 讀回遮蔽合約 (`8ddac76`)。
 * 完成 Stage 34 角色權限 UI 控制項渲染 (`9eb9f85`) 與 Stage 35 操作處理器接線 (`fa6b873`)。
 * 完成 Stage 36 生產環境劃扣作業讀回與受控整合套件 (`d697cfb`)。
-* 完成 Stage 37-A 後端 Web App 受控部署:
-  - 在 Owner 明確授權下成功部署 Backend Web App **Version 97**。
-  - Script ID: `1vRepq_HNkjbs8vRQvbkkDE8unGPHfksfhOTrkrNZthFZHs2GSHO8Gasc`
-  - Deployment ID: `AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw`
+* 完成 Stage 37 部署與驗證里程碑 (`aa1f191`):
+  - **Stage 37-A 後端 Web App 受控部署**: 在 Owner 授權下部署至 **Version 97** (`AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw`)。
+  - **Stage 37-B 受控生產試算寫入證明**: CONTROLLED PRODUCTION SHEET WRITE PROOF EXECUTED AND CLEANED UP (`RES-20260802-TEST01` -> `TEST_CLEANUP_DELETED`)。
+  - 驗證單號一致性、全生命週期轉移、助理讀回遮蔽 (`readbackRedacted === true`)、管理員完整審查與銷售員拒絕存取。
   - 測試總數保持 **202 / 202 PASS**。
 * 本機檢查、模擬測試與部署 Dry Run 全數通過 (`npm run check`, `npm run simulate:all`, `deploy.py --check` PASS)。
+
 
 
 ## 3. 未完成內容與未啟用功能 (Deactivated Features)

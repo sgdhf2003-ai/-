@@ -5,21 +5,41 @@
 - repo root: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 - branch: `main`
 - source of truth: Canonical cloud-drive checkout path above
-- HEAD: `4296e10d9acff4ba1050a645475a858c4936a789`
-- origin/main: `4296e10d9acff4ba1050a645475a858c4936a789`
+- HEAD: `aa1f191ba754ae200f3d23f9d826244361937af0`
+- origin/main: `aa1f191ba754ae200f3d23f9d826244361937af0`
 - ahead / behind vs origin/main: `0 / 0`
 
 ## Current Stage
 
-- current stage: Stage 37-A Backend Deploy Readiness & Approval Package (Deployed)
+- current stage: Stage 37-C Stage 37 Milestone Handoff & Memory Closure Record
 - previous completed deliveries:
   - Stage 36 Production Operation Readback & Controlled Integration Package (`d697cfb`)
   - Stage 37-A Backend Deploy Readiness & Approval Package (Version 97 Deployed)
-- latest pushed main commit: `4296e10d9acff4ba1050a645475a858c4936a789` (`docs: create PROJECT_MEMORY.md for allocation assistant build history and governance`)
+  - Stage 37-B Controlled Production Verification Gate (Proof Executed)
+  - Stage 37-C Stage 37 Milestone Handoff & Memory Closure Record
+- latest pushed main commit: `aa1f191ba754ae200f3d23f9d826244361937af0` (`docs: record Stage 37-A backend Version 97 deployment in project handoff and memory`)
 - backend deployed version: `97` (canonical deployment record - 103 versions headroom remaining)
 - LINE Bot deployed version: `1` (canonical deployment record - fresh project Version 1)
 - automated simulations: 202 / 202 PASS (`npm run simulate:all`)
 - Web App URL: `https://script.google.com/macros/s/AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw/exec`
+
+## Stage 37 Summary & Production Verification Record
+
+- **Stage 37 Status**: STAGE 37 CONTROLLED PRODUCTION DEPLOYMENT & VERIFICATION MILESTONE COMPLETE
+- **Backend Deployment (Version 97)**: Pushed backend source files and created Version 97 (`AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw`). Verified HTTP 200 live endpoint response.
+- **Controlled Sheet Write Proof**:
+  - Status: **CONTROLLED PRODUCTION SHEET WRITE PROOF EXECUTED AND CLEANED UP**.
+  - Test Reservation ID: `RES-20260802-TEST01`
+  - Lifecycle: `ACTIVE` -> `FULFILLED` -> `TEST_CLEANUP_DELETED`.
+  - Evidence Check: `reservationNumber === holdRecord.id === rowData[0]` verified.
+  - Readback Audit Redaction Contract: Assistant readback redacted (`readbackRedacted === true`), Admin readback unredacted, Sales readback denied (`READBACK_QUERY_DENIED`).
+- **Side Effect Summary**:
+  - Google Sheet Proof: Controlled production Sheet write proof executed and cleaned up to `TEST_CLEANUP_DELETED`.
+  - LINE API Calls: `0` (`notificationBypassed: true` preserved).
+  - Secret / Token Printing: `0`.
+- **Automated Verification**: `npm run check` PASS, `npm run simulate:all` **202 / 202 PASS**, backend/LINE dry-run PASS.
+- **Recommended Next Gate**: `Stage 38: Admin Operation Flow UI Endpoint Integration Gate`
+
 
 
 ## Stage 36 Summary & Controlled Integration Record
