@@ -1,6 +1,4 @@
-/**
- * AllocationGatewayClient Hook & Controller (Pack 3B)
- */
+const { evaluateUserPermission, sanitizeReadbackAuditRecord } = require('../rules/allocation-rules');
 
 class AllocationGatewayClient {
   constructor({ gateway, uiState, tenantParams = {} }) {
@@ -19,6 +17,104 @@ class AllocationGatewayClient {
 
   _generateKey(prefix) {
     return `${prefix}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+  }
+
+  createFormalHold(holdPayload, userContext) {
+    const role = userContext ? userContext.role : null;
+    const perm = evaluateUserPermission(role, 'upsertHold', holdPayload ? holdPayload.status : null);
+    if (!perm.allowed) {
+      return { ok: false, errorCode: perm.errorCode, message: perm.message };
+    }
+
+    if (!holdPayload || typeof holdPayload !== 'object' || !holdPayload.item) {
+      return { ok: false, errorCode: 'INVALID_HOLD_PAYLOAD', message: '劃扣資料不完整' };
+    }
+
+    const reservationNumber = holdPayload.reservationNumber || holdPayload.id || `RES-${Date.now()}`;
+    const holdRecord = {
+      ...holdPayload,
+      id: reservationNumber,
+      reservationNumber,
+      status: holdPayload.status || 'ACTIVE',
+      notificationBypassed: true,
+      updatedAt: new Date().toISOString()
+    };
+
+    return {
+      ok: true,
+      reservationNumber,
+      holdRecord,
+      notificationBypassed: true,
+      message: '正式保留劃扣建立成功'
+    };
+  }
+
+  fulfillHold(fulfillPayload, userContext) {
+    const role = userContext ? userContext.role : null;
+    const perm = evaluateUserPermission(role, 'fulfillHold');
+    if (!perm.allowed) {
+      return { ok: false, errorCode: perm.errorCode, message: perm.message };
+    }
+
+    if (!fulfillPayload || !fulfillPayload.reservationNumber || !fulfillPayload.quantity || fulfillPayload.quantity <= 0) {
+      return { ok: false, errorCode: 'INVALID_FULFILL_PAYLOAD', message: '部分銷扣出貨數量無效' };
+    }
+
+    const remainingQty = Math.max(0, (fulfillPayload.totalQuantity || fulfillPayload.quantity) - fulfillPayload.quantity);
+    const ledgerRow = [
+      fulfillPayload.reservationNumber,
+      fulfillPayload.action || 'FULFILL_PARTIAL',
+      fulfillPayload.item || '品項',
+      fulfillPayload.quantity,
+      remainingQty,
+      remainingQty === 0 ? 'FULFILLED' : 'PARTIAL_FULFILLED',
+      new Date().toISOString()
+    ];
+
+    return {
+      ok: true,
+      reservationNumber: fulfillPayload.reservationNumber,
+      remainingQuantity: remainingQty,
+      ledgerRow,
+      notificationBypassed: true,
+      message: '劃扣銷扣出貨成功'
+    };
+  }
+
+  cancelReleaseHold(cancelPayload, userContext) {
+    const role = userContext ? userContext.role : null;
+    const perm = evaluateUserPermission(role, 'cancelRelease');
+    if (!perm.allowed) {
+      return { ok: false, errorCode: perm.errorCode, message: perm.message };
+    }
+
+    if (!cancelPayload || !cancelPayload.reservationNumber) {
+      return { ok: false, errorCode: 'INVALID_CANCEL_PAYLOAD', message: '取消釋放劃扣單號無效' };
+    }
+
+    const ledgerRow = [
+      cancelPayload.reservationNumber,
+      'CANCEL_RELEASE',
+      cancelPayload.item || '品項',
+      cancelPayload.quantity || 0,
+      0,
+      'CANCELLED',
+      new Date().toISOString()
+    ];
+
+    return {
+      ok: true,
+      reservationNumber: cancelPayload.reservationNumber,
+      remainingQuantity: 0,
+      ledgerRow,
+      notificationBypassed: true,
+      message: '劃扣保留取消與庫存釋放成功'
+    };
+  }
+
+  queryReadbackAudit(record, userContext) {
+    const role = userContext ? userContext.role : null;
+    return sanitizeReadbackAuditRecord(record, role);
   }
 
   submitRawText(rawText) {
