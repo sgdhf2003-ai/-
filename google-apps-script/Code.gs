@@ -420,7 +420,24 @@ function upsertStores(stores, isSnapshot) {
 
 function upsertHolds(holds, isSnapshot, userContext) {
   logDebug("upsertHolds called with holds count: " + (holds ? holds.length : 0) + ", isSnapshot: " + isSnapshot + ", userContext: " + JSON.stringify(userContext));
+
+  if (userContext) {
+    if (!userContext.role || userContext.role === "unknown") {
+      return { ok: false, errorCode: "INVALID_SESSION_USER", message: "登入狀態失效或缺少使用者權限脈絡" };
+    }
+    const role = String(userContext.role || "").trim().toLowerCase();
+    if (role === "sales" || role === "retailsales" || role === "showroomsales" || role === "retail" || role === "無") {
+      return { ok: false, errorCode: "UNAUTHORIZED_ROLE", message: "您目前的權限角色無法執行劃扣與出貨操作" };
+    }
+    const hasCleanupTarget = (holds || []).some(h => h && (h.status === "TEST_CLEANUP_DELETED" || h.status === "CORRECTED"));
+    if (hasCleanupTarget && role !== "admin" && role !== "boss") {
+      return { ok: false, errorCode: "ADMIN_ROLE_REQUIRED", message: "僅限系統管理員 (admin) 執行紀錄清理與人工修正" };
+    }
+  }
+
+
   const storesById = makeLookup(readObjects(SHEETS.stores, HEADERS.stores), "id");
+
   const existingHolds = makeLookup(readObjects(SHEETS.holds, HEADERS.holds), "id");
 
   // If isSnapshot is true, check for deleted holds to send deduction notifications

@@ -3,7 +3,8 @@
  */
 
 const assert = require('assert');
-const { evaluateAllocationRules, OCR_CONFIDENCE_THRESHOLD } = require('../../allocation-assistant/index');
+const { evaluateAllocationRules, OCR_CONFIDENCE_THRESHOLD, evaluateUserPermission } = require('../../allocation-assistant/index');
+
 
 let totalTests = 0;
 let passedTests = 0;
@@ -136,6 +137,63 @@ runTest('total available stock less than requested quantity produces INSUFFICIEN
   const res = evaluateAllocationRules({ item, snapshot });
   assert.strictEqual(res.suggestion.warnings.length, 1);
   assert.strictEqual(res.suggestion.warnings[0].warningCode, 'INSUFFICIENT_STOCK');
+});
+
+// 6. Role Permission Guard: Sales Role Write Denied
+runTest('sales role attempting write action returns UNAUTHORIZED_ROLE deny code', () => {
+  const perm = evaluateUserPermission('sales', 'upsertHold');
+  assert.strictEqual(perm.allowed, false);
+  assert.strictEqual(perm.errorCode, 'UNAUTHORIZED_ROLE');
+});
+
+// 7. Role Permission Guard: Retail Role Cancel Denied
+runTest('retail role attempting cancelRelease returns UNAUTHORIZED_ROLE deny code', () => {
+  const perm = evaluateUserPermission('retail', 'cancelRelease');
+  assert.strictEqual(perm.allowed, false);
+  assert.strictEqual(perm.errorCode, 'UNAUTHORIZED_ROLE');
+});
+
+// 8. Role Permission Guard: Assistant Role Cleanup Denied
+runTest('assistant role attempting TEST_CLEANUP_DELETED returns ADMIN_ROLE_REQUIRED deny code', () => {
+  const perm = evaluateUserPermission('assistant', 'upsertHold', 'TEST_CLEANUP_DELETED');
+  assert.strictEqual(perm.allowed, false);
+  assert.strictEqual(perm.errorCode, 'ADMIN_ROLE_REQUIRED');
+});
+
+// 9. Role Permission Guard: Admin Allowed
+runTest('admin role allowed for write actions and cleanup status', () => {
+  const permWrite = evaluateUserPermission('admin', 'upsertHold');
+  assert.strictEqual(permWrite.allowed, true);
+
+  const permCleanup = evaluateUserPermission('admin', 'upsertHold', 'TEST_CLEANUP_DELETED');
+  assert.strictEqual(permCleanup.allowed, true);
+});
+
+// 10. Role Permission Guard: Boss Allowed
+runTest('boss role allowed for write actions and cleanup status', () => {
+  const permWrite = evaluateUserPermission('boss', 'fulfillHold');
+  assert.strictEqual(permWrite.allowed, true);
+
+  const permCleanup = evaluateUserPermission('boss', 'upsertHold', 'CORRECTED');
+  assert.strictEqual(permCleanup.allowed, true);
+});
+
+// 11. Role Permission Guard: Invalid Session User Denied
+runTest('null or unknown session role returns INVALID_SESSION_USER deny code', () => {
+  const permNull = evaluateUserPermission(null, 'upsertHold');
+  assert.strictEqual(permNull.allowed, false);
+  assert.strictEqual(permNull.errorCode, 'INVALID_SESSION_USER');
+
+  const permUnknown = evaluateUserPermission('unknown', 'fulfillHold');
+  assert.strictEqual(permUnknown.allowed, false);
+  assert.strictEqual(permUnknown.errorCode, 'INVALID_SESSION_USER');
+});
+
+// 12. Notification Boundary: Preserves Notification Bypassed Flag
+runTest('permission check preserves notificationBypassed flag as true by default', () => {
+  const perm = evaluateUserPermission('admin', 'upsertHold');
+  assert.strictEqual(perm.allowed, true);
+  assert.strictEqual(perm.notificationBypassed, true);
 });
 
 console.log(`\nAllocation Rules Engine Simulation Summary: ${passedTests} / ${totalTests} PASS`);

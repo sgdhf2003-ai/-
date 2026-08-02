@@ -33,8 +33,10 @@ const { AllocationGateway } = require('./gateway/allocation-gateway');
 
 const {
   OCR_CONFIDENCE_THRESHOLD,
-  evaluateAllocationRules
+  evaluateAllocationRules,
+  evaluateUserPermission
 } = require('./rules/allocation-rules');
+
 
 const { AuditLogger } = require('./audit/audit-logger');
 
@@ -90,8 +92,10 @@ module.exports = {
   ExternalProvider,
   AllocationGateway,
 
-  // Rules Evaluator
+  // Rules Evaluator & Permission Guard
+  OCR_CONFIDENCE_THRESHOLD,
   evaluateAllocationRules,
+  evaluateUserPermission,
 
   // Audit Logger
   AuditLogger,

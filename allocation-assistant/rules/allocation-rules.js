@@ -172,7 +172,53 @@ function evaluateAllocationRules({ item, snapshot, customerApprovedMixedBatch = 
   };
 }
 
+/**
+ * Evaluates user permission role against write actions and status transitions.
+ * @param {string} role User role code (admin, boss, assistant, sales, retail, etc.)
+ * @param {string} action Action type ('upsertHold', 'fulfillHold', 'cancelRelease', 'readAll', etc.)
+ * @param {string} [targetStatus] Optional target status for hold updates
+ * @return {{ allowed: boolean, errorCode?: string, message?: string }} Permission evaluation result
+ */
+function evaluateUserPermission(role, action, targetStatus) {
+  if (!role || role === 'null' || role === 'undefined' || role === 'unknown') {
+    return {
+      allowed: false,
+      errorCode: 'INVALID_SESSION_USER',
+      message: '登入狀態失效或缺少使用者權限脈絡'
+    };
+  }
+
+  const normRole = String(role || '').trim().toLowerCase();
+
+  // 1. Check admin-only cleanup/correction statuses
+  if (targetStatus === 'TEST_CLEANUP_DELETED' || targetStatus === 'CORRECTED') {
+    if (normRole !== 'admin' && normRole !== 'boss') {
+      return {
+        allowed: false,
+        errorCode: 'ADMIN_ROLE_REQUIRED',
+        message: '僅限系統管理員 (admin) 執行紀錄清理與人工修正'
+      };
+    }
+  }
+
+  // 2. Write actions (upsertHold, fulfillHold, cancelRelease)
+  const isWriteAction = action === 'upsertHold' || action === 'fulfillHold' || action === 'cancelRelease';
+  if (isWriteAction) {
+    if (normRole === 'sales' || normRole === 'retailsales' || normRole === 'showroomsales' || normRole === 'retail' || normRole === '無') {
+      return {
+        allowed: false,
+        errorCode: 'UNAUTHORIZED_ROLE',
+        message: '您目前的權限角色無法執行劃扣與出貨操作'
+      };
+    }
+  }
+
+  return { allowed: true, notificationBypassed: true };
+}
+
+
 module.exports = {
   OCR_CONFIDENCE_THRESHOLD,
-  evaluateAllocationRules
+  evaluateAllocationRules,
+  evaluateUserPermission
 };
