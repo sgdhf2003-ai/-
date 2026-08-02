@@ -46,14 +46,24 @@
   - Backend Web App 成功部署至 **Version 98** (`AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw`)。
 
 ### Stage 39: Sales Admin Daily Operational Flow Readiness Audit
-* **狀態**: 完成並記錄 (Stage 39 Milestone Complete)
-* **最新同步 Commit**: `0f7ec24c13dfaf3cb7ca3d4695aa4a9a8a64b231` (`docs: record Stage 38 milestone closure, Version 98 deployment and explicit action dispatcher integration`)
-* **準備度審查結果**: **Readiness Classification: PASS**
-* **審查內容**:
-  - **4 大日常作業流程**: 建立正式劃扣、部分/全額銷扣出貨、取消釋放劃扣、作業讀回與審查全數通過驗證。
-  - **權限與去敏感化**: `admin`/`boss`/`assistant` 允許操作；`sales`/`retail` 拒絕寫入與審查 (`READBACK_QUERY_DENIED`)；助理讀回去敏感化 (`readbackRedacted === true`)。
-  - **線上 Web App 基線**: 保留 **Backend Web App Version 98** 為當前作業基線。
-  - 0 次未授權 Google Sheet 寫入、0 次 LINE API 發送、0 次 Token 讀取。
+* **狀態**: 完成並記錄 (`4b2f5f4`)
+* **交付與驗證內容**:
+  - 配貨助手 4 大日常作業流程與角色權限防護準備度審查評定為 **PASS**。
+
+### Stage 40: Owner-Supervised Production Pilot Execution Gate
+* **狀態**: 完成並記錄 (Stage 40 Milestone Complete)
+* **最新同步 Commit**: `4b2f5f473592f7704de8697fbf5d3b3b3f6fd8e0` (`docs: record Stage 39 readiness audit PASS and Version 98 operational baseline`)
+* **受控試辦結果**: **PILOT EXECUTION RESULT: 4 / 4 STEPS PASS**
+* **試辦案件與安全證明**:
+  - **Pilot Reservation ID**: `RES-20260802-PILOT01`
+  - **Final Status**: `CANCELLED`
+  - **Remaining Quantity**: `0`
+  - **Step 1 (Create Formal Hold)**: `PASS` (`reservationNumber === holdRecord.id === rowData[0] === 'RES-20260802-PILOT01'`, Status: `ACTIVE`)。
+  - **Step 2 (Fulfill / Outbound Shipment)**: `PASS` (`fulfilledQuantity: 2`, `remainingQuantity: 0`, Status: `FULFILLED`, 7 欄位銷扣帳冊)。
+  - **Step 3 (Cancel / Release)**: `PASS` (`remainingQuantity: 0`, Status: `CANCELLED`, `CANCEL_RELEASE` 帳冊)。
+  - **Step 4 (Readback Audit & Role Redaction)**: `PASS` (`admin` Unredacted、`assistant` `readbackRedacted === true`、`sales` 拒絕存取，Step 4 Sheet 寫入數為 0)。
+  - 0 次 LINE API 主動發送 (`notificationBypassed: true`)、0 次 Token 印出、0 次額外部署。
+  - 保留 **Backend Web App Version 98** 與 **LINE Bot Version 1** 作為生產部署基線。
 
 ## 4. 自動化驗證基線 (Automated Verification Baseline)
 - `npm run check`: **PASS**
@@ -62,6 +72,7 @@
 - `python3 deploy.py line-bot --check`: **VALID** (LINE Bot Apps Script dry-run safe)
 - `git diff --check`: **PASS** (0 空白字元錯誤)
 - **生產環境部署記錄**: Backend Web App Version 98, LINE Bot Project Version 1 完好保留。
+
 
 
 

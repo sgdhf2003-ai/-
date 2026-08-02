@@ -5,22 +5,42 @@
 - repo root: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 - branch: `main`
 - source of truth: Canonical cloud-drive checkout path above
-- HEAD: `0f7ec24c13dfaf3cb7ca3d4695aa4a9a8a64b231`
-- origin/main: `0f7ec24c13dfaf3cb7ca3d4695aa4a9a8a64b231`
+- HEAD: `4b2f5f473592f7704de8697fbf5d3b3b3f6fd8e0`
+- origin/main: `4b2f5f473592f7704de8697fbf5d3b3b3f6fd8e0`
 - ahead / behind vs origin/main: `0 / 0`
 
 ## Current Stage
 
-- current stage: Stage 39-A Stage 39 Milestone Handoff & Memory Closure Record
+- current stage: Stage 40-B Stage 40 Milestone Handoff & Memory Closure Record
 - previous completed deliveries:
-  - Stage 38 Admin Operation Flow UI Endpoint Integration & Version 98 Deployment (`0f7ec24`)
-  - Stage 39 Sales Admin Daily Operational Flow Readiness Audit (Readiness PASS)
-  - Stage 39-A Stage 39 Milestone Handoff & Memory Closure Record
-- latest pushed main commit: `0f7ec24c13dfaf3cb7ca3d4695aa4a9a8a64b231` (`docs: record Stage 38 milestone closure, Version 98 deployment and explicit action dispatcher integration`)
+  - Stage 39 Sales Admin Daily Operational Flow Readiness Audit (`4b2f5f4`)
+  - Stage 40 Owner-Supervised Production Pilot Execution (All 4 Steps PASS)
+  - Stage 40-B Stage 40 Milestone Handoff & Memory Closure Record
+- latest pushed main commit: `4b2f5f473592f7704de8697fbf5d3b3b3f6fd8e0` (`docs: record Stage 39 readiness audit PASS and Version 98 operational baseline`)
 - backend deployed version: `98` (canonical deployment record - 102 versions headroom remaining)
 - LINE Bot deployed version: `1` (canonical deployment record - fresh project Version 1)
 - automated simulations: 202 / 202 PASS (`npm run simulate:all`)
 - Web App URL: `https://script.google.com/macros/s/AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw/exec`
+
+## Stage 40 Summary & Production Pilot Execution Record
+
+- **Stage 40 Pilot Result**: **STAGE 40 LIMITED PRODUCTION PILOT EXECUTION COMPLETE (4 / 4 STEPS PASS)**
+- **Pilot Reservation ID**: `RES-20260802-PILOT01`
+- **Final Status**: `CANCELLED`
+- **Remaining Quantity**: `0`
+- **Owner-Supervised Pilot Lifecycle Evidence**:
+  - **Step 1 (Create Formal Hold)**: `PASS` (`reservationNumber === holdRecord.id === rowData[0] === 'RES-20260802-PILOT01'`, Status: `ACTIVE`, Quantity: `2`).
+  - **Step 2 (Fulfill / Outbound Shipment)**: `PASS` (`fulfilledQuantity: 2`, `remainingQuantity: 0`, Status: `FULFILLED`, 7-column ledger row appended).
+  - **Step 3 (Cancel / Release)**: `PASS` (`remainingQuantity: 0`, Status: `CANCELLED`, `CANCEL_RELEASE` ledger row appended).
+  - **Step 4 (Readback Audit & Role Redaction)**: `PASS` (`admin` unredacted, `assistant` `readbackRedacted === true`, `sales` `READBACK_QUERY_DENIED`, Step 4 Sheet writes = `0`).
+- **Side Effect & Safety Summary**:
+  - Step 4 Sheet Writes: `0` (Read-only execution)
+  - LINE API Calls: `0` (`notificationBypassed: true` preserved)
+  - Tokens / Secrets Printed: `0`
+  - Deploys Executed: `0` (Backend Version 98 & LINE Bot Version 1 preserved)
+- **Automated Verification**: `npm run check` PASS, `npm run simulate:all` **202 / 202 PASS**, backend/LINE dry-run PASS, `git diff --check` PASS.
+- **Recommended Next Gate**: `Stage 41: Full Production Rollout & Operator Onboarding Gate`
+
 
 ## Stage 39 Summary & Operational Readiness Audit Record
 
