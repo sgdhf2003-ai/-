@@ -56,15 +56,20 @@
   - Pilot 4 / 4 Steps 受控試辦完好通過驗證 (`RES-20260802-PILOT01` -> `CANCELLED`)。
 
 ### Stage 41: Supervised Production Batch Execution Gate
-* **狀態**: 完成並記錄 (Stage 41 Milestone Complete)
-* **最新同步 Commit**: `40416f1db49f7202278631fa28ce60bd4fd760cf` (`docs: record Stage 40 production pilot completion`)
-* **受控批次結果**: **SUPERVISED BATCH RESULT: 3 / 3 RESERVATIONS PASS**
-* **真實生產案件與驗證證明**:
-  - **`RES-20260802-LIVE01`**: 台北大安門市, `EQA-6522`, 銷扣 2 件, `remainingQuantity: 0`, Final Status: `FULFILLED` (ID 合約 PASS, 助理讀回遮蔽 PASS)。
-  - **`RES-20260802-LIVE02`**: 台中中港門市, `EQA-7110`, 部分銷扣 2 件/總數 5 件, `remainingQuantity: 3`, Final Status: `PARTIAL_FULFILLED` (ID 合約 PASS, 助理讀回遮蔽 PASS)。
-  - **`RES-20260802-LIVE03`**: 高雄巨蛋門市, `EQA-8830`, 銷扣 1 件, `remainingQuantity: 0`, Final Status: `FULFILLED` (ID 合約 PASS, 助理讀回遮蔽 PASS)。
-  - **銷扣帳冊證明**: 寫入對應之 `FULFILL_FULL` 與 `FULFILL_PARTIAL` 7 欄位帳冊紀錄。
-  - 0 次 LINE API 主動發送 (`notificationBypassed: true`)、0 次 Token 印出、0 次額外部署。
+* **狀態**: 完成並記錄 (`8b53044`)
+* **交付與驗證內容**:
+  - 受控生產批次 3 筆真實單據驗證完好通過 (`RES-20260802-LIVE01`, `LIVE02`, `LIVE03`)。
+
+### Stage 42: Routine Monitoring Execution & Daily Health Sign-off Gate
+* **狀態**: 完成並記錄 (Stage 42 Milestone Complete)
+* **最新同步 Commit**: `8b530440c64d6d5008973df5bab9bf4afae13fef` (`docs: record Stage 41 supervised live batch completion`)
+* **常態監控結果**: **ROUTINE HEALTH CLASSIFICATION: PASS**
+* **監控與驗證證明**:
+  - **Endpoint Health**: Web App HTTP 200 OK (`https://script.google.com/macros/s/AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw/exec`), `fulfillHoldAction` 與 `cancelReleaseHoldAction` 存在於函式清單。
+  - **ID Parity Contract**: `RES-20260802-LIVE01`, `LIVE02`, `LIVE03` 均滿足 `reservationNumber === holdRecord.id === rowData[0]`。
+  - **Ledger Schema & Arithmetic**: 7 欄位帳冊 Schema PASS, 剩餘數量運算 `remainingQuantity >= 0` PASS。
+  - **Role Redaction**: 助理讀回去敏感化 (`readbackRedacted === true`) PASS。
+  - 0 次未授權 Google Sheet 寫入、0 次 LINE API 發送 (`notificationBypassed: true`)、0 次 Token 印出、0 次額外部署。
   - 保留 **Backend Web App Version 98** 與 **LINE Bot Version 1** 作為生產部署基線。
 
 ## 4. 自動化驗證基線 (Automated Verification Baseline)
@@ -74,6 +79,7 @@
 - `python3 deploy.py line-bot --check`: **VALID** (LINE Bot Apps Script dry-run safe)
 - `git diff --check`: **PASS** (0 空白字元錯誤)
 - **生產環境部署記錄**: Backend Web App Version 98, LINE Bot Project Version 1 完好保留。
+
 
 
 

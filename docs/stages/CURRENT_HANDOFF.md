@@ -5,22 +5,45 @@
 - repo root: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 - branch: `main`
 - source of truth: Canonical cloud-drive checkout path above
-- HEAD: `40416f1db49f7202278631fa28ce60bd4fd760cf`
-- origin/main: `40416f1db49f7202278631fa28ce60bd4fd760cf`
+- HEAD: `8b530440c64d6d5008973df5bab9bf4afae13fef`
+- origin/main: `8b530440c64d6d5008973df5bab9bf4afae13fef`
 - ahead / behind vs origin/main: `0 / 0`
 
 ## Current Stage
 
-- current stage: Stage 41-D Stage 41 Milestone Handoff & Memory Closure Record
+- current stage: Stage 42-C Stage 42 Milestone Handoff & Memory Closure Record
 - previous completed deliveries:
-  - Stage 40 Production Pilot Execution (`40416f1`)
-  - Stage 41 Supervised Live Batch Execution (3 Real Reservations PASS)
-  - Stage 41-D Stage 41 Milestone Handoff & Memory Closure Record
-- latest pushed main commit: `40416f1db49f7202278631fa28ce60bd4fd760cf` (`docs: record Stage 40 production pilot completion`)
+  - Stage 41 Supervised Production Batch Execution (`8b53044`)
+  - Stage 42 Routine Monitoring Execution & Daily Health Sign-off (Health PASS)
+  - Stage 42-C Stage 42 Milestone Handoff & Memory Closure Record
+- latest pushed main commit: `8b530440c64d6d5008973df5bab9bf4afae13fef` (`docs: record Stage 41 supervised live batch completion`)
 - backend deployed version: `98` (canonical deployment record - 102 versions headroom remaining)
 - LINE Bot deployed version: `1` (canonical deployment record - fresh project Version 1)
 - automated simulations: 202 / 202 PASS (`npm run simulate:all`)
 - Web App URL: `https://script.google.com/macros/s/AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw/exec`
+
+## Stage 42 Summary & Routine Monitoring Health Record
+
+- **Stage 42 Health Classification**: **PASS**
+- **Endpoint & Function Registry**:
+  - Web App Status: **HTTP 200 OK**
+  - Function Registry: Confirmed `fulfillHoldAction` and `cancelReleaseHoldAction` active.
+- **Monitored Reservation Evidence**:
+  1. `RES-20260802-LIVE01`: `FULFILLED`, `remainingQuantity: 0`, ID Contract: `PASS`, Assistant Audit Redaction: `PASS`.
+  2. `RES-20260802-LIVE02`: `PARTIAL_FULFILLED`, `remainingQuantity: 3`, ID Contract: `PASS`, Assistant Audit Redaction: `PASS`.
+  3. `RES-20260802-LIVE03`: `FULFILLED`, `remainingQuantity: 0`, ID Contract: `PASS`, Assistant Audit Redaction: `PASS`.
+- **Ledger & Arithmetic Verification**:
+  - Schema: 7-column ledger schema `PASS`.
+  - Arithmetic: `remainingQuantity >= 0` `PASS`.
+  - Status Parity: `holds` vs `ledger` status parity `PASS`.
+- **Side Effect & Safety Summary**:
+  - Google Sheet Writes: `0` (during monitoring)
+  - LINE API Calls: `0` (`notificationBypassed: true` preserved)
+  - Tokens / Secrets Printed: `0`
+  - Deploys Executed: `0` (Backend Version 98 & LINE Bot Version 1 preserved)
+- **Automated Verification**: `npm run check` PASS, `npm run simulate:all` **202 / 202 PASS**, backend/LINE dry-run PASS, `git diff --check` PASS.
+- **Recommended Next Gate**: `Stage 43: Allocation Assistant Full Routine Operations & Phase Closure`
+
 
 ## Stage 41 Summary & Supervised Production Batch Record
 
