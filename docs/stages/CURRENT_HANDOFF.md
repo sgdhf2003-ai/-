@@ -5,22 +5,42 @@
 - repo root: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 - branch: `main`
 - source of truth: Canonical cloud-drive checkout path above
-- HEAD: `4b2f5f473592f7704de8697fbf5d3b3b3f6fd8e0`
-- origin/main: `4b2f5f473592f7704de8697fbf5d3b3b3f6fd8e0`
+- HEAD: `40416f1db49f7202278631fa28ce60bd4fd760cf`
+- origin/main: `40416f1db49f7202278631fa28ce60bd4fd760cf`
 - ahead / behind vs origin/main: `0 / 0`
 
 ## Current Stage
 
-- current stage: Stage 40-B Stage 40 Milestone Handoff & Memory Closure Record
+- current stage: Stage 41-D Stage 41 Milestone Handoff & Memory Closure Record
 - previous completed deliveries:
-  - Stage 39 Sales Admin Daily Operational Flow Readiness Audit (`4b2f5f4`)
-  - Stage 40 Owner-Supervised Production Pilot Execution (All 4 Steps PASS)
-  - Stage 40-B Stage 40 Milestone Handoff & Memory Closure Record
-- latest pushed main commit: `4b2f5f473592f7704de8697fbf5d3b3b3f6fd8e0` (`docs: record Stage 39 readiness audit PASS and Version 98 operational baseline`)
+  - Stage 40 Production Pilot Execution (`40416f1`)
+  - Stage 41 Supervised Live Batch Execution (3 Real Reservations PASS)
+  - Stage 41-D Stage 41 Milestone Handoff & Memory Closure Record
+- latest pushed main commit: `40416f1db49f7202278631fa28ce60bd4fd760cf` (`docs: record Stage 40 production pilot completion`)
 - backend deployed version: `98` (canonical deployment record - 102 versions headroom remaining)
 - LINE Bot deployed version: `1` (canonical deployment record - fresh project Version 1)
 - automated simulations: 202 / 202 PASS (`npm run simulate:all`)
 - Web App URL: `https://script.google.com/macros/s/AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw/exec`
+
+## Stage 41 Summary & Supervised Production Batch Record
+
+- **Stage 41 Batch Result**: **SUPERVISED LIVE PRODUCTION BATCH COMPLETE (3 / 3 RESERVATIONS PASS)**
+- **Processed Real Production Reservations**:
+  1. `RES-20260802-LIVE01`: Store `台北大安門市`, Item `EQA-6522`, Total Qty `2`, Fulfilled `2`, `remainingQuantity: 0`, Final Status: `FULFILLED`, ID Contract: `PASS`, Assistant Audit Redaction: `PASS`.
+  2. `RES-20260802-LIVE02`: Store `台中中港門市`, Item `EQA-7110`, Total Qty `5`, Fulfilled `2`, `remainingQuantity: 3`, Final Status: `PARTIAL_FULFILLED`, ID Contract: `PASS`, Assistant Audit Redaction: `PASS`.
+  3. `RES-20260802-LIVE03`: Store `高雄巨蛋門市`, Item `EQA-8830`, Total Qty `1`, Fulfilled `1`, `remainingQuantity: 0`, Final Status: `FULFILLED`, ID Contract: `PASS`, Assistant Audit Redaction: `PASS`.
+- **Ledger & Action Evidence**:
+  - `RES-20260802-LIVE01`: `["RES-20260802-LIVE01", "FULFILL_FULL", "EQA-6522", 2, 0, "FULFILLED", timestamp]`
+  - `RES-20260802-LIVE02`: `["RES-20260802-LIVE02", "FULFILL_PARTIAL", "EQA-7110", 2, 3, "PARTIAL_FULFILLED", timestamp]`
+  - `RES-20260802-LIVE03`: `["RES-20260802-LIVE03", "FULFILL_FULL", "EQA-8830", 1, 0, "FULFILLED", timestamp]`
+- **Side Effect & Safety Summary**:
+  - Reservations Processed: `3`
+  - LINE API Calls: `0` (`notificationBypassed: true` preserved across all operations)
+  - Tokens / Secrets Printed: `0`
+  - Deploys Executed: `0` (Backend Version 98 & LINE Bot Version 1 preserved)
+- **Automated Verification**: `npm run check` PASS, `npm run simulate:all` **202 / 202 PASS**, backend/LINE dry-run PASS, `git diff --check` PASS.
+- **Recommended Next Gate**: `Stage 42: Production Routine Monitoring & Maintenance Gate`
+
 
 ## Stage 40 Summary & Production Pilot Execution Record
 

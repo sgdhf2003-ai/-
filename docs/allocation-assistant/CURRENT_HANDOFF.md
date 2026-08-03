@@ -1,11 +1,11 @@
 # JYAI Allocation Assistant - CURRENT HANDOFF
 
 ## 1. 專案基線狀態 (Project Baseline)
-* **交接日期**: 2026-08-02
+* **交接日期**: 2026-08-03
 * **執行目錄**: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 * **目前分支**: `main`
-* **HEAD Hash**: `4b2f5f473592f7704de8697fbf5d3b3b3f6fd8e0`
-* **origin/main Hash**: `4b2f5f473592f7704de8697fbf5d3b3b3f6fd8e0`
+* **HEAD Hash**: `40416f1db49f7202278631fa28ce60bd4fd760cf`
+* **origin/main Hash**: `40416f1db49f7202278631fa28ce60bd4fd760cf`
 * **分支關係**: `0 ahead / 0 behind` (完全同步)
 * **Working Tree 狀態**: Clean
 
@@ -18,14 +18,15 @@
 * 完成 Stage 37 部署與驗證里程碑 (`3879b58`)：Web App Version 97 部署與受控 Sheet 寫入證明 (`RES-20260802-TEST01` -> `TEST_CLEANUP_DELETED`)。
 * 完成 Stage 38 管理員作業流程 UI 端點整合與 Version 98 受控部署 (`8f292db`, `0f7ec24`)。
 * 完成 Stage 39 業務助理日常作業流程準備度審查 (`4b2f5f4`): 準備度審查評定為 **PASS**。
-* 完成 Stage 40 Owner 監督受控生產試辦營運驗證 (Pilot Result: **4 / 4 STEPS PASS**):
-  - **Step 1 (Create Formal Hold)**: `PASS` (`RES-20260802-PILOT01` 建立，`reservationNumber === holdRecord.id === rowData[0]`, Status: `ACTIVE`)。
-  - **Step 2 (Fulfill / Outbound Shipment)**: `PASS` (銷扣 2 件，`remainingQuantity: 0`, Status: `FULFILLED`, 寫入 7 欄位銷扣帳冊)。
-  - **Step 3 (Cancel / Release)**: `PASS` (取消劃扣釋放庫存，`remainingQuantity: 0`, Status: `CANCELLED`, 寫入 `CANCEL_RELEASE` 帳冊)。
-  - **Step 4 (Readback Audit & Role Redaction)**: `PASS` (`admin` Unredacted 審查、`assistant` `readbackRedacted === true` 遮蔽、`sales` 拒絕存取，Step 4 Sheet 寫入數為 0)。
+* 完成 Stage 40 Owner 監督受控生產試辦營運驗證 (`40416f1`): Pilot 4 / 4 Steps 完好通過 (`RES-20260802-PILOT01` -> `CANCELLED`)。
+* 完成 Stage 41 受控生產批次營運與人員導入驗證 (Batch Result: **3 / 3 RESERVATIONS PASS**):
+  - **`RES-20260802-LIVE01`**: 台北大安門市, `EQA-6522`, 銷扣 2 件, `remainingQuantity: 0`, Final Status: `FULFILLED` (ID 合約 PASS, 助理讀回遮蔽 PASS)。
+  - **`RES-20260802-LIVE02`**: 台中中港門市, `EQA-7110`, 部分銷扣 2 件/總數 5 件, `remainingQuantity: 3`, Final Status: `PARTIAL_FULFILLED` (ID 合約 PASS, 助理讀回遮蔽 PASS)。
+  - **`RES-20260802-LIVE03`**: 高雄巨蛋門市, `EQA-8830`, 銷扣 1 件, `remainingQuantity: 0`, Final Status: `FULFILLED` (ID 合約 PASS, 助理讀回遮蔽 PASS)。
   - 全流程 0 次 LINE API 主動發送 (`notificationBypassed: true`)、0 次 Token/Secret 印出、0 次額外部署。
   - 測試總數保持 **202 / 202 PASS**。
 * 本機檢查、模擬測試與部署 Dry Run 全數通過 (`npm run check`, `npm run simulate:all`, `deploy.py --check` PASS)。
+
 
 
 

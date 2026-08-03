@@ -51,17 +51,19 @@
   - 配貨助手 4 大日常作業流程與角色權限防護準備度審查評定為 **PASS**。
 
 ### Stage 40: Owner-Supervised Production Pilot Execution Gate
-* **狀態**: 完成並記錄 (Stage 40 Milestone Complete)
-* **最新同步 Commit**: `4b2f5f473592f7704de8697fbf5d3b3b3f6fd8e0` (`docs: record Stage 39 readiness audit PASS and Version 98 operational baseline`)
-* **受控試辦結果**: **PILOT EXECUTION RESULT: 4 / 4 STEPS PASS**
-* **試辦案件與安全證明**:
-  - **Pilot Reservation ID**: `RES-20260802-PILOT01`
-  - **Final Status**: `CANCELLED`
-  - **Remaining Quantity**: `0`
-  - **Step 1 (Create Formal Hold)**: `PASS` (`reservationNumber === holdRecord.id === rowData[0] === 'RES-20260802-PILOT01'`, Status: `ACTIVE`)。
-  - **Step 2 (Fulfill / Outbound Shipment)**: `PASS` (`fulfilledQuantity: 2`, `remainingQuantity: 0`, Status: `FULFILLED`, 7 欄位銷扣帳冊)。
-  - **Step 3 (Cancel / Release)**: `PASS` (`remainingQuantity: 0`, Status: `CANCELLED`, `CANCEL_RELEASE` 帳冊)。
-  - **Step 4 (Readback Audit & Role Redaction)**: `PASS` (`admin` Unredacted、`assistant` `readbackRedacted === true`、`sales` 拒絕存取，Step 4 Sheet 寫入數為 0)。
+* **狀態**: 完成並記錄 (`40416f1`)
+* **交付與驗證內容**:
+  - Pilot 4 / 4 Steps 受控試辦完好通過驗證 (`RES-20260802-PILOT01` -> `CANCELLED`)。
+
+### Stage 41: Supervised Production Batch Execution Gate
+* **狀態**: 完成並記錄 (Stage 41 Milestone Complete)
+* **最新同步 Commit**: `40416f1db49f7202278631fa28ce60bd4fd760cf` (`docs: record Stage 40 production pilot completion`)
+* **受控批次結果**: **SUPERVISED BATCH RESULT: 3 / 3 RESERVATIONS PASS**
+* **真實生產案件與驗證證明**:
+  - **`RES-20260802-LIVE01`**: 台北大安門市, `EQA-6522`, 銷扣 2 件, `remainingQuantity: 0`, Final Status: `FULFILLED` (ID 合約 PASS, 助理讀回遮蔽 PASS)。
+  - **`RES-20260802-LIVE02`**: 台中中港門市, `EQA-7110`, 部分銷扣 2 件/總數 5 件, `remainingQuantity: 3`, Final Status: `PARTIAL_FULFILLED` (ID 合約 PASS, 助理讀回遮蔽 PASS)。
+  - **`RES-20260802-LIVE03`**: 高雄巨蛋門市, `EQA-8830`, 銷扣 1 件, `remainingQuantity: 0`, Final Status: `FULFILLED` (ID 合約 PASS, 助理讀回遮蔽 PASS)。
+  - **銷扣帳冊證明**: 寫入對應之 `FULFILL_FULL` 與 `FULFILL_PARTIAL` 7 欄位帳冊紀錄。
   - 0 次 LINE API 主動發送 (`notificationBypassed: true`)、0 次 Token 印出、0 次額外部署。
   - 保留 **Backend Web App Version 98** 與 **LINE Bot Version 1** 作為生產部署基線。
 
@@ -72,6 +74,7 @@
 - `python3 deploy.py line-bot --check`: **VALID** (LINE Bot Apps Script dry-run safe)
 - `git diff --check`: **PASS** (0 空白字元錯誤)
 - **生產環境部署記錄**: Backend Web App Version 98, LINE Bot Project Version 1 完好保留。
+
 
 
 
