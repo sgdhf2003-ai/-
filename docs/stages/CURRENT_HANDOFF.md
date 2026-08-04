@@ -5,22 +5,42 @@
 - repo root: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 - branch: `main`
 - source of truth: Canonical cloud-drive checkout path above
-- HEAD: `8b530440c64d6d5008973df5bab9bf4afae13fef`
-- origin/main: `8b530440c64d6d5008973df5bab9bf4afae13fef`
+- HEAD: `6536987380c120075fe0303180579cd703dce29b`
+- origin/main: `6536987380c120075fe0303180579cd703dce29b`
 - ahead / behind vs origin/main: `0 / 0`
 
 ## Current Stage
 
-- current stage: Stage 42-C Stage 42 Milestone Handoff & Memory Closure Record
+- current stage: Stage 43 Allocation Assistant Full Routine Operations & Phase Closure
 - previous completed deliveries:
-  - Stage 41 Supervised Production Batch Execution (`8b53044`)
-  - Stage 42 Routine Monitoring Execution & Daily Health Sign-off (Health PASS)
-  - Stage 42-C Stage 42 Milestone Handoff & Memory Closure Record
-- latest pushed main commit: `8b530440c64d6d5008973df5bab9bf4afae13fef` (`docs: record Stage 41 supervised live batch completion`)
+  - Stage 42 Routine Monitoring Execution & Daily Health Sign-off (`6536987`)
+  - Stage 43 Allocation Assistant Full Routine Operations & Phase Closure Contract Gate
+- latest pushed main commit: `6536987380c120075fe0303180579cd703dce29b` (`docs: record Stage 42 routine monitoring health sign-off PASS and Version 98 operational status`)
 - backend deployed version: `98` (canonical deployment record - 102 versions headroom remaining)
 - LINE Bot deployed version: `1` (canonical deployment record - fresh project Version 1)
 - automated simulations: 202 / 202 PASS (`npm run simulate:all`)
 - Web App URL: `https://script.google.com/macros/s/AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw/exec`
+
+## Stage 43 Summary & Allocation Assistant Phase Closure Record
+
+- **Stage 43 Phase Status**: **ALLOCATION ASSISTANT DAILY OPERATION LOOP PHASE COMPLETE (CONTRACT GATE APPROVED)**
+- **Full Routine Operation Loop Contract Verified & Documented**:
+  1. **Create Formal Hold**: ID Contract `reservationNumber === holdRecord.id === rowData[0]`, Status `ACTIVE`.
+  2. **Fulfill / Partial Fulfill**: 7-column ledger row append (`action: FULFILL_FULL` / `FULFILL_PARTIAL`), `remainingQuantity >= 0`, Status `FULFILLED` / `PARTIAL_FULFILLED`.
+  3. **Cancel / Release**: 7-column ledger row append (`action: CANCEL_RELEASE`), `remainingQuantity: 0`, Status `CANCELLED`.
+  4. **Readback / Audit**: Assistant redaction (`readbackRedacted === true`), Admin unredacted, Sales denied (`READBACK_QUERY_DENIED`).
+- **Production Baseline Preserved**:
+  - Backend Web App Version: `98` (`AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw`)
+  - LINE Bot Version: `1` (`AKfycbwskF_c2VpW6Cv3yR-wUevRXdrG754ZzxyYMorroqjwkjJZT10wp3DqIZ2kA-GrKK0a`)
+  - SOP Document: `docs/allocation-assistant/OPERATING_SOP.md`
+- **Side Effect & Safety Summary**:
+  - Google Sheet Writes: `0` (during closure documentation)
+  - LINE API Calls: `0` (`notificationBypassed: true` preserved)
+  - Tokens / Secrets Printed: `0`
+  - Deploys Executed: `0`
+- **Automated Verification**: `npm run check` PASS, `npm run simulate:all` **202 / 202 PASS**, backend/LINE dry-run PASS, `git diff --check` PASS.
+- **Recommended Next Phase**: `Phase 4: Customer Notification & LINE Messaging Integration Gate` (or Owner-designated next phase).
+
 
 ## Stage 42 Summary & Routine Monitoring Health Record
 

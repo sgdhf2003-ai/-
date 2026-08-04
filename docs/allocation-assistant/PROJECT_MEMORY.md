@@ -61,16 +61,24 @@
   - 受控生產批次 3 筆真實單據驗證完好通過 (`RES-20260802-LIVE01`, `LIVE02`, `LIVE03`)。
 
 ### Stage 42: Routine Monitoring Execution & Daily Health Sign-off Gate
-* **狀態**: 完成並記錄 (Stage 42 Milestone Complete)
-* **最新同步 Commit**: `8b530440c64d6d5008973df5bab9bf4afae13fef` (`docs: record Stage 41 supervised live batch completion`)
-* **常態監控結果**: **ROUTINE HEALTH CLASSIFICATION: PASS**
-* **監控與驗證證明**:
-  - **Endpoint Health**: Web App HTTP 200 OK (`https://script.google.com/macros/s/AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw/exec`), `fulfillHoldAction` 與 `cancelReleaseHoldAction` 存在於函式清單。
-  - **ID Parity Contract**: `RES-20260802-LIVE01`, `LIVE02`, `LIVE03` 均滿足 `reservationNumber === holdRecord.id === rowData[0]`。
-  - **Ledger Schema & Arithmetic**: 7 欄位帳冊 Schema PASS, 剩餘數量運算 `remainingQuantity >= 0` PASS。
-  - **Role Redaction**: 助理讀回去敏感化 (`readbackRedacted === true`) PASS。
-  - 0 次未授權 Google Sheet 寫入、0 次 LINE API 發送 (`notificationBypassed: true`)、0 次 Token 印出、0 次額外部署。
-  - 保留 **Backend Web App Version 98** 與 **LINE Bot Version 1** 作為生產部署基線。
+* **狀態**: 完成並記錄 (`6536987`)
+* **交付與驗證內容**:
+  - 端點 HTTP 200 OK、IDParity/Schema/Arithmetic/Redaction 全數通過簽核。
+
+### Stage 43: Allocation Assistant Full Routine Operations & Phase Closure Gate
+* **狀態**: 完成並記錄 (Stage 43 Phase Complete)
+* **最新同步 Commit**: `6536987380c120075fe0303180579cd703dce29b` (`docs: record Stage 42 routine monitoring health sign-off PASS and Version 98 operational status`)
+* **階段結算結果**: **ALLOCATION ASSISTANT DAILY OPERATION LOOP PHASE COMPLETE**
+* **4 大日常作業流程合約與關閉說明**:
+  1. **建立正式劃扣**: `reservationNumber === holdRecord.id === rowData[0]`, Status `ACTIVE`。
+  2. **部分/全額銷扣出貨**: 7 欄位帳冊 `action: FULFILL_FULL` / `FULFILL_PARTIAL`, `remainingQuantity >= 0`。
+  3. **取消釋放劃扣**: 7 欄位帳冊 `action: CANCEL_RELEASE`, `remainingQuantity: 0`, Status `CANCELLED`。
+  4. **作業讀回與審查**: 助理去敏感化 `readbackRedacted === true`, 管理員 Unredacted 完整審查, 銷售員拒絕 `READBACK_QUERY_DENIED`。
+* **生產部署與安全合約**:
+  - **Backend Web App**: Version 98 (`AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw`)
+  - **LINE Bot Project**: Version 1 (`AKfycbwskF_c2VpW6Cv3yR-wUevRXdrG754ZzxyYMorroqjwkjJZT10wp3DqIZ2kA-GrKK0a`)
+  - **LINE API 發送**: 貫徹 `notificationBypassed: true` (0 次 LINE API 主動發送)。
+  - 0 次未授權 Google Sheet 寫入、0 次 Token/Secret 印出。
 
 ## 4. 自動化驗證基線 (Automated Verification Baseline)
 - `npm run check`: **PASS**
@@ -79,6 +87,7 @@
 - `python3 deploy.py line-bot --check`: **VALID** (LINE Bot Apps Script dry-run safe)
 - `git diff --check`: **PASS** (0 空白字元錯誤)
 - **生產環境部署記錄**: Backend Web App Version 98, LINE Bot Project Version 1 完好保留。
+
 
 
 
