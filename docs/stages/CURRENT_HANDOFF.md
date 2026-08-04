@@ -5,23 +5,46 @@
 - repo root: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 - branch: `main`
 - source of truth: Canonical cloud-drive checkout path above
-- HEAD: `4f9b5a83d9dc44c86b591bdcb079d24d521a68b2`
-- origin/main: `4f9b5a83d9dc44c86b591bdcb079d24d521a68b2`
+- HEAD: `64d067b70a0ee20aa47f1a7410f538f1cea3ce71`
+- origin/main: `64d067b70a0ee20aa47f1a7410f538f1cea3ce71`
 - ahead / behind vs origin/main: `0 / 0`
 
 ## Current Stage
 
-- current stage: Phase 4-D Controlled LINE Messaging Pilot Milestone Handoff
+- current stage: Phase 4-G Controlled LINE Messaging Pilot Milestone Handoff
 - previous completed deliveries:
-  - Stage 43 Allocation Assistant Phase Closure (`4f9b5a8`)
-  - Phase 4-A Controlled LINE Messaging Pilot Preflight (READY)
-  - Phase 4-B Controlled LINE Messaging Pilot Safety Rules Design (DESIGN COMPLETE)
-  - Phase 4-C Controlled Simulation Test Harness Implementation (10 / 10 PASS)
-- latest pushed main commit: `4f9b5a83d9dc44c86b591bdcb079d24d521a68b2` (`docs: record Stage 43 Allocation Assistant phase closure and daily operation loop contract completion`)
+  - Phase 4 Simulation Test Harness & Baseline Commit (`64d067b`)
+  - Phase 4-E Production Implementation Preflight (READY)
+  - Phase 4-F Production Code Implementation (Pass 212/212 Simulations)
+  - Phase 4-G Controlled LINE Messaging Pilot Milestone Handoff
+- latest pushed main commit: `64d067b70a0ee20aa47f1a7410f538f1cea3ce71` (`test: implement Phase 4 controlled LINE messaging pilot simulation test harness and record milestone handoff`)
 - backend deployed version: `98` (canonical deployment record - 102 versions headroom remaining)
 - LINE Bot deployed version: `1` (canonical deployment record - fresh project Version 1)
 - automated simulations: 212 / 212 PASS (`npm run simulate:all`)
 - Web App URL: `https://script.google.com/macros/s/AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw/exec`
+
+## Phase 4 Summary & Controlled LINE Messaging Pilot Record
+
+- **Phase 4 Status**: **CONTROLLED LINE MESSAGING PILOT PRODUCTION CODE IMPLEMENTED & VERIFIED (212 / 212 PASS)**
+- **Implemented Production Components**:
+  - `ProductionLineMessagingAdapter` (`allocation-assistant/adapters/production-line-messaging-adapter.js`): Production LINE messaging adapter with explicit token configuration and fetcher injection.
+  - `evaluateLineNotificationPolicy` (`allocation-assistant/rules/allocation-rules.js`): Policy evaluator enforcing all 10 fail-closed contracts.
+  - `evaluateLineNotificationPolicy_` (`google-apps-script/Code.gs`): Apps Script notification policy evaluation helper.
+  - Export Wireup (`allocation-assistant/index.js`): Formally exported policy evaluator and production messaging adapter.
+- **Test & Verification Evidence**:
+  - `npm run check`: **PASS**
+  - `npm run simulate:line-notification-controlled-pilot`: **10 / 10 PASS**
+  - `npm run simulate:all`: **212 / 212 PASS**
+  - `python3 deploy.py backend --check`: **VALID**
+  - `python3 deploy.py line-bot --check`: **VALID**
+  - `git diff --check`: **PASS**
+- **Side Effect & Safety Summary**:
+  - LINE API Calls: `0` (`notificationBypassed: true` default preserved)
+  - Google Sheet Writes: `0`
+  - Tokens / Secrets Printed: `0`
+  - Deploys Executed: `0` (Backend Version 98 & LINE Bot Version 1 preserved)
+- **Recommended Next Gate**: `Phase 5: Supervised Customer LINE Notification Pilot Execution Gate` (or Owner-designated next gate).
+
 
 ## Phase 4 Summary & Controlled LINE Messaging Pilot Record
 

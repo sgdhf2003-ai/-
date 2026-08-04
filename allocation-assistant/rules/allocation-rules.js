@@ -285,9 +285,120 @@ function sanitizeReadbackAuditRecord(record, userRole) {
   };
 }
 
+/**
+ * Evaluates controlled LINE notification policy contracts.
+ *
+ * @param {Object} request Notification policy evaluation request
+ * @return {{ success: boolean, failureCode?: string, bypassed?: boolean, lineRequestId?: string, auditRecord?: Object }} Policy result
+ */
+function evaluateLineNotificationPolicy(request = {}) {
+  const {
+    notificationBypassed = true,
+    operatorRole,
+    recipientLineUserId,
+    userOptInStatus,
+    tokenConfigured = true,
+    adapterInjected = true,
+    simulatedApiError = false,
+    pilotWhitelist = [],
+    reservationNumber = '',
+    intent = ''
+  } = request;
+
+  // 1. Safety Bypass Check (default: true)
+  if (notificationBypassed !== false) {
+    return {
+      success: true,
+      bypassed: true,
+      failureCode: 'NOTIFICATION_BYPASSED'
+    };
+  }
+
+  // 2. Role Authorization Check
+  const normRole = String(operatorRole || '').trim().toLowerCase();
+  const allowedRoles = ['admin', 'boss', 'assistant'];
+  if (!normRole || !allowedRoles.includes(normRole)) {
+    return {
+      success: false,
+      failureCode: 'UNAUTHORIZED_ROLE'
+    };
+  }
+
+  // 3. lineUserId Format & Opt-In Check
+  const lineUserIdPattern = /^U[0-9a-fA-F]{32}$/;
+  if (!recipientLineUserId || !lineUserIdPattern.test(recipientLineUserId) || userOptInStatus !== 'OPTED_IN') {
+    return {
+      success: false,
+      failureCode: 'LINE_USER_NOT_BOUND'
+    };
+  }
+
+  // 4. Pilot Whitelist Check
+  const isWhitelisted = Array.isArray(pilotWhitelist) && pilotWhitelist.some(
+    r => (typeof r === 'string' ? r === recipientLineUserId : r && r.lineUserId === recipientLineUserId && r.optInStatus === 'OPTED_IN')
+  );
+  if (!isWhitelisted) {
+    return {
+      success: false,
+      failureCode: 'NOT_IN_PILOT_WHITELIST'
+    };
+  }
+
+  // 5. Adapter Injection Check
+  if (!adapterInjected) {
+    return {
+      success: false,
+      failureCode: 'LINE_ADAPTER_MISSING'
+    };
+  }
+
+  // 6. Token Configured Check
+  if (!tokenConfigured) {
+    return {
+      success: false,
+      failureCode: 'LINE_TOKEN_MISSING'
+    };
+  }
+
+  // 7. API Execution Error Check
+  if (simulatedApiError) {
+    const errorRecord = {
+      reservationNumber,
+      lineUserId: recipientLineUserId,
+      intent,
+      status: 'FAILED',
+      failureCode: 'LINE_API_EXECUTION_ERROR',
+      sentAt: new Date().toISOString()
+    };
+    return {
+      success: false,
+      failureCode: 'LINE_API_EXECUTION_ERROR',
+      auditRecord: errorRecord
+    };
+  }
+
+  const lineRequestId = `line-req-${Date.now()}`;
+  const successRecord = {
+    reservationNumber,
+    lineUserId: recipientLineUserId,
+    intent,
+    status: 'DELIVERED',
+    lineRequestId,
+    sentAt: new Date().toISOString()
+  };
+
+  return {
+    success: true,
+    delivered: true,
+    lineRequestId,
+    auditRecord: successRecord
+  };
+}
+
 module.exports = {
   OCR_CONFIDENCE_THRESHOLD,
   evaluateAllocationRules,
   evaluateUserPermission,
-  sanitizeReadbackAuditRecord
+  sanitizeReadbackAuditRecord,
+  evaluateLineNotificationPolicy
 };

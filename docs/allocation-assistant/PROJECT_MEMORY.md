@@ -71,11 +71,11 @@
   - 配貨助手 4 大日常作業流程合約簽核完畢，階段總結記錄完成。
 
 ### Phase 4: Controlled Customer LINE Notification Pilot Gate
-* **狀態**: 完成並記錄 (Phase 4 Milestone Complete)
-* **最新同步 Commit**: `4f9b5a83d9dc44c86b591bdcb079d24d521a68b2` (`docs: record Stage 43 Allocation Assistant phase closure and daily operation loop contract completion`)
-* **試辦模擬結果**: **CONTROLLED SIMULATION HARNESS RESULT: 10 / 10 PASS**
+* **狀態**: 完成並記錄 (`64d067b`)
+* **最新同步 Commit**: `64d067b70a0ee20aa47f1a7410f538f1cea3ce71` (`test: implement Phase 4 controlled LINE messaging pilot simulation test harness and record milestone handoff`)
+* **試辦實作結果**: **CONTROLLED LINE NOTIFICATION PILOT CODE IMPLEMENTED & VERIFIED (212 / 212 PASS)**
 * **驗證與防護證明**:
-  - **模擬測試檔**: `tests/simulations/line-notification-controlled-pilot.sim.js` (指令: `npm run simulate:line-notification-controlled-pilot`)。
+  - **生產組件實作**: `ProductionLineMessagingAdapter`, `evaluateLineNotificationPolicy` (`allocation-assistant`), `evaluateLineNotificationPolicy_` (`google-apps-script/Code.gs`)。
   - **10 大 Fail-Closed 防護驗證**:
     1. `NOTIFICATION_BYPASSED`: `notificationBypassed === true` 時攔截並執行 0 次 LINE 通訊。
     2. `UNAUTHORIZED_ROLE`: 銷售員/未授權角色拒絕發送。
@@ -88,6 +88,7 @@
     9. `EXPLICIT_MOCK_REQUIREMENT`: 模擬 Adapter 必須顯式注入，無法在生產環境隱式觸發。
   - 貫徹 `notificationBypassed: true` (0 次 LINE API 主動發送)、0 次未授權 Google Sheet 寫入、0 次 Token/Secret 印出。
   - 保留 **Backend Web App Version 98** 與 **LINE Bot Version 1** 作為生產部署基線。
+
 
 ## 4. 自動化驗證基線 (Automated Verification Baseline)
 - `npm run check`: **PASS**

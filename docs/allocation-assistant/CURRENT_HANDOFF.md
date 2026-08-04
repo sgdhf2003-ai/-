@@ -4,10 +4,10 @@
 * **交接日期**: 2026-08-04
 * **執行目錄**: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 * **目前分支**: `main`
-* **HEAD Hash**: `4f9b5a83d9dc44c86b591bdcb079d24d521a68b2`
-* **origin/main Hash**: `4f9b5a83d9dc44c86b591bdcb079d24d521a68b2`
+* **HEAD Hash**: `64d067b70a0ee20aa47f1a7410f538f1cea3ce71`
+* **origin/main Hash**: `64d067b70a0ee20aa47f1a7410f538f1cea3ce71`
 * **分支關係**: `0 ahead / 0 behind` (完全同步)
-* **Working Tree 狀態**: Clean (0 uncommitted/untracked code changes)
+* **Working Tree 狀態**: Clean (Pending Phase 4-G Commit)
 
 ## 2. 本次完成內容 (Completed Work)
 * 完成 Stage 30 & 31 生產環境 Google Sheet 劃扣與出貨生命週期驗證 (`RES-20260801-001`, `RES-20260801-002`)。
@@ -22,11 +22,14 @@
 * 完成 Stage 41 受控生產批次營運與人員導入驗證 (`8b53044`): 3 筆真實單據處理與驗證完好通過。
 * 完成 Stage 42 生產環境常態監控執行與每日健康簽核 (`6536987`): 端點 HTTP 200 OK，IDParity/Schema/Arithmetic/Redaction 全數 PASS。
 * 完成 Stage 43 配貨助手日常作業全流程階段總結與合約關閉 (`4f9b5a8`): 階段結算完成。
-* 完成 Phase 4 受控 LINE 客戶通知試辦模擬測試套件 (Simulation Result: **10 / 10 PASS**):
-  - 建立 `tests/simulations/line-notification-controlled-pilot.sim.js` 驗證 10 大 Fail-Closed 安全防護合約。
+* 完成 Phase 4 受控 LINE 客戶通知試辦程式碼實作與驗證 (`64d067b`):
+  - 實作 `ProductionLineMessagingAdapter` (`allocation-assistant/adapters/production-line-messaging-adapter.js`)。
+  - 實作 `evaluateLineNotificationPolicy` (`allocation-assistant/rules/allocation-rules.js`)。
+  - 實作 `evaluateLineNotificationPolicy_` (`google-apps-script/Code.gs`)。
   - 貫徹 `notificationBypassed: true` (0 次 LINE API 主動發送)、0 次未授權 Google Sheet 寫入、0 次 Token/Secret 印出。
-  - 測試總數提升至 **212 / 212 PASS** (`npm run simulate:all`)。
+  - 測試總數保持 **212 / 212 PASS** (`npm run simulate:all`)。
 * 本機檢查、模擬測試與部署 Dry Run 全數通過 (`npm run check`, `npm run simulate:all`, `deploy.py --check` PASS)。
+
 
 
 

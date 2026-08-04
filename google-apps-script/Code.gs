@@ -5953,3 +5953,81 @@ function runJyTokenExecution() {
     touchedTabs: []
   };
 }
+
+/**
+ * Evaluates controlled LINE customer notification policy in Apps Script context.
+ * Fail-closed default: notificationBypassed is TRUE.
+ *
+ * @param {Object} request Notification request payload
+ * @return {Object} Notification evaluation result
+ */
+function evaluateLineNotificationPolicy_(request) {
+  var req = request || {};
+  var notificationBypassed = req.notificationBypassed !== undefined ? req.notificationBypassed : true;
+
+  if (notificationBypassed !== false) {
+    return {
+      success: true,
+      bypassed: true,
+      failureCode: "NOTIFICATION_BYPASSED",
+      lineApiCallsCount: 0
+    };
+  }
+
+  var operatorRole = req.operatorRole ? String(req.operatorRole).trim().toLowerCase() : "";
+  var allowedRoles = ["admin", "boss", "assistant"];
+  if (!operatorRole || allowedRoles.indexOf(operatorRole) === -1) {
+    return {
+      success: false,
+      failureCode: "UNAUTHORIZED_ROLE",
+      lineApiCallsCount: 0
+    };
+  }
+
+  var recipientLineUserId = req.recipientLineUserId;
+  var lineUserIdPattern = /^U[0-9a-fA-F]{32}$/;
+  if (!recipientLineUserId || !lineUserIdPattern.test(recipientLineUserId) || req.userOptInStatus !== "OPTED_IN") {
+    return {
+      success: false,
+      failureCode: "LINE_USER_NOT_BOUND",
+      lineApiCallsCount: 0
+    };
+  }
+
+  var pilotWhitelist = req.pilotWhitelist || [];
+  var isWhitelisted = false;
+  for (var i = 0; i < pilotWhitelist.length; i++) {
+    var item = pilotWhitelist[i];
+    if (typeof item === "string" && item === recipientLineUserId) {
+      isWhitelisted = true;
+      break;
+    } else if (item && item.lineUserId === recipientLineUserId && item.optInStatus === "OPTED_IN") {
+      isWhitelisted = true;
+      break;
+    }
+  }
+
+  if (!isWhitelisted) {
+    return {
+      success: false,
+      failureCode: "NOT_IN_PILOT_WHITELIST",
+      lineApiCallsCount: 0
+    };
+  }
+
+  var props = PropertiesService.getScriptProperties();
+  var lineToken = props.getProperty("LINE_CHANNEL_ACCESS_TOKEN");
+  if (!lineToken) {
+    return {
+      success: false,
+      failureCode: "LINE_TOKEN_MISSING",
+      lineApiCallsCount: 0
+    };
+  }
+
+  return {
+    success: true,
+    delivered: false,
+    message: "Policy check passed, pending explicit execution approval"
+  };
+}

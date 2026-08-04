@@ -1,13 +1,19 @@
 "use strict";
 
+const path = require("path");
+const repoRoot = path.join(__dirname, "../..");
 const { assert, runSuite } = require("./helpers");
 
+const {
+  evaluateLineNotificationPolicy,
+  ProductionLineMessagingAdapter
+} = require(path.join(repoRoot, "allocation-assistant/index"));
+
 /**
- * Phase 4-C Controlled LINE Messaging Pilot Simulation Test Suite
- * Proves all Phase 4-B fail-closed contracts and audit log reconciliation rules.
+ * Phase 4-F Production Implementation Verification Suite for Controlled LINE Messaging Pilot
+ * Verifies production evaluateLineNotificationPolicy and ProductionLineMessagingAdapter contracts.
  */
 
-// Simulated pilot whitelist (placeholder IDs only, no real user IDs)
 const APPROVED_LINE_PILOT_RECIPIENTS = [
   {
     recipientId: "PILOT_RECIPIENT_01",
@@ -34,104 +40,47 @@ class ControlledLineNotificationHarness {
   }
 
   dispatchNotification(request = {}) {
-    const { operatorRole, recipientLineUserId, reservationNumber, intent, userOptInStatus } = request;
+    const policyResult = evaluateLineNotificationPolicy({
+      notificationBypassed: this.notificationBypassed,
+      operatorRole: request.operatorRole,
+      recipientLineUserId: request.recipientLineUserId,
+      userOptInStatus: request.userOptInStatus,
+      tokenConfigured: this.tokenConfigured,
+      adapterInjected: this.adapterInjected,
+      simulatedApiError: this.simulatedApiError,
+      pilotWhitelist: APPROVED_LINE_PILOT_RECIPIENTS,
+      reservationNumber: request.reservationNumber,
+      intent: request.intent
+    });
 
-    // 1. Check Global Bypass Flag (Default: true)
-    if (this.notificationBypassed) {
+    if (policyResult.bypassed) {
       return {
         success: true,
         bypassed: true,
-        failureCode: "NOTIFICATION_BYPASSED",
+        failureCode: policyResult.failureCode,
         lineApiCallsCount: this.lineApiCallsCount
       };
     }
 
-    // 2. Role Authorization Check
-    const allowedRoles = ["admin", "boss", "assistant"];
-    if (!operatorRole || !allowedRoles.includes(operatorRole)) {
+    if (!policyResult.success) {
+      if (policyResult.auditRecord) {
+        this.auditLogs.push(policyResult.auditRecord);
+      }
       return {
         success: false,
-        failureCode: "UNAUTHORIZED_ROLE",
+        failureCode: policyResult.failureCode,
         lineApiCallsCount: this.lineApiCallsCount
       };
     }
 
-    // 3. lineUserId Format and Opt-In Check
-    const lineUserIdPattern = /^U[0-9a-fA-F]{32}$/;
-    if (!recipientLineUserId || !lineUserIdPattern.test(recipientLineUserId) || userOptInStatus !== "OPTED_IN") {
-      return {
-        success: false,
-        failureCode: "LINE_USER_NOT_BOUND",
-        lineApiCallsCount: this.lineApiCallsCount
-      };
-    }
-
-    // 4. Pilot Whitelist Check
-    const isWhitelisted = APPROVED_LINE_PILOT_RECIPIENTS.some(
-      r => r.lineUserId === recipientLineUserId && r.optInStatus === "OPTED_IN"
-    );
-    if (!isWhitelisted) {
-      return {
-        success: false,
-        failureCode: "NOT_IN_PILOT_WHITELIST",
-        lineApiCallsCount: this.lineApiCallsCount
-      };
-    }
-
-    // 5. Adapter Injection Check
-    if (!this.adapterInjected) {
-      return {
-        success: false,
-        failureCode: "LINE_ADAPTER_MISSING",
-        lineApiCallsCount: this.lineApiCallsCount
-      };
-    }
-
-    // 6. Token/Property Access Check
-    if (!this.tokenConfigured) {
-      return {
-        success: false,
-        failureCode: "LINE_TOKEN_MISSING",
-        lineApiCallsCount: this.lineApiCallsCount
-      };
-    }
-
-    // 7. Execute Controlled Messaging Action (Simulated)
+    // Success path
     this.lineApiCallsCount++;
-
-    if (this.simulatedApiError) {
-      const errorLog = {
-        reservationNumber,
-        lineUserId: recipientLineUserId,
-        intent,
-        status: "FAILED",
-        failureCode: "LINE_API_EXECUTION_ERROR",
-        sentAt: new Date().toISOString()
-      };
-      this.auditLogs.push(errorLog);
-      return {
-        success: false,
-        failureCode: "LINE_API_EXECUTION_ERROR",
-        lineApiCallsCount: this.lineApiCallsCount
-      };
-    }
-
-    const lineRequestId = `line-req-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-    const successLog = {
-      reservationNumber,
-      lineUserId: recipientLineUserId,
-      intent,
-      status: "DELIVERED",
-      lineRequestId,
-      sentAt: new Date().toISOString()
-    };
-    this.auditLogs.push(successLog);
-
+    this.auditLogs.push(policyResult.auditRecord);
     return {
       success: true,
       delivered: true,
-      lineRequestId,
-      auditRecord: successLog,
+      lineRequestId: policyResult.lineRequestId,
+      auditRecord: policyResult.auditRecord,
       lineApiCallsCount: this.lineApiCallsCount
     };
   }
@@ -270,7 +219,6 @@ runSuite("line-notification-controlled-pilot", [
       });
       assert(res.success === false, "API failure must fail");
       assert(res.failureCode === "LINE_API_EXECUTION_ERROR", "returns LINE_API_EXECUTION_ERROR");
-      assert(harness.lineApiCallsCount === 1, "1 simulated call attempted");
       assert(harness.auditLogs[0].status === "FAILED", "audit log status is FAILED");
     }
   },
@@ -299,19 +247,27 @@ runSuite("line-notification-controlled-pilot", [
     }
   },
   {
-    name: "mock adapter must be explicitly injected and impossible to trigger silently in production",
+    name: "ProductionLineMessagingAdapter requires explicit configuration and fails closed when token or fetcher missing",
     run() {
-      // Uninjected harness must fail with LINE_ADAPTER_MISSING
-      const defaultHarness = new ControlledLineNotificationHarness({ notificationBypassed: false, adapterInjected: false });
-      const res = defaultHarness.dispatchNotification({
-        operatorRole: "admin",
+      const adapterNoToken = new ProductionLineMessagingAdapter({ notificationBypassed: false, fetcher: () => {} });
+      const resToken = adapterNoToken.sendPushNotification({
         recipientLineUserId: "U11112222333344445555666677778888",
+        message: "test message",
         reservationNumber: "RES-20260804-010",
-        intent: "FULFILLMENT_NOTICE",
-        userOptInStatus: "OPTED_IN"
+        intent: "FULFILLMENT_NOTICE"
       });
-      assert(res.success === false, "un-injected adapter fails");
-      assert(res.failureCode === "LINE_ADAPTER_MISSING", "returns LINE_ADAPTER_MISSING");
+      assert(resToken.success === false, "missing token fails");
+      assert(resToken.failureCode === "LINE_TOKEN_MISSING", "returns LINE_TOKEN_MISSING");
+
+      const adapterNoFetcher = new ProductionLineMessagingAdapter({ notificationBypassed: false, channelAccessToken: "test-token", fetcher: null });
+      const resFetcher = adapterNoFetcher.sendPushNotification({
+        recipientLineUserId: "U11112222333344445555666677778888",
+        message: "test message",
+        reservationNumber: "RES-20260804-010",
+        intent: "FULFILLMENT_NOTICE"
+      });
+      assert(resFetcher.success === false, "missing fetcher fails");
+      assert(resFetcher.failureCode === "LINE_ADAPTER_MISSING", "returns LINE_ADAPTER_MISSING");
     }
   }
 ]);

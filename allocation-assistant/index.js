@@ -35,7 +35,8 @@ const {
   OCR_CONFIDENCE_THRESHOLD,
   evaluateAllocationRules,
   evaluateUserPermission,
-  sanitizeReadbackAuditRecord
+  sanitizeReadbackAuditRecord,
+  evaluateLineNotificationPolicy
 } = require('./rules/allocation-rules');
 
 
@@ -52,6 +53,7 @@ const { FormalHoldWritebackAdapter } = require('./adapters/formal-hold-writeback
 const { ControlledTestSheetReservationAdapter } = require('./adapters/controlled-test-sheet-reservation-adapter');
 const { ProductionSheetReadinessDiagnostics } = require('./adapters/production-sheet-readiness-diagnostics');
 const { ProductionSheetReservationAdapter } = require('./adapters/production-sheet-reservation-adapter');
+const { ProductionLineMessagingAdapter } = require('./adapters/production-line-messaging-adapter');
 
 const { SyncIdempotencyGuard } = require('./sync/sync-idempotency-guard');
 const { AllocationSyncEngine } = require('./sync/allocation-sync-engine');
@@ -99,6 +101,7 @@ module.exports = {
   evaluateAllocationRules,
   evaluateUserPermission,
   sanitizeReadbackAuditRecord,
+  evaluateLineNotificationPolicy,
 
 
   // Audit Logger
@@ -114,6 +117,7 @@ module.exports = {
   ControlledTestSheetReservationAdapter,
   ProductionSheetReadinessDiagnostics,
   ProductionSheetReservationAdapter,
+  ProductionLineMessagingAdapter,
 
   // Sync Engine & Guard
   SyncIdempotencyGuard,
