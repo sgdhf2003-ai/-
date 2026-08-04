@@ -5,21 +5,54 @@
 - repo root: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 - branch: `main`
 - source of truth: Canonical cloud-drive checkout path above
-- HEAD: `6536987380c120075fe0303180579cd703dce29b`
-- origin/main: `6536987380c120075fe0303180579cd703dce29b`
+- HEAD: `4f9b5a83d9dc44c86b591bdcb079d24d521a68b2`
+- origin/main: `4f9b5a83d9dc44c86b591bdcb079d24d521a68b2`
 - ahead / behind vs origin/main: `0 / 0`
 
 ## Current Stage
 
-- current stage: Stage 43 Allocation Assistant Full Routine Operations & Phase Closure
+- current stage: Phase 4-D Controlled LINE Messaging Pilot Milestone Handoff
 - previous completed deliveries:
-  - Stage 42 Routine Monitoring Execution & Daily Health Sign-off (`6536987`)
-  - Stage 43 Allocation Assistant Full Routine Operations & Phase Closure Contract Gate
-- latest pushed main commit: `6536987380c120075fe0303180579cd703dce29b` (`docs: record Stage 42 routine monitoring health sign-off PASS and Version 98 operational status`)
+  - Stage 43 Allocation Assistant Phase Closure (`4f9b5a8`)
+  - Phase 4-A Controlled LINE Messaging Pilot Preflight (READY)
+  - Phase 4-B Controlled LINE Messaging Pilot Safety Rules Design (DESIGN COMPLETE)
+  - Phase 4-C Controlled Simulation Test Harness Implementation (10 / 10 PASS)
+- latest pushed main commit: `4f9b5a83d9dc44c86b591bdcb079d24d521a68b2` (`docs: record Stage 43 Allocation Assistant phase closure and daily operation loop contract completion`)
 - backend deployed version: `98` (canonical deployment record - 102 versions headroom remaining)
 - LINE Bot deployed version: `1` (canonical deployment record - fresh project Version 1)
-- automated simulations: 202 / 202 PASS (`npm run simulate:all`)
+- automated simulations: 212 / 212 PASS (`npm run simulate:all`)
 - Web App URL: `https://script.google.com/macros/s/AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw/exec`
+
+## Phase 4 Summary & Controlled LINE Messaging Pilot Record
+
+- **Phase 4 Status**: **CONTROLLED LINE MESSAGING PILOT SIMULATION TEST HARNESS COMPLETE (10 / 10 PASS)**
+- **Test Evidence**:
+  - `npm run check`: **PASS**
+  - `npm run simulate:line-notification-controlled-pilot`: **10 / 10 PASS**
+  - `npm run simulate:all`: **212 / 212 PASS** (202 previous + 10 new)
+  - `python3 deploy.py backend --check`: **VALID**
+  - `python3 deploy.py line-bot --check`: **VALID**
+  - `git diff --check`: **PASS**
+- **Verified Fail-Closed Contracts**:
+  1. `notificationBypassed === true` returns `NOTIFICATION_BYPASSED` and executes 0 LINE calls.
+  2. Unauthorized roles (`sales`/`retail`) return `UNAUTHORIZED_ROLE`.
+  3. Missing/malformed `lineUserId` or `optInStatus !== 'OPTED_IN'` returns `LINE_USER_NOT_BOUND`.
+  4. Non-whitelisted recipient returns `NOT_IN_PILOT_WHITELIST`.
+  5. Missing LINE token/property returns `LINE_TOKEN_MISSING` without printing secrets.
+  6. Missing adapter returns `LINE_ADAPTER_MISSING`.
+  7. Simulated LINE API failure returns `LINE_API_EXECUTION_ERROR`.
+  8. Simulated successful delivery reconciles `reservationNumber`, `lineUserId`, `intent`, `status: DELIVERED`, `lineRequestId`, `sentAt`.
+  9. Mock adapter must be explicitly injected and is impossible to trigger silently in production.
+- **Modified & Created Files**:
+  - `tests/simulations/line-notification-controlled-pilot.sim.js` (NEW simulation harness)
+  - `package.json` (MODIFIED - registered `simulate:line-notification-controlled-pilot` command)
+- **Side Effect & Safety Summary**:
+  - LINE API Calls: `0` (`notificationBypassed: true` preserved)
+  - Google Sheet Writes: `0`
+  - Tokens / Secrets Printed: `0`
+  - Deploys Executed: `0` (Backend Version 98 & LINE Bot Version 1 preserved)
+- **Recommended Next Gate**: `Phase 5: Supervised Customer LINE Notification Pilot Execution Gate` (or Owner-designated next gate).
+
 
 ## Stage 43 Summary & Allocation Assistant Phase Closure Record
 

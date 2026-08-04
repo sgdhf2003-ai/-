@@ -66,27 +66,38 @@
   - 端點 HTTP 200 OK、IDParity/Schema/Arithmetic/Redaction 全數通過簽核。
 
 ### Stage 43: Allocation Assistant Full Routine Operations & Phase Closure Gate
-* **狀態**: 完成並記錄 (Stage 43 Phase Complete)
-* **最新同步 Commit**: `6536987380c120075fe0303180579cd703dce29b` (`docs: record Stage 42 routine monitoring health sign-off PASS and Version 98 operational status`)
-* **階段結算結果**: **ALLOCATION ASSISTANT DAILY OPERATION LOOP PHASE COMPLETE**
-* **4 大日常作業流程合約與關閉說明**:
-  1. **建立正式劃扣**: `reservationNumber === holdRecord.id === rowData[0]`, Status `ACTIVE`。
-  2. **部分/全額銷扣出貨**: 7 欄位帳冊 `action: FULFILL_FULL` / `FULFILL_PARTIAL`, `remainingQuantity >= 0`。
-  3. **取消釋放劃扣**: 7 欄位帳冊 `action: CANCEL_RELEASE`, `remainingQuantity: 0`, Status `CANCELLED`。
-  4. **作業讀回與審查**: 助理去敏感化 `readbackRedacted === true`, 管理員 Unredacted 完整審查, 銷售員拒絕 `READBACK_QUERY_DENIED`。
-* **生產部署與安全合約**:
-  - **Backend Web App**: Version 98 (`AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw`)
-  - **LINE Bot Project**: Version 1 (`AKfycbwskF_c2VpW6Cv3yR-wUevRXdrG754ZzxyYMorroqjwkjJZT10wp3DqIZ2kA-GrKK0a`)
-  - **LINE API 發送**: 貫徹 `notificationBypassed: true` (0 次 LINE API 主動發送)。
-  - 0 次未授權 Google Sheet 寫入、0 次 Token/Secret 印出。
+* **狀態**: 完成並記錄 (`4f9b5a8`)
+* **交付與驗證內容**:
+  - 配貨助手 4 大日常作業流程合約簽核完畢，階段總結記錄完成。
+
+### Phase 4: Controlled Customer LINE Notification Pilot Gate
+* **狀態**: 完成並記錄 (Phase 4 Milestone Complete)
+* **最新同步 Commit**: `4f9b5a83d9dc44c86b591bdcb079d24d521a68b2` (`docs: record Stage 43 Allocation Assistant phase closure and daily operation loop contract completion`)
+* **試辦模擬結果**: **CONTROLLED SIMULATION HARNESS RESULT: 10 / 10 PASS**
+* **驗證與防護證明**:
+  - **模擬測試檔**: `tests/simulations/line-notification-controlled-pilot.sim.js` (指令: `npm run simulate:line-notification-controlled-pilot`)。
+  - **10 大 Fail-Closed 防護驗證**:
+    1. `NOTIFICATION_BYPASSED`: `notificationBypassed === true` 時攔截並執行 0 次 LINE 通訊。
+    2. `UNAUTHORIZED_ROLE`: 銷售員/未授權角色拒絕發送。
+    3. `LINE_USER_NOT_BOUND`: 未綁定或未 Opt-In 拒絕發送。
+    4. `NOT_IN_PILOT_WHITELIST`: 非白名單用戶拒絕發送。
+    5. `LINE_TOKEN_MISSING`: 缺少 Token 靜默 Fail-Closed 不暴露 Secret。
+    6. `LINE_ADAPTER_MISSING`: 缺少 Adapter 時拒絕執行。
+    7. `LINE_API_EXECUTION_ERROR`: API 異常時記錄 FAILED 稽核日誌。
+    8. `DELIVERED`: 成功發送完好核對 `reservationNumber`, `lineUserId`, `intent`, `status`, `lineRequestId`, `sentAt` 帳冊。
+    9. `EXPLICIT_MOCK_REQUIREMENT`: 模擬 Adapter 必須顯式注入，無法在生產環境隱式觸發。
+  - 貫徹 `notificationBypassed: true` (0 次 LINE API 主動發送)、0 次未授權 Google Sheet 寫入、0 次 Token/Secret 印出。
+  - 保留 **Backend Web App Version 98** 與 **LINE Bot Version 1** 作為生產部署基線。
 
 ## 4. 自動化驗證基線 (Automated Verification Baseline)
 - `npm run check`: **PASS**
-- `npm run simulate:all`: **202 / 202 PASS**
+- `npm run simulate:line-notification-controlled-pilot`: **10 / 10 PASS**
+- `npm run simulate:all`: **212 / 212 PASS** (202 舊項目 + 10 新項目)
 - `python3 deploy.py backend --check`: **VALID** (Backend Apps Script dry-run safe)
 - `python3 deploy.py line-bot --check`: **VALID** (LINE Bot Apps Script dry-run safe)
 - `git diff --check`: **PASS** (0 空白字元錯誤)
 - **生產環境部署記錄**: Backend Web App Version 98, LINE Bot Project Version 1 完好保留。
+
 
 
 
