@@ -5,40 +5,44 @@
 - repo root: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 - branch: `main`
 - source of truth: Canonical cloud-drive checkout path above
-- HEAD: `7dd7ed0a2b924beb36bd8ed66fa86661cf149b09`
-- origin/main: `7dd7ed0a2b924beb36bd8ed66fa86661cf149b09`
+- HEAD: `93e8cb485f6cbec174e71104eaf272bc6a23510f`
+- origin/main: `93e8cb485f6cbec174e71104eaf272bc6a23510f`
 - ahead / behind vs origin/main: `0 / 0`
 
 ## Current Stage
 
-- current stage: Phase 6-F Backend Web App Version 100 Deployment
+- current stage: Phase 6-G Production Read-Only Contract Verification Gate
 - previous completed deliveries:
   - Phase 6-C Endpoint Action Consolidation Suite (`7dd7ed0`)
   - Phase 6-E Backend Apps Script Endpoint Action Integration Implementation (`05ebafa`, 228 / 228 PASS)
-  - Phase 6-F Backend Web App Controlled Deployment to Version 100 (HTTP 200 OK)
-- latest pushed main commit: `05ebafaadab6478eb8369831992ac702f0c0b83b` (`feat(allocation-assistant): wire backend action handlers to dispatcher`)
+  - Phase 6-F Backend Web App Version 100 Deployment (`93e8cb4`, HTTP 200 OK)
+  - Phase 6-G Production Read-Only Contract Verification Gate (HTTP 200, INVALID_SESSION_USER, readbackRedacted PASS)
+- latest pushed main commit: `93e8cb485f6cbec174e71104eaf272bc6a23510f` (`docs: record Phase 6-F Backend Web App Version 100 deployment handoff`)
 - backend deployed version: `100` (canonical deployment record - 100 versions headroom remaining)
 - LINE Bot deployed version: `1` (canonical deployment record - fresh project Version 1)
 - automated simulations: 228 / 228 PASS (`npm run simulate:all`)
 - Web App URL: `https://script.google.com/macros/s/AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw/exec`
+- recommended next stage: **Phase 7-A Web App Admin Operations UI Audit Gate**
 
-## Phase 6 Summary & Backend Version 100 Deployment Record
+## Phase 6 Summary & Production Endpoint Read-Only Verification Record
 
-- **Phase 6 Status**: **BACKEND WEB APP VERSION 100 DEPLOYED & VERIFIED (HTTP 200 OK)**
-- **Deployed Components**:
-  - `google-apps-script`: Pushed `Code.gs`, `AllocationAssistantView.html`, `Index.html`, `appsscript.json` to Script ID `1vRepq_HNkjbs8vRQvbkkDE8unGPHfksfhOTrkrNZthFZHs2GSHO8Gasc`.
-  - Created Version `100` and updated Deployment ID `AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw`.
+- **Phase 6 Status**: **PRODUCTION READ-ONLY CONTRACT VERIFICATION COMPLETED & CONFIRMED (100% PASS)**
+- **Production Endpoint Read-Only Proofs**:
+  - `GET Health Ping`: **HTTP 200 OK** (`https://script.google.com/macros/s/AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw/exec`)
+  - `Unauthenticated Fulfill Action`: `{ ok: false, errorCode: "INVALID_SESSION_USER", message: "登入狀態失效或缺少使用者權限脈絡" }` (Fail-closed verified!)
+  - `Readback Audit Query`: `{ ok: true, found: true, reservationNumber: "RES-20260805-AUDIT01", record: {...}, readbackRedacted: true }` (Sanitized readback output verified!)
 - **Test & Verification Evidence**:
   - `npm run check`: **PASS**
   - `npm run simulate:all`: **228 / 228 PASS**
   - `python3 deploy.py backend --check`: **VALID**
   - `python3 deploy.py line-bot --check`: **VALID**
-  - `read-only Web App HTTP ping`: **HTTP 200 OK**
+  - `git diff --check`: **PASS**
 - **Side Effect & Safety Summary**:
-  - LINE API Calls: `0` (`notificationBypassed: true` default preserved)
+  - LINE API Push Calls: `0` (`notificationBypassed: true` default preserved)
   - Google Sheet Writes: `0`
   - Tokens / Secrets Printed: `0`
-  - LINE Bot Deployments: `0` (LINE Bot Version 1 preserved)
+  - Deploys Executed: `0` (Backend Version 100 & LINE Bot Version 1 preserved)
+
 
 
 

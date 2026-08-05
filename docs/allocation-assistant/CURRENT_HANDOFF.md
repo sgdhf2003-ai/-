@@ -4,10 +4,10 @@
 * **交接日期**: 2026-08-05
 * **執行目錄**: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 * **目前分支**: `main`
-* **HEAD Hash**: `05ebafaadab6478eb8369831992ac702f0c0b83b`
-* **origin/main Hash**: `05ebafaadab6478eb8369831992ac702f0c0b83b`
+* **HEAD Hash**: `93e8cb485f6cbec174e71104eaf272bc6a23510f`
+* **origin/main Hash**: `93e8cb485f6cbec174e71104eaf272bc6a23510f`
 * **分支關係**: `0 ahead / 0 behind` (完全同步)
-* **Working Tree 狀態**: Clean
+* **Working Tree 狀態**: Clean (Pending Phase 6-G Commit)
 
 ## 2. 本次完成內容 (Completed Work)
 * 完成 Stage 30 & 31 生產環境 Google Sheet 劃扣與出貨生命週期驗證 (`RES-20260801-001`, `RES-20260801-002`)。
@@ -28,9 +28,10 @@
 * 完成 Phase 6-A 多批次銷扣出貨算術核對與 7 欄位 Ledger Schema 驗證套件 (`be95249`, 220/220 PASS)。
 * 完成 Phase 6-C 端點動作分發器整合套件 (`7dd7ed0`, 225/225 PASS)。
 * 完成 Phase 6-E Apps Script 後端端點處理器接線套件 (`05ebafa`, 228/228 PASS)。
-* 完成 Phase 6-F Backend Web App Version 100 受控部署與驗證 (HTTP 200 OK, 100 剩餘版本空間)。
-
+* 完成 Phase 6-F Backend Web App Version 100 受控部署與驗證 (`93e8cb4`, HTTP 200 OK, 100 剩餘版本空間)。
+* 完成 Phase 6-G 生產環境唯讀合約驗證 (HTTP 200 Health Ping, `INVALID_SESSION_USER` Fail-Closed, `readbackRedacted: true` 脫敏驗證 100% PASS)。
 * 本機檢查、模擬測試與部署 Dry Run 全數通過 (`npm run check`, `npm run simulate:all`, `deploy.py --check` PASS)。
+
 
 ## 3. 未完成內容與未啟用功能 (Deactivated Features)
 * LINE API 主動 Push/Send 維持關閉 (`notificationBypassed: true`)。
