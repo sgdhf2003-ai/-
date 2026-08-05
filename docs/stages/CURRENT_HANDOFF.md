@@ -11,35 +11,35 @@
 
 ## Current Stage
 
-- current stage: Phase 6-E Backend Apps Script Endpoint Action Integration Implementation
+- current stage: Phase 6-F Backend Web App Version 100 Deployment
 - previous completed deliveries:
   - Phase 6-C Endpoint Action Consolidation Suite (`7dd7ed0`)
-  - Phase 6-D Contract-First Backend Integration Plan
-  - Phase 6-E Backend Apps Script Endpoint Action Integration Implementation (228 / 228 PASS)
-- latest pushed main commit: `7dd7ed0a2b924beb36bd8ed66fa86661cf149b09` (`feat(allocation-assistant): consolidate endpoint action dispatchers`)
-- backend deployed version: `99` (canonical deployment record - 101 versions headroom remaining)
+  - Phase 6-E Backend Apps Script Endpoint Action Integration Implementation (`05ebafa`, 228 / 228 PASS)
+  - Phase 6-F Backend Web App Controlled Deployment to Version 100 (HTTP 200 OK)
+- latest pushed main commit: `05ebafaadab6478eb8369831992ac702f0c0b83b` (`feat(allocation-assistant): wire backend action handlers to dispatcher`)
+- backend deployed version: `100` (canonical deployment record - 100 versions headroom remaining)
 - LINE Bot deployed version: `1` (canonical deployment record - fresh project Version 1)
 - automated simulations: 228 / 228 PASS (`npm run simulate:all`)
 - Web App URL: `https://script.google.com/macros/s/AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw/exec`
 
-## Phase 6 Summary & Backend Wireup Integration Record
+## Phase 6 Summary & Backend Version 100 Deployment Record
 
-- **Phase 6 Status**: **BACKEND ENDPOINT ACTION INTEGRATION IMPLEMENTED & VERIFIED (228 / 228 PASS)**
-- **Implemented Components**:
-  - `google-apps-script/Code.gs`: Updated `fulfillHoldAction`, `cancelReleaseHoldAction`, and added `readbackAuditAction` delegated to `AllocationEndpointDispatcher` logic.
-  - `tests/simulations/allocation-backend-wireup.sim.js`: 3 new simulation tests verifying Apps Script handlers, 7-column ledger row generation, session auth, and sanitized readback queries in Node.js VM context.
+- **Phase 6 Status**: **BACKEND WEB APP VERSION 100 DEPLOYED & VERIFIED (HTTP 200 OK)**
+- **Deployed Components**:
+  - `google-apps-script`: Pushed `Code.gs`, `AllocationAssistantView.html`, `Index.html`, `appsscript.json` to Script ID `1vRepq_HNkjbs8vRQvbkkDE8unGPHfksfhOTrkrNZthFZHs2GSHO8Gasc`.
+  - Created Version `100` and updated Deployment ID `AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw`.
 - **Test & Verification Evidence**:
   - `npm run check`: **PASS**
-  - `npm run simulate:allocation-backend-wireup`: **3 / 3 PASS**
-  - `npm run simulate:all`: **228 / 228 PASS** (225 previous + 3 new)
+  - `npm run simulate:all`: **228 / 228 PASS**
   - `python3 deploy.py backend --check`: **VALID**
   - `python3 deploy.py line-bot --check`: **VALID**
-  - `git diff --check`: **PASS**
+  - `read-only Web App HTTP ping`: **HTTP 200 OK**
 - **Side Effect & Safety Summary**:
   - LINE API Calls: `0` (`notificationBypassed: true` default preserved)
   - Google Sheet Writes: `0`
   - Tokens / Secrets Printed: `0`
-  - Deploys Executed: `0` (Backend Version 99 & LINE Bot Version 1 preserved)
+  - LINE Bot Deployments: `0` (LINE Bot Version 1 preserved)
+
 
 
 ## Phase 6 Summary & Endpoint Action Consolidation Record

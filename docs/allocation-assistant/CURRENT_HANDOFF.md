@@ -4,10 +4,10 @@
 * **交接日期**: 2026-08-05
 * **執行目錄**: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 * **目前分支**: `main`
-* **HEAD Hash**: `7dd7ed0a2b924beb36bd8ed66fa86661cf149b09`
-* **origin/main Hash**: `7dd7ed0a2b924beb36bd8ed66fa86661cf149b09`
+* **HEAD Hash**: `05ebafaadab6478eb8369831992ac702f0c0b83b`
+* **origin/main Hash**: `05ebafaadab6478eb8369831992ac702f0c0b83b`
 * **分支關係**: `0 ahead / 0 behind` (完全同步)
-* **Working Tree 狀態**: Clean (Pending Phase 6-E Commit)
+* **Working Tree 狀態**: Clean
 
 ## 2. 本次完成內容 (Completed Work)
 * 完成 Stage 30 & 31 生產環境 Google Sheet 劃扣與出貨生命週期驗證 (`RES-20260801-001`, `RES-20260801-002`)。
@@ -27,9 +27,9 @@
 * 完成 Phase 5 受控單一對象 LINE 通知試辦執行與安全驗證 (`f2364a8`, `4468ab0`)。
 * 完成 Phase 6-A 多批次銷扣出貨算術核對與 7 欄位 Ledger Schema 驗證套件 (`be95249`, 220/220 PASS)。
 * 完成 Phase 6-C 端點動作分發器整合套件 (`7dd7ed0`, 225/225 PASS)。
-* 完成 Phase 6-E Apps Script 後端端點處理器接線套件 (228/228 PASS):
-  - 更新 `google-apps-script/Code.gs` 中之 `fulfillHoldAction`, `cancelReleaseHoldAction` 並新增 `readbackAuditAction` 委派分發。
-  - 新增 `tests/simulations/allocation-backend-wireup.sim.js` (3 個測試案例，全數 PASS)。
+* 完成 Phase 6-E Apps Script 後端端點處理器接線套件 (`05ebafa`, 228/228 PASS)。
+* 完成 Phase 6-F Backend Web App Version 100 受控部署與驗證 (HTTP 200 OK, 100 剩餘版本空間)。
+
 * 本機檢查、模擬測試與部署 Dry Run 全數通過 (`npm run check`, `npm run simulate:all`, `deploy.py --check` PASS)。
 
 ## 3. 未完成內容與未啟用功能 (Deactivated Features)
