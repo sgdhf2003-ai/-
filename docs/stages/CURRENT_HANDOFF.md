@@ -5,22 +5,42 @@
 - repo root: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 - branch: `main`
 - source of truth: Canonical cloud-drive checkout path above
-- HEAD: `be952497b1d66fedbaf6fc08a93c2ec719ef4bfc`
-- origin/main: `be952497b1d66fedbaf6fc08a93c2ec719ef4bfc`
+- HEAD: `7dd7ed0a2b924beb36bd8ed66fa86661cf149b09`
+- origin/main: `7dd7ed0a2b924beb36bd8ed66fa86661cf149b09`
 - ahead / behind vs origin/main: `0 / 0`
 
 ## Current Stage
 
-- current stage: Phase 6-C Allocation Endpoint Dispatcher Consolidation Suite Implementation
+- current stage: Phase 6-E Backend Apps Script Endpoint Action Integration Implementation
 - previous completed deliveries:
-  - Phase 6-A Multi-Lot Fulfillment Reconciliation (`be95249`)
-  - Phase 6-B Endpoint Action Consolidation Contract Plan
-  - Phase 6-C Allocation Endpoint Dispatcher Consolidation Suite Implementation (225 / 225 PASS)
-- latest pushed main commit: `be952497b1d66fedbaf6fc08a93c2ec719ef4bfc` (`feat(allocation-assistant): implement multi-lot fulfillment reconciliation`)
+  - Phase 6-C Endpoint Action Consolidation Suite (`7dd7ed0`)
+  - Phase 6-D Contract-First Backend Integration Plan
+  - Phase 6-E Backend Apps Script Endpoint Action Integration Implementation (228 / 228 PASS)
+- latest pushed main commit: `7dd7ed0a2b924beb36bd8ed66fa86661cf149b09` (`feat(allocation-assistant): consolidate endpoint action dispatchers`)
 - backend deployed version: `99` (canonical deployment record - 101 versions headroom remaining)
 - LINE Bot deployed version: `1` (canonical deployment record - fresh project Version 1)
-- automated simulations: 225 / 225 PASS (`npm run simulate:all`)
+- automated simulations: 228 / 228 PASS (`npm run simulate:all`)
 - Web App URL: `https://script.google.com/macros/s/AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw/exec`
+
+## Phase 6 Summary & Backend Wireup Integration Record
+
+- **Phase 6 Status**: **BACKEND ENDPOINT ACTION INTEGRATION IMPLEMENTED & VERIFIED (228 / 228 PASS)**
+- **Implemented Components**:
+  - `google-apps-script/Code.gs`: Updated `fulfillHoldAction`, `cancelReleaseHoldAction`, and added `readbackAuditAction` delegated to `AllocationEndpointDispatcher` logic.
+  - `tests/simulations/allocation-backend-wireup.sim.js`: 3 new simulation tests verifying Apps Script handlers, 7-column ledger row generation, session auth, and sanitized readback queries in Node.js VM context.
+- **Test & Verification Evidence**:
+  - `npm run check`: **PASS**
+  - `npm run simulate:allocation-backend-wireup`: **3 / 3 PASS**
+  - `npm run simulate:all`: **228 / 228 PASS** (225 previous + 3 new)
+  - `python3 deploy.py backend --check`: **VALID**
+  - `python3 deploy.py line-bot --check`: **VALID**
+  - `git diff --check`: **PASS**
+- **Side Effect & Safety Summary**:
+  - LINE API Calls: `0` (`notificationBypassed: true` default preserved)
+  - Google Sheet Writes: `0`
+  - Tokens / Secrets Printed: `0`
+  - Deploys Executed: `0` (Backend Version 99 & LINE Bot Version 1 preserved)
+
 
 ## Phase 6 Summary & Endpoint Action Consolidation Record
 

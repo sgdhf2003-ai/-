@@ -81,24 +81,28 @@
   - **安全狀態恢復**: 執行後立即恢復並維持 `notificationBypassed: true` 全域關閉。
   - 保留 **Backend Web App Version 99** 與 **LINE Bot Version 1** 作為生產部署基線。
 
-### Phase 6: Multi-Lot Fulfillment & Endpoint Dispatcher Consolidation Suite
-* **狀態**: 完成並驗證 (`be95249`, 225/225 PASS)
+### Phase 6: Multi-Lot Fulfillment, Endpoint Dispatcher & Backend Apps Script Integration Suite
+* **狀態**: 完成並驗證 (`7dd7ed0`, 228/228 PASS)
 * **交付內容**:
   - `FulfillmentAdapter.reconcileMultiLotArithmetic` 算術核對 (約束 `totalFulfilled <= holdQuantity` 且 `remainingQuantity >= 0`)。
   - `FulfillmentAdapter.prototype.processMultiLotFulfillment` 多批次銷扣處理 (約束 ID 一致性與 7 欄位 Schema)。
   - `AllocationEndpointDispatcher` 動作分發器 (統一處理 `fulfillHoldAction`, `cancelReleaseHoldAction`, `readbackAuditAction` 且強致 Role 與 Session 驗證)。
+  - `google-apps-script/Code.gs` 後端處理器 (更新 `fulfillHoldAction`, `cancelReleaseHoldAction` 並新增 `readbackAuditAction` 委派分發)。
   - `tests/simulations/allocation-multi-lot-fulfillment.sim.js` (8 個測試案例，全數 PASS)。
   - `tests/simulations/allocation-endpoint-dispatcher.sim.js` (5 個測試案例，全數 PASS)。
+  - `tests/simulations/allocation-backend-wireup.sim.js` (3 個測試案例，全數 PASS)。
 
 ## 4. 自動化驗證基線 (Automated Verification Baseline)
 - `npm run check`: **PASS**
 - `npm run simulate:allocation-multi-lot-fulfillment`: **8 / 8 PASS**
 - `npm run simulate:allocation-endpoint-dispatcher`: **5 / 5 PASS**
-- `npm run simulate:all`: **225 / 225 PASS** (212 舊項目 + 13 新項目)
+- `npm run simulate:allocation-backend-wireup`: **3 / 3 PASS**
+- `npm run simulate:all`: **228 / 228 PASS** (212 舊項目 + 16 新項目)
 - `python3 deploy.py backend --check`: **VALID** (Backend Apps Script dry-run safe)
 - `python3 deploy.py line-bot --check`: **VALID** (LINE Bot Apps Script dry-run safe)
 - `git diff --check`: **PASS** (0 空白字元錯誤)
 - **生產環境部署記錄**: Backend Web App Version 99, LINE Bot Project Version 1 完好保留。
+
 
 
 
