@@ -4,10 +4,10 @@
 * **交接日期**: 2026-08-05
 * **執行目錄**: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 * **目前分支**: `main`
-* **HEAD Hash**: `0983402d39893941add3cc868f6232f4336aaeed`
-* **origin/main Hash**: `0983402d39893941add3cc868f6232f4336aaeed`
+* **HEAD Hash**: `c593f6e21a0c62dc388ce2b8e30b9fdf0f47a864`
+* **origin/main Hash**: `c593f6e21a0c62dc388ce2b8e30b9fdf0f47a864`
 * **分支關係**: `0 ahead / 0 behind` (完全同步)
-* **Working Tree 狀態**: Clean (Pending Phase 4-I Handoff Commit)
+* **Working Tree 狀態**: Clean (Pending Phase 5-B Handoff Commit)
 
 ## 2. 本次完成內容 (Completed Work)
 * 完成 Stage 30 & 31 生產環境 Google Sheet 劃扣與出貨生命週期驗證 (`RES-20260801-001`, `RES-20260801-002`)。
@@ -22,17 +22,15 @@
 * 完成 Stage 41 受控生產批次營運與人員導入驗證 (`8b53044`): 3 筆真實單據處理與驗證完好通過。
 * 完成 Stage 42 生產環境常態監控執行與每日健康簽核 (`6536987`): 端點 HTTP 200 OK，IDParity/Schema/Arithmetic/Redaction 全數 PASS。
 * 完成 Stage 43 配貨助手日常作業全流程階段總結與合約關閉 (`4f9b5a8`): 階段結算完成。
-* 完成 Phase 4 受控 LINE 客戶通知試辦程式碼實作與 Commit/Push (`0983402`):
-  - 實作 `ProductionLineMessagingAdapter` (`allocation-assistant/adapters/production-line-messaging-adapter.js`)。
-  - 實作 `evaluateLineNotificationPolicy` (`allocation-assistant/rules/allocation-rules.js`)。
-  - 實作 `evaluateLineNotificationPolicy_` (`google-apps-script/Code.gs`)。
-  - 測試總數保持 **212 / 212 PASS** (`npm run simulate:all`)。
-* 完成 Phase 4-H Backend Web App Version 99 受控部署:
-  - 部署 Backend Web App 至 **Version 99** (Script ID: `1vRepq_HNkjbs8vRQvbkkDE8unGPHfksfhOTrkrNZthFZHs2GSHO8Gasc`, Deployment ID: `AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw`)。
-  - 保留 101 個 Version 配額。
-  - 貫徹 `notificationBypassed: true` (0 次 LINE API 主動發送)、0 次未授權 Google Sheet 寫入、0 次 Token/Secret 印出。
-  - 保留 LINE Bot Version 1 (0 次 LINE Bot 部署)。
+* 完成 Phase 4 受控 LINE 客戶通知試辦程式碼實作與 Version 99 部署 (`0983402`, `c593f6e`)。
+* 完成 Stage 45 常態營運監控與健康審查 (PASS - 212/212 PASS)。
+* 完成 Phase 5 受控單一對象 LINE 通知試辦執行與安全驗證:
+  - 受控模擬對象: `PILOT_RECIPIENT_01` (`U11112222333344445555666677778888`, `OPTED_IN`)。
+  - 本機 Token 防護邊界實施 Fail-Closed 攔截 (`LINE_TOKEN_MISSING`)，未印出任何 Secret，亦未執行真實 LINE API Push。
+  - 稽核對帳證明: 僅作為測試 Harness 之內部對帳憑據 (產生 `line-req-1785922732923`)，未宣稱真實客戶發送或生產 LINE 交付。
+  - 執行後立即恢復並維持 `notificationBypassed: true` 全域關閉。
 * 本機檢查、模擬測試與部署 Dry Run 全數通過 (`npm run check`, `npm run simulate:all`, `deploy.py --check` PASS)。
+
 
 
 

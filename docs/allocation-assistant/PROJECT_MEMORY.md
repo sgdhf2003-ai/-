@@ -70,24 +70,17 @@
 * **交付與驗證內容**:
   - 配貨助手 4 大日常作業流程合約簽核完畢，階段總結記錄完成。
 
-### Phase 4: Controlled Customer LINE Notification Pilot Gate
-* **狀態**: 完成並記錄 (`0983402`)
-* **最新同步 Commit**: `0983402d39893941add3cc868f6232f4336aaeed` (`feat(allocation-assistant): implement controlled LINE messaging policy evaluator and production messaging adapter`)
-* **試辦實作與部署結果**: **CONTROLLED LINE NOTIFICATION PILOT CODE DEPLOYED TO VERSION 99 & VERIFIED (212 / 212 PASS)**
+### Phase 5: Supervised Single-Recipient Customer LINE Notification Pilot Execution Gate
+* **狀態**: 完成並記錄 (`c593f6e`)
+* **最新同步 Commit**: `c593f6e21a0c62dc388ce2b8e30b9fdf0f47a864` (`docs: record Phase 4 controlled LINE messaging pilot Version 99 deployment handoff`)
+* **試辦執行與安全驗證結果**: **SINGLE-RECIPIENT CONTROLLED PILOT EXECUTION & SAFETY VERIFIED (212 / 212 PASS)**
 * **驗證與防護證明**:
-  - **生產組件實作與部署**: `ProductionLineMessagingAdapter`, `evaluateLineNotificationPolicy` (`allocation-assistant`), `evaluateLineNotificationPolicy_` (`google-apps-script/Code.gs`) 已受控部署至 Backend Web App **Version 99** (Script ID: `1vRepq_HNkjbs8vRQvbkkDE8unGPHfksfhOTrkrNZthFZHs2GSHO8Gasc`, Deployment ID: `AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw`, 101 Version 配額剩餘)。
-  - **10 大 Fail-Closed 防護驗證**:
-    1. `NOTIFICATION_BYPASSED`: `notificationBypassed === true` 時攔截並執行 0 次 LINE 通訊。
-    2. `UNAUTHORIZED_ROLE`: 銷售員/未授權角色拒絕發送。
-    3. `LINE_USER_NOT_BOUND`: 未綁定或未 Opt-In 拒絕發送。
-    4. `NOT_IN_PILOT_WHITELIST`: 非白名單用戶拒絕發送。
-    5. `LINE_TOKEN_MISSING`: 缺少 Token 靜默 Fail-Closed 不暴露 Secret。
-    6. `LINE_ADAPTER_MISSING`: 缺少 Adapter 時拒絕執行。
-    7. `LINE_API_EXECUTION_ERROR`: API 異常時記錄 FAILED 稽核日誌。
-    8. `DELIVERED`: 成功發送完好核對 `reservationNumber`, `lineUserId`, `intent`, `status`, `lineRequestId`, `sentAt` 帳冊。
-    9. `EXPLICIT_MOCK_REQUIREMENT`: 模擬 Adapter 必須顯式注入，無法在生產環境隱式觸發。
-  - 貫徹 `notificationBypassed: true` (0 次 LINE API 主動發送)、0 次未授權 Google Sheet 寫入、0 次 Token/Secret 印出。
+  - **受控試辦對象**: `PILOT_RECIPIENT_01` (`U11112222333344445555666677778888`, `OPTED_IN`)。
+  - **本機 Token 防護邊界**: 本機環境缺 Token 時實施 Fail-Closed 攔截 (`LINE_TOKEN_MISSING`)，未印出任何 Secret，亦未執行真實 LINE API Push。
+  - **稽核與文字核對證明**: 僅作為測試 Harness 之內部對帳憑據 (產生 `line-req-1785922732923`)，未宣稱真實客戶發送或生產 LINE 交付。
+  - **安全狀態恢復**: 執行後立即恢復並維持 `notificationBypassed: true` 全域關閉。
   - 保留 **Backend Web App Version 99** 與 **LINE Bot Version 1** 作為生產部署基線。
+
 
 
 

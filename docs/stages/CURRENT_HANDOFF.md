@@ -5,22 +5,47 @@
 - repo root: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 - branch: `main`
 - source of truth: Canonical cloud-drive checkout path above
-- HEAD: `0983402d39893941add3cc868f6232f4336aaeed`
-- origin/main: `0983402d39893941add3cc868f6232f4336aaeed`
+- HEAD: `c593f6e21a0c62dc388ce2b8e30b9fdf0f47a864`
+- origin/main: `c593f6e21a0c62dc388ce2b8e30b9fdf0f47a864`
 - ahead / behind vs origin/main: `0 / 0`
 
 ## Current Stage
 
-- current stage: Phase 4-I Controlled LINE Messaging Pilot Deployment Milestone Handoff
+- current stage: Phase 5-B Controlled LINE Messaging Single-Recipient Execution Milestone Handoff
 - previous completed deliveries:
-  - Phase 4-G Controlled LINE Messaging Pilot Milestone Handoff (`0983402`)
-  - Phase 4-H Controlled Backend Web App Version 99 Deployment
-  - Phase 4-I Controlled LINE Messaging Pilot Deployment Milestone Handoff
-- latest pushed main commit: `0983402d39893941add3cc868f6232f4336aaeed` (`feat(allocation-assistant): implement controlled LINE messaging policy evaluator and production messaging adapter`)
+  - Phase 4-I Controlled LINE Messaging Pilot Deployment Milestone Handoff (`c593f6e`)
+  - Stage 45 Read-Only Operations Monitoring & Health Audit (PASS - 212/212 PASS)
+  - Phase 5 Single-Recipient Controlled Pilot Execution & Safety Verification
+- latest pushed main commit: `c593f6e21a0c62dc388ce2b8e30b9fdf0f47a864` (`docs: record Phase 4 controlled LINE messaging pilot Version 99 deployment handoff`)
 - backend deployed version: `99` (canonical deployment record - 101 versions headroom remaining)
 - LINE Bot deployed version: `1` (canonical deployment record - fresh project Version 1)
 - automated simulations: 212 / 212 PASS (`npm run simulate:all`)
 - Web App URL: `https://script.google.com/macros/s/AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw/exec`
+
+## Phase 5 Summary & Single-Recipient Controlled Execution Record
+
+- **Phase 5 Status**: **SINGLE-RECIPIENT CONTROLLED PILOT EXECUTION & SAFETY VERIFIED (212 / 212 PASS)**
+- **Controlled Test Scenario & Policy Verification**:
+  - Synthetic Recipient: `PILOT_RECIPIENT_01` (`U11112222333344445555666677778888`, `optInStatus: OPTED_IN`)
+  - Test Scenario Payload: `admin` role, reservation `RES-20260805-PILOT01`, intent `FULFILLMENT_NOTICE`
+  - Policy Evaluation Status: `PASS` (Policy evaluator returned local harness reconciliation receipt `line-req-1785922732923`)
+  - Local Token Boundary: Fail-Closed (`LINE_TOKEN_MISSING` guarded; 0 secrets printed; 0 real LINE API push calls executed)
+  - Audit Reconciliation Wording: Local harness policy evaluation evidence only; no real production LINE delivery or customer notification claimed.
+- **Safety Restoration**:
+  - `notificationBypassed: true` restored/enforced system-wide immediately after invocation.
+- **Test & Verification Evidence**:
+  - `npm run check`: **PASS**
+  - `npm run simulate:line-notification-controlled-pilot`: **10 / 10 PASS**
+  - `npm run simulate:all`: **212 / 212 PASS**
+  - `python3 deploy.py backend --check`: **VALID**
+  - `python3 deploy.py line-bot --check`: **VALID**
+  - `git diff --check`: **PASS**
+- **Side Effect & Safety Summary**:
+  - Real LINE API Push Calls: `0` (Local token boundary guarded)
+  - Google Sheet Writes: `0`
+  - Secrets Printed: `0`
+  - Deploys Executed: `0` (Backend Version 99 & LINE Bot Version 1 preserved)
+
 
 ## Phase 4 Summary & Controlled LINE Messaging Pilot Record
 
