@@ -71,15 +71,16 @@
   - 配貨助手 4 大日常作業流程合約簽核完畢，階段總結記錄完成。
 
 ### Phase 5: Supervised Single-Recipient Customer LINE Notification Pilot Execution Gate
-* **狀態**: 完成並記錄 (`c593f6e`)
-* **最新同步 Commit**: `c593f6e21a0c62dc388ce2b8e30b9fdf0f47a864` (`docs: record Phase 4 controlled LINE messaging pilot Version 99 deployment handoff`)
+* **狀態**: 完成並記錄 (`f2364a8`)
+* **最新同步 Commit**: `f2364a85eb14e3e64185ce173bcaf8c279b7ae97` (`docs: record Phase 5 single-recipient controlled LINE pilot safety handoff`)
 * **試辦執行與安全驗證結果**: **SINGLE-RECIPIENT CONTROLLED PILOT EXECUTION & SAFETY VERIFIED (212 / 212 PASS)**
 * **驗證與防護證明**:
-  - **受控試辦對象**: `PILOT_RECIPIENT_01` (`U11112222333344445555666677778888`, `OPTED_IN`)。
+  - **受控試辦對象**: Owner 授權對象 (`U17700...` 為隱私遮蔽，`OPTED_IN`)。
   - **本機 Token 防護邊界**: 本機環境缺 Token 時實施 Fail-Closed 攔截 (`LINE_TOKEN_MISSING`)，未印出任何 Secret，亦未執行真實 LINE API Push。
-  - **稽核與文字核對證明**: 僅作為測試 Harness 之內部對帳憑據 (產生 `line-req-1785922732923`)，未宣稱真實客戶發送或生產 LINE 交付。
+  - **稽核與文字核對證明**: 僅作為測試 Harness 之內部對帳憑據 (產生 `line-req-1785938116713`)，未宣稱真實客戶發送或生產 LINE 交付。
   - **安全狀態恢復**: 執行後立即恢復並維持 `notificationBypassed: true` 全域關閉。
   - 保留 **Backend Web App Version 99** 與 **LINE Bot Version 1** 作為生產部署基線。
+
 
 
 

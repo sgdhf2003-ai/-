@@ -4,10 +4,10 @@
 * **交接日期**: 2026-08-05
 * **執行目錄**: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 * **目前分支**: `main`
-* **HEAD Hash**: `c593f6e21a0c62dc388ce2b8e30b9fdf0f47a864`
-* **origin/main Hash**: `c593f6e21a0c62dc388ce2b8e30b9fdf0f47a864`
+* **HEAD Hash**: `f2364a85eb14e3e64185ce173bcaf8c279b7ae97`
+* **origin/main Hash**: `f2364a85eb14e3e64185ce173bcaf8c279b7ae97`
 * **分支關係**: `0 ahead / 0 behind` (完全同步)
-* **Working Tree 狀態**: Clean (Pending Phase 5-B Handoff Commit)
+* **Working Tree 狀態**: Clean (Pending Phase 5-D Handoff Commit)
 
 ## 2. 本次完成內容 (Completed Work)
 * 完成 Stage 30 & 31 生產環境 Google Sheet 劃扣與出貨生命週期驗證 (`RES-20260801-001`, `RES-20260801-002`)。
@@ -24,12 +24,13 @@
 * 完成 Stage 43 配貨助手日常作業全流程階段總結與合約關閉 (`4f9b5a8`): 階段結算完成。
 * 完成 Phase 4 受控 LINE 客戶通知試辦程式碼實作與 Version 99 部署 (`0983402`, `c593f6e`)。
 * 完成 Stage 45 常態營運監控與健康審查 (PASS - 212/212 PASS)。
-* 完成 Phase 5 受控單一對象 LINE 通知試辦執行與安全驗證:
-  - 受控模擬對象: `PILOT_RECIPIENT_01` (`U11112222333344445555666677778888`, `OPTED_IN`)。
+* 完成 Phase 5 受控單一對象 LINE 通知試辦執行與安全驗證 (`f2364a8`):
+  - 受控對象: Owner 授權與 Opted-in 對象 (`U17700...` 為隱私遮蔽，`OPTED_IN`)。
   - 本機 Token 防護邊界實施 Fail-Closed 攔截 (`LINE_TOKEN_MISSING`)，未印出任何 Secret，亦未執行真實 LINE API Push。
-  - 稽核對帳證明: 僅作為測試 Harness 之內部對帳憑據 (產生 `line-req-1785922732923`)，未宣稱真實客戶發送或生產 LINE 交付。
+  - 稽核對帳證明: 僅作為測試 Harness 之內部對帳憑據 (產生 `line-req-1785938116713`)，未宣稱真實客戶發送或生產 LINE 交付。
   - 執行後立即恢復並維持 `notificationBypassed: true` 全域關閉。
 * 本機檢查、模擬測試與部署 Dry Run 全數通過 (`npm run check`, `npm run simulate:all`, `deploy.py --check` PASS)。
+
 
 
 
