@@ -5,23 +5,48 @@
 - repo root: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 - branch: `main`
 - source of truth: Canonical cloud-drive checkout path above
-- HEAD: `64d067b70a0ee20aa47f1a7410f538f1cea3ce71`
-- origin/main: `64d067b70a0ee20aa47f1a7410f538f1cea3ce71`
+- HEAD: `0983402d39893941add3cc868f6232f4336aaeed`
+- origin/main: `0983402d39893941add3cc868f6232f4336aaeed`
 - ahead / behind vs origin/main: `0 / 0`
 
 ## Current Stage
 
-- current stage: Phase 4-G Controlled LINE Messaging Pilot Milestone Handoff
+- current stage: Phase 4-I Controlled LINE Messaging Pilot Deployment Milestone Handoff
 - previous completed deliveries:
-  - Phase 4 Simulation Test Harness & Baseline Commit (`64d067b`)
-  - Phase 4-E Production Implementation Preflight (READY)
-  - Phase 4-F Production Code Implementation (Pass 212/212 Simulations)
-  - Phase 4-G Controlled LINE Messaging Pilot Milestone Handoff
-- latest pushed main commit: `64d067b70a0ee20aa47f1a7410f538f1cea3ce71` (`test: implement Phase 4 controlled LINE messaging pilot simulation test harness and record milestone handoff`)
-- backend deployed version: `98` (canonical deployment record - 102 versions headroom remaining)
+  - Phase 4-G Controlled LINE Messaging Pilot Milestone Handoff (`0983402`)
+  - Phase 4-H Controlled Backend Web App Version 99 Deployment
+  - Phase 4-I Controlled LINE Messaging Pilot Deployment Milestone Handoff
+- latest pushed main commit: `0983402d39893941add3cc868f6232f4336aaeed` (`feat(allocation-assistant): implement controlled LINE messaging policy evaluator and production messaging adapter`)
+- backend deployed version: `99` (canonical deployment record - 101 versions headroom remaining)
 - LINE Bot deployed version: `1` (canonical deployment record - fresh project Version 1)
 - automated simulations: 212 / 212 PASS (`npm run simulate:all`)
 - Web App URL: `https://script.google.com/macros/s/AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw/exec`
+
+## Phase 4 Summary & Controlled LINE Messaging Pilot Record
+
+- **Phase 4 Status**: **CONTROLLED LINE MESSAGING PILOT VERSION 99 DEPLOYED & VERIFIED (212 / 212 PASS)**
+- **Production Deployment Record**:
+  - Backend Web App Version: **Version 99**
+  - Script ID: `1vRepq_HNkjbs8vRQvbkkDE8unGPHfksfhOTrkrNZthFZHs2GSHO8Gasc`
+  - Deployment ID: `AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw`
+  - Web App URL: `https://script.google.com/macros/s/AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw/exec`
+  - Headroom Remaining: `101 version slots out of 200`
+  - LINE Bot Version: **Version 1** preserved (0 LINE Bot deployments executed)
+- **Test & Verification Evidence**:
+  - `npm run check`: **PASS**
+  - `npm run simulate:line-notification-controlled-pilot`: **10 / 10 PASS**
+  - `npm run simulate:all`: **212 / 212 PASS**
+  - `python3 deploy.py backend --check`: **VALID**
+  - `python3 deploy.py line-bot --check`: **VALID**
+  - `git diff --check`: **PASS**
+- **Side Effect & Safety Summary**:
+  - Backend Deployments: `1` controlled deployment to Version 99
+  - LINE API Calls: `0` (`notificationBypassed: true` default preserved)
+  - Google Sheet Writes: `0`
+  - Secrets Printed: `0`
+  - LINE Bot Deployments: `0`
+- **Recommended Next Gate**: `Phase 5: Supervised Customer LINE Notification Pilot Execution Gate` (or Owner-designated next gate).
+
 
 ## Phase 4 Summary & Controlled LINE Messaging Pilot Record
 

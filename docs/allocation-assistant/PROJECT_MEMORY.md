@@ -71,11 +71,11 @@
   - 配貨助手 4 大日常作業流程合約簽核完畢，階段總結記錄完成。
 
 ### Phase 4: Controlled Customer LINE Notification Pilot Gate
-* **狀態**: 完成並記錄 (`64d067b`)
-* **最新同步 Commit**: `64d067b70a0ee20aa47f1a7410f538f1cea3ce71` (`test: implement Phase 4 controlled LINE messaging pilot simulation test harness and record milestone handoff`)
-* **試辦實作結果**: **CONTROLLED LINE NOTIFICATION PILOT CODE IMPLEMENTED & VERIFIED (212 / 212 PASS)**
+* **狀態**: 完成並記錄 (`0983402`)
+* **最新同步 Commit**: `0983402d39893941add3cc868f6232f4336aaeed` (`feat(allocation-assistant): implement controlled LINE messaging policy evaluator and production messaging adapter`)
+* **試辦實作與部署結果**: **CONTROLLED LINE NOTIFICATION PILOT CODE DEPLOYED TO VERSION 99 & VERIFIED (212 / 212 PASS)**
 * **驗證與防護證明**:
-  - **生產組件實作**: `ProductionLineMessagingAdapter`, `evaluateLineNotificationPolicy` (`allocation-assistant`), `evaluateLineNotificationPolicy_` (`google-apps-script/Code.gs`)。
+  - **生產組件實作與部署**: `ProductionLineMessagingAdapter`, `evaluateLineNotificationPolicy` (`allocation-assistant`), `evaluateLineNotificationPolicy_` (`google-apps-script/Code.gs`) 已受控部署至 Backend Web App **Version 99** (Script ID: `1vRepq_HNkjbs8vRQvbkkDE8unGPHfksfhOTrkrNZthFZHs2GSHO8Gasc`, Deployment ID: `AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw`, 101 Version 配額剩餘)。
   - **10 大 Fail-Closed 防護驗證**:
     1. `NOTIFICATION_BYPASSED`: `notificationBypassed === true` 時攔截並執行 0 次 LINE 通訊。
     2. `UNAUTHORIZED_ROLE`: 銷售員/未授權角色拒絕發送。
@@ -87,7 +87,8 @@
     8. `DELIVERED`: 成功發送完好核對 `reservationNumber`, `lineUserId`, `intent`, `status`, `lineRequestId`, `sentAt` 帳冊。
     9. `EXPLICIT_MOCK_REQUIREMENT`: 模擬 Adapter 必須顯式注入，無法在生產環境隱式觸發。
   - 貫徹 `notificationBypassed: true` (0 次 LINE API 主動發送)、0 次未授權 Google Sheet 寫入、0 次 Token/Secret 印出。
-  - 保留 **Backend Web App Version 98** 與 **LINE Bot Version 1** 作為生產部署基線。
+  - 保留 **Backend Web App Version 99** 與 **LINE Bot Version 1** 作為生產部署基線。
+
 
 
 ## 4. 自動化驗證基線 (Automated Verification Baseline)
