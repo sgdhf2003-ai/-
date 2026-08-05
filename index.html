@@ -312,6 +312,20 @@
             <button class="primary-button" type="submit">新增保留提醒</button>
           </form>
           <div class="list" id="holdList"></div>
+          <div id="holdFulfillModal" class="modal-overlay" style="display:none;">
+            <div class="modal-card">
+              <h3>劃扣銷扣出貨確認</h3>
+              <p id="fulfillModalItemInfo"></p>
+              <label>
+                銷扣出貨數量
+                <input id="fulfillModalQtyInput" type="number" min="1" inputmode="numeric" />
+              </label>
+              <div class="modal-actions">
+                <button id="btnFulfillConfirmSubmit" class="primary-button">確認銷扣</button>
+                <button id="btnFulfillConfirmCancel" class="secondary-button">取消</button>
+              </div>
+            </div>
+          </div>
         </section>
 
         <section class="view" id="projectsView">

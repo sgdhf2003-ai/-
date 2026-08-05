@@ -6137,10 +6137,112 @@ function fallbackCopyText_(text) {
     textArea.select();
     textArea.setSelectionRange(0, text.length);
     return document.execCommand("copy");
-  } catch (error) {
-    console.warn("[DailyBrief] fallback execCommand failed", error);
-    return false;
   } finally {
     document.body.removeChild(textArea);
   }
+}
+
+// --- Phase 7-C Allocation UI Control Panel Helpers ---
+
+function renderHoldItemActions(hold, userContext) {
+  const normRole = String(userContext ? userContext.role : "").trim().toLowerCase();
+  const isAuthorized = normRole === "admin" || normRole === "boss" || normRole === "assistant";
+
+  if (isAuthorized) {
+    return `
+      <div class="hold-action-controls" data-hold-id="${hold ? (hold.id || hold.reservationNumber) : ''}">
+        <button class="btn-fulfill-hold primary-button small-btn" data-action="fulfill" data-id="${hold ? (hold.id || hold.reservationNumber) : ''}">銷扣出貨</button>
+        <button class="btn-cancel-hold secondary-button small-btn" data-action="cancel" data-id="${hold ? (hold.id || hold.reservationNumber) : ''}">取消釋放</button>
+      </div>
+    `.trim();
+  }
+
+  return `
+    <div class="hold-action-controls readonly-controls" data-hold-id="${hold ? (hold.id || hold.reservationNumber) : ''}">
+      <button class="btn-fulfill-hold primary-button small-btn disabled" disabled read-only>銷扣出貨 (唯讀防護)</button>
+      <button class="btn-cancel-hold secondary-button small-btn disabled" disabled read-only>取消釋放 (唯讀防護)</button>
+      <span class="readonly-note">[唯讀防護] 權限不足 (${normRole || "未登入"})</span>
+    </div>
+  `.trim();
+}
+
+function validateFulfillInput(quantity, totalQuantity) {
+  const qty = Number(quantity);
+  const total = Number(totalQuantity);
+
+  if (isNaN(qty) || qty <= 0) {
+    return { ok: false, errorCode: "INVALID_FULFILL_PAYLOAD", message: "銷扣數量必須大於 0" };
+  }
+
+  if (qty > total) {
+    return { ok: false, errorCode: "EXCEEDS_REMAINING_QUANTITY", message: "銷扣數量超過劃扣保留數量" };
+  }
+
+  return { ok: true, quantity: qty, remainingQuantity: Math.max(0, total - qty) };
+}
+
+function buildAllocationActionPayload(actionType, dataPayload, userContext) {
+  const normRole = String(userContext ? userContext.role : "").trim().toLowerCase();
+  const safeContext = {
+    username: userContext ? (userContext.username || "operator") : "unknown",
+    role: normRole || "unknown"
+  };
+
+  if (actionType === "fulfillHold") {
+    return {
+      action: "fulfillHold",
+      userContext: safeContext,
+      fulfillPayload: {
+        reservationNumber: dataPayload.reservationNumber || dataPayload.id,
+        quantity: Number(dataPayload.quantity),
+        totalQuantity: Number(dataPayload.totalQuantity || dataPayload.quantity),
+        item: dataPayload.item || "品項",
+        action: dataPayload.action || (dataPayload.quantity >= (dataPayload.totalQuantity || dataPayload.quantity) ? "FULFILL_DEDUCT" : "PARTIAL_FULFILL_DEDUCT")
+      },
+      notificationBypassed: true
+    };
+  }
+
+  if (actionType === "cancelReleaseHold") {
+    return {
+      action: "cancelReleaseHold",
+      userContext: safeContext,
+      cancelPayload: {
+        reservationNumber: dataPayload.reservationNumber || dataPayload.id,
+        item: dataPayload.item || "品項",
+        quantity: Number(dataPayload.quantity || 0)
+      },
+      notificationBypassed: true
+    };
+  }
+
+  return { action: actionType, userContext: safeContext, notificationBypassed: true };
+}
+
+function reconcileHoldStateFromReceipt(holdState, receipt) {
+  if (!holdState || !receipt || !receipt.ok) return holdState;
+
+  const remainingQty = typeof receipt.remainingQuantity === "number" ? receipt.remainingQuantity : holdState.remainingQuantity;
+  const status = receipt.status || holdState.status;
+
+  const updatedHold = {
+    ...holdState,
+    remainingQuantity: remainingQty,
+    status: status,
+    ledgerHistory: Array.isArray(holdState.ledgerHistory) ? [...holdState.ledgerHistory] : []
+  };
+
+  if (Array.isArray(receipt.ledgerRow) && receipt.ledgerRow.length === 7) {
+    updatedHold.ledgerHistory.unshift(receipt.ledgerRow);
+  }
+
+  return updatedHold;
+}
+
+const targetScope = typeof window !== "undefined" ? window : (typeof globalThis !== "undefined" ? globalThis : this);
+if (targetScope) {
+  targetScope.renderHoldItemActions = renderHoldItemActions;
+  targetScope.validateFulfillInput = validateFulfillInput;
+  targetScope.buildAllocationActionPayload = buildAllocationActionPayload;
+  targetScope.reconcileHoldStateFromReceipt = reconcileHoldStateFromReceipt;
 }

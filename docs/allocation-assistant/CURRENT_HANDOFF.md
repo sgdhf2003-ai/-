@@ -29,7 +29,11 @@
 * 完成 Phase 6-C 端點動作分發器整合套件 (`7dd7ed0`, 225/225 PASS)。
 * 完成 Phase 6-E Apps Script 後端端點處理器接線套件 (`05ebafa`, 228/228 PASS)。
 * 完成 Phase 6-F Backend Web App Version 100 受控部署與驗證 (`93e8cb4`, HTTP 200 OK, 100 剩餘版本空間)。
-* 完成 Phase 6-G 生產環境唯讀合約驗證 (HTTP 200 Health Ping, `INVALID_SESSION_USER` Fail-Closed, `readbackRedacted: true` 脫敏驗證 100% PASS)。
+* 完成 Phase 6-G 生產環境唯讀合約驗證 (`adcc02a`, HTTP 200 Health Ping, `INVALID_SESSION_USER` Fail-Closed, `readbackRedacted: true` 脫敏驗證 100% PASS)。
+* 完成 Phase 7-C 管理員作業 UI 控制面板實作與 TDD 驗證 (233/233 PASS):
+  - 實作 `renderHoldItemActions`, `validateFulfillInput`, `buildAllocationActionPayload`, `reconcileHoldStateFromReceipt` 處理器。
+  - 新增 `index.html` 與 `google-apps-script/Index.html` 劃扣銷扣出貨對話框 UI 模組。
+  - 新增 `tests/simulations/allocation-ui-control-panel.sim.js` (5 個 TDD 測試案例，全數 PASS)。
 * 本機檢查、模擬測試與部署 Dry Run 全數通過 (`npm run check`, `npm run simulate:all`, `deploy.py --check` PASS)。
 
 

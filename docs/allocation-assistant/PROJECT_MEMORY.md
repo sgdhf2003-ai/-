@@ -93,18 +93,26 @@
     - `GET Health Ping`: **HTTP 200 OK**
     - `Unauthenticated Fulfill Action`: `INVALID_SESSION_USER` (Fail-Closed 驗證成功)
     - `Readback Audit Query`: `readbackRedacted: true` (脫敏讀回驗證成功)
+### Phase 7: Web App Admin Operations UI Control Panel Suite
+* **狀態**: 完成並驗證 (233/233 PASS)
+* **交付內容**:
+  - `app.js` UI 處理器 (`renderHoldItemActions`, `validateFulfillInput`, `buildAllocationActionPayload`, `reconcileHoldStateFromReceipt`)。
+  - `index.html` 與 `google-apps-script/Index.html` (`#holdFulfillModal` 銷扣出貨對話框)。
+  - `tests/simulations/allocation-ui-control-panel.sim.js` (5 個 TDD 測試案例，全數 PASS)。
 
 ## 4. 自動化驗證基線 (Automated Verification Baseline)
 - `npm run check`: **PASS**
 - `npm run simulate:allocation-multi-lot-fulfillment`: **8 / 8 PASS**
 - `npm run simulate:allocation-endpoint-dispatcher`: **5 / 5 PASS**
 - `npm run simulate:allocation-backend-wireup`: **3 / 3 PASS**
-- `npm run simulate:all`: **228 / 228 PASS** (212 舊項目 + 16 新項目)
+- `npm run simulate:allocation-ui-control-panel`: **5 / 5 PASS**
+- `npm run simulate:all`: **233 / 233 PASS** (212 舊項目 + 21 新項目)
 - `python3 deploy.py backend --check`: **VALID** (Backend Apps Script dry-run safe)
 - `python3 deploy.py line-bot --check`: **VALID** (LINE Bot Apps Script dry-run safe)
 - `read-only Web App HTTP ping`: **HTTP 200 OK**
 - `git diff --check`: **PASS** (0 空白字元錯誤)
 - **生產環境部署記錄**: Backend Web App Version 100 (已生效), LINE Bot Project Version 1 完好保留。
+
 
 
 
