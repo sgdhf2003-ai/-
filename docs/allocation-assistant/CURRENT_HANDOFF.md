@@ -4,10 +4,10 @@
 * **交接日期**: 2026-08-05
 * **執行目錄**: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 * **目前分支**: `main`
-* **HEAD Hash**: `4468ab01c4139ea8b100584eeb5ef966db14684e`
-* **origin/main Hash**: `4468ab01c4139ea8b100584eeb5ef966db14684e`
+* **HEAD Hash**: `be952497b1d66fedbaf6fc08a93c2ec719ef4bfc`
+* **origin/main Hash**: `be952497b1d66fedbaf6fc08a93c2ec719ef4bfc`
 * **分支關係**: `0 ahead / 0 behind` (完全同步)
-* **Working Tree 狀態**: Clean (Pending Phase 6-A Commit)
+* **Working Tree 狀態**: Clean (Pending Phase 6-C Commit)
 
 ## 2. 本次完成內容 (Completed Work)
 * 完成 Stage 30 & 31 生產環境 Google Sheet 劃扣與出貨生命週期驗證 (`RES-20260801-001`, `RES-20260801-002`)。
@@ -25,11 +25,14 @@
 * 完成 Phase 4 受控 LINE 客戶通知試辦程式碼實作與 Version 99 部署 (`0983402`, `c593f6e`)。
 * 完成 Stage 45 常態營運監控與健康審查 (PASS - 212/212 PASS)。
 * 完成 Phase 5 受控單一對象 LINE 通知試辦執行與安全驗證 (`f2364a8`, `4468ab0`)。
-* 完成 Phase 6-A 多批次銷扣出貨算術核對與 7 欄位 Ledger Schema 驗證套件 (220/220 PASS):
-  - 實作 `FulfillmentAdapter.reconcileMultiLotArithmetic` 算術核對 (強致約束 `totalFulfilled <= holdQuantity` 且 `remainingQuantity >= 0`)。
-  - 實作 `FulfillmentAdapter.prototype.processMultiLotFulfillment` 多批次銷扣 (強致約束 ID 一致性合約 `reservationNumber === holdRecord.id === ledgerRow[0]` 與 7 欄位 Schema)。
-  - 新增 `tests/simulations/allocation-multi-lot-fulfillment.sim.js` (8 個測試案例，全數 PASS)。
+* 完成 Phase 6-A 多批次銷扣出貨算術核對與 7 欄位 Ledger Schema 驗證套件 (`be95249`, 220/220 PASS)。
+* 完成 Phase 6-C 端點動作分發器整合套件 (`AllocationEndpointDispatcher`, 225/225 PASS):
+  - 實作 `AllocationEndpointDispatcher.fulfillHoldAction(data)` (約束 7 欄位 Ledger Schema 與 role 邊界)。
+  - 實作 `AllocationEndpointDispatcher.cancelReleaseHoldAction(data)` (約束 `remainingQuantity: 0` 與 `status: CANCELLED`)。
+  - 實作 `AllocationEndpointDispatcher.readbackAuditAction(data)` (約束權限驗證與 `readbackRedacted: true` 脫敏遮蔽)。
+  - 新增 `tests/simulations/allocation-endpoint-dispatcher.sim.js` (5 個測試案例，全數 PASS)。
 * 本機檢查、模擬測試與部署 Dry Run 全數通過 (`npm run check`, `npm run simulate:all`, `deploy.py --check` PASS)。
+
 
 
 

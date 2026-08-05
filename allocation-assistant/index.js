@@ -69,6 +69,7 @@ const { OcrCandidateMatcher } = require('./ocr/ocr-candidate-matcher');
 const { ImageOcrAdapter } = require('./ocr/image-ocr-adapter');
 const { LiffMicroEditPopup } = require('./ui/liff-micro-edit-popup');
 const { FulfillmentAdapter } = require('./fulfillment/fulfillment-adapter');
+const { AllocationEndpointDispatcher } = require('./endpoints/allocation-endpoint-dispatcher');
 
 module.exports = {
   // Constants
@@ -131,9 +132,10 @@ module.exports = {
   SandboxInventoryProvider,
   SandboxDemoCards,
 
-  // OCR, LIFF & Fulfillment Components
+  // OCR, LIFF, Fulfillment & Endpoint Dispatcher Components
   OcrCandidateMatcher,
   ImageOcrAdapter,
   LiffMicroEditPopup,
-  FulfillmentAdapter
+  FulfillmentAdapter,
+  AllocationEndpointDispatcher
 };

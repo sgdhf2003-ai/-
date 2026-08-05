@@ -5,22 +5,44 @@
 - repo root: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 - branch: `main`
 - source of truth: Canonical cloud-drive checkout path above
-- HEAD: `4468ab01c4139ea8b100584eeb5ef966db14684e`
-- origin/main: `4468ab01c4139ea8b100584eeb5ef966db14684e`
+- HEAD: `be952497b1d66fedbaf6fc08a93c2ec719ef4bfc`
+- origin/main: `be952497b1d66fedbaf6fc08a93c2ec719ef4bfc`
 - ahead / behind vs origin/main: `0 / 0`
 
 ## Current Stage
 
-- current stage: Phase 6-A Multi-Lot Fulfillment Arithmetic Reconciliation Implementation
+- current stage: Phase 6-C Allocation Endpoint Dispatcher Consolidation Suite Implementation
 - previous completed deliveries:
-  - Phase 5-D Real Single-Recipient Production LINE Delivery Readiness & Safety Milestone Handoff (`4468ab0`)
-  - Return to Allocation Assistant Main-Axis Planning Gate
-  - Phase 6-A Multi-Lot Fulfillment Arithmetic Reconciliation Implementation (220 / 220 PASS)
-- latest pushed main commit: `4468ab01c4139ea8b100584eeb5ef966db14684e` (`docs: record Phase 5 fail-closed LINE delivery attempt handoff`)
+  - Phase 6-A Multi-Lot Fulfillment Reconciliation (`be95249`)
+  - Phase 6-B Endpoint Action Consolidation Contract Plan
+  - Phase 6-C Allocation Endpoint Dispatcher Consolidation Suite Implementation (225 / 225 PASS)
+- latest pushed main commit: `be952497b1d66fedbaf6fc08a93c2ec719ef4bfc` (`feat(allocation-assistant): implement multi-lot fulfillment reconciliation`)
 - backend deployed version: `99` (canonical deployment record - 101 versions headroom remaining)
 - LINE Bot deployed version: `1` (canonical deployment record - fresh project Version 1)
-- automated simulations: 220 / 220 PASS (`npm run simulate:all`)
+- automated simulations: 225 / 225 PASS (`npm run simulate:all`)
 - Web App URL: `https://script.google.com/macros/s/AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw/exec`
+
+## Phase 6 Summary & Endpoint Action Consolidation Record
+
+- **Phase 6 Status**: **ENDPOINT ACTION DISPATCHER SUITE IMPLEMENTED & VERIFIED (225 / 225 PASS)**
+- **Implemented Components**:
+  - `AllocationEndpointDispatcher`: Centralized action dispatcher implementing `fulfillHoldAction`, `cancelReleaseHoldAction`, and `readbackAuditAction`.
+  - `evaluateEndpointSessionAuth`: Fail-closed session authentication guard returning `INVALID_SESSION_USER` for missing or unauthenticated user contexts.
+  - `evaluateEndpointRoleAuthorization`: Fail-closed role authorization guard restricting write actions to `admin`, `boss`, `assistant` only.
+  - `tests/simulations/allocation-endpoint-dispatcher.sim.js`: 5 new simulation tests covering session auth, role authorization, 7-column ledger row generation, and sanitized readback queries.
+- **Test & Verification Evidence**:
+  - `npm run check`: **PASS**
+  - `npm run simulate:allocation-endpoint-dispatcher`: **5 / 5 PASS**
+  - `npm run simulate:all`: **225 / 225 PASS** (220 previous + 5 new)
+  - `python3 deploy.py backend --check`: **VALID**
+  - `python3 deploy.py line-bot --check`: **VALID**
+  - `git diff --check`: **PASS**
+- **Side Effect & Safety Summary**:
+  - LINE API Calls: `0` (`notificationBypassed: true` default preserved)
+  - Google Sheet Writes: `0`
+  - Tokens / Secrets Printed: `0`
+  - Deploys Executed: `0` (Backend Version 99 & LINE Bot Version 1 preserved)
+
 
 ## Phase 6 Summary & Multi-Lot Fulfillment Record
 
