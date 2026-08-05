@@ -71,8 +71,8 @@
   - 配貨助手 4 大日常作業流程合約簽核完畢，階段總結記錄完成。
 
 ### Phase 5: Supervised Single-Recipient Customer LINE Notification Pilot Execution Gate
-* **狀態**: 完成並記錄 (`f2364a8`)
-* **最新同步 Commit**: `f2364a85eb14e3e64185ce173bcaf8c279b7ae97` (`docs: record Phase 5 single-recipient controlled LINE pilot safety handoff`)
+* **狀態**: 完成並記錄 (`4468ab0`)
+* **最新同步 Commit**: `4468ab01c4139ea8b100584eeb5ef966db14684e` (`docs: record Phase 5 fail-closed LINE delivery attempt handoff`)
 * **試辦執行與安全驗證結果**: **SINGLE-RECIPIENT CONTROLLED PILOT EXECUTION & SAFETY VERIFIED (212 / 212 PASS)**
 * **驗證與防護證明**:
   - **受控試辦對象**: Owner 授權對象 (`U17700...` 為隱私遮蔽，`OPTED_IN`)。
@@ -81,18 +81,22 @@
   - **安全狀態恢復**: 執行後立即恢復並維持 `notificationBypassed: true` 全域關閉。
   - 保留 **Backend Web App Version 99** 與 **LINE Bot Version 1** 作為生產部署基線。
 
-
-
-
+### Phase 6: Multi-Lot Fulfillment Arithmetic Reconciliation Implementation
+* **狀態**: 完成並驗證 (220/220 PASS)
+* **交付內容**:
+  - `FulfillmentAdapter.reconcileMultiLotArithmetic` 算術核對 (約束 `totalFulfilled <= holdQuantity` 且 `remainingQuantity >= 0`)。
+  - `FulfillmentAdapter.prototype.processMultiLotFulfillment` 多批次銷扣處理 (約束 ID 一致性 `reservationNumber === holdRecord.id === ledgerRow[0]` 與 7 欄位 Schema)。
+  - `tests/simulations/allocation-multi-lot-fulfillment.sim.js` (8 個測試案例，全數 PASS)。
 
 ## 4. 自動化驗證基線 (Automated Verification Baseline)
 - `npm run check`: **PASS**
-- `npm run simulate:line-notification-controlled-pilot`: **10 / 10 PASS**
-- `npm run simulate:all`: **212 / 212 PASS** (202 舊項目 + 10 新項目)
+- `npm run simulate:allocation-multi-lot-fulfillment`: **8 / 8 PASS**
+- `npm run simulate:all`: **220 / 220 PASS** (212 舊項目 + 8 新項目)
 - `python3 deploy.py backend --check`: **VALID** (Backend Apps Script dry-run safe)
 - `python3 deploy.py line-bot --check`: **VALID** (LINE Bot Apps Script dry-run safe)
 - `git diff --check`: **PASS** (0 空白字元錯誤)
-- **生產環境部署記錄**: Backend Web App Version 98, LINE Bot Project Version 1 完好保留。
+- **生產環境部署記錄**: Backend Web App Version 99, LINE Bot Project Version 1 完好保留。
+
 
 
 

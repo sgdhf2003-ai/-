@@ -242,6 +242,173 @@ class FulfillmentAdapter {
       lineNotificationMessage
     };
   }
+
+  /**
+   * Reconciles multi-lot fulfillment arithmetic bounds.
+   * Enforces totalFulfilled <= holdQuantity and remainingQuantity >= 0.
+   */
+  static reconcileMultiLotArithmetic(options = {}) {
+    const { holdQuantity = 0, fulfilledQuantity = 0, lots = [] } = options;
+    const totalHold = Number(holdQuantity || 0);
+
+    let lotSum = 0;
+    if (Array.isArray(lots) && lots.length > 0) {
+      lotSum = lots.reduce((acc, lot) => acc + Number(lot && lot.quantity || 0), 0);
+    }
+    const targetFulfilled = Number(fulfilledQuantity || 0) > 0 ? Number(fulfilledQuantity) : lotSum;
+
+    if (totalHold <= 0) {
+      return { ok: false, errorCode: 'INVALID_HOLD_QUANTITY', remainingQuantity: 0 };
+    }
+
+    if (targetFulfilled <= 0) {
+      return { ok: false, errorCode: 'INVALID_FULFILLMENT_QUANTITY', remainingQuantity: totalHold };
+    }
+
+    if (targetFulfilled > totalHold) {
+      return { ok: false, errorCode: 'EXCEEDS_REMAINING_QUANTITY', remainingQuantity: totalHold };
+    }
+
+    const remainingQuantity = totalHold - targetFulfilled;
+    const isFull = remainingQuantity === 0;
+    const status = isFull ? 'FULFILLED' : 'PARTIALLY_FULFILLED';
+    const action = isFull ? 'FULL_FULFILL' : 'PARTIAL_FULFILL';
+
+    return {
+      ok: true,
+      holdQuantity: totalHold,
+      fulfilledQuantity: targetFulfilled,
+      remainingQuantity,
+      status,
+      action,
+      lotDeductions: Array.isArray(lots) ? lots.map(l => ({
+        lotId: (l && l.lotId) || 'LOT_DEFAULT',
+        sku: (l && l.sku) || '',
+        quantity: Number((l && l.quantity) || 0)
+      })) : []
+    };
+  }
+
+  /**
+   * Processes multi-lot split fulfillment against persistence adapter.
+   * Enforces reservationNumber === holdRecord.id === ledgerRow[0] and 7-column schema.
+   */
+  processMultiLotFulfillment(payload = {}) {
+    const reservationNumber = payload.reservationNumber || 'RES_UNKNOWN';
+    const operatorRole = payload.operatorRole ? String(payload.operatorRole).trim().toLowerCase() : '';
+    const allowedRoles = ['admin', 'boss', 'assistant'];
+
+    if (payload.authorized === false || (operatorRole && !allowedRoles.includes(operatorRole))) {
+      return {
+        success: false,
+        reservationNumber,
+        status: 'FULFILLMENT_FAILED',
+        remainingQuantity: 0,
+        errorCode: 'UNAUTHORIZED_OPERATOR',
+        lineNotificationMessage: `⚠️ 未授權之操作員，無法執行單據 ${reservationNumber} 的多批次出貨動作。`
+      };
+    }
+
+    if (!this.sheetAdapter ||
+      typeof this.sheetAdapter.queryHoldByReservationNumber !== 'function' ||
+      typeof this.sheetAdapter.updateHoldStatus !== 'function' ||
+      typeof this.sheetAdapter.recordInventoryAdjustment !== 'function') {
+      return {
+        success: false,
+        reservationNumber,
+        status: 'FULFILLMENT_FAILED',
+        remainingQuantity: 0,
+        errorCode: 'FULFILLMENT_ADAPTER_MISSING',
+        lineNotificationMessage: `⚠️ 單據 ${reservationNumber} 缺少持久化 adapter。`
+      };
+    }
+
+    const holdLookup = this.sheetAdapter.queryHoldByReservationNumber(reservationNumber);
+    if (!holdLookup || !holdLookup.found) {
+      return {
+        success: false,
+        reservationNumber,
+        status: 'FULFILLMENT_FAILED',
+        remainingQuantity: 0,
+        errorCode: 'HOLD_NOT_FOUND',
+        lineNotificationMessage: `⚠️ 找不到單據 ${reservationNumber}。`
+      };
+    }
+
+    const holdRecord = holdLookup.record || {};
+    const holdQuantity = Number(holdRecord.quantity || payload.totalQuantity || 0);
+    const fulfilledQuantity = Number(payload.fulfilledQuantity || 0);
+
+    const arithmetic = FulfillmentAdapter.reconcileMultiLotArithmetic({
+      holdQuantity,
+      fulfilledQuantity,
+      lots: payload.lots
+    });
+
+    if (!arithmetic.ok) {
+      return {
+        success: false,
+        reservationNumber,
+        status: 'FULFILLMENT_FAILED',
+        remainingQuantity: holdQuantity,
+        errorCode: arithmetic.errorCode,
+        lineNotificationMessage: `⚠️ 單據 ${reservationNumber} 多批次出貨計算失敗：${arithmetic.errorCode}。`
+      };
+    }
+
+    const updatedAt = new Date().toISOString();
+    const statusResult = this.sheetAdapter.updateHoldStatus({
+      reservationNumber,
+      status: arithmetic.status,
+      fulfilledQuantity: arithmetic.fulfilledQuantity,
+      remainingQuantity: arithmetic.remainingQuantity,
+      updatedAt
+    });
+
+    if (!statusResult || statusResult.success !== true || statusResult.persisted !== true) {
+      return {
+        success: false,
+        reservationNumber,
+        status: 'FULFILLMENT_FAILED',
+        remainingQuantity: arithmetic.remainingQuantity,
+        errorCode: (statusResult && statusResult.errorCode) || 'FULFILLMENT_STATUS_UPDATE_FAILED',
+        lineNotificationMessage: `⚠️ 單據 ${reservationNumber} 狀態寫回失敗。`
+      };
+    }
+
+    const inventoryResult = this.sheetAdapter.recordInventoryAdjustment({
+      reservationNumber,
+      action: arithmetic.action === 'FULL_FULFILL' ? 'FULFILL_DEDUCT' : 'PARTIAL_FULFILL_DEDUCT',
+      item: holdRecord.item || payload.item || payload.productCode || '',
+      quantity: arithmetic.fulfilledQuantity,
+      remainingQuantity: arithmetic.remainingQuantity,
+      status: arithmetic.status,
+      updatedAt
+    });
+
+    if (!inventoryResult || inventoryResult.success !== true || inventoryResult.persisted !== true) {
+      return {
+        success: false,
+        reservationNumber,
+        status: 'FULFILLMENT_FAILED',
+        remainingQuantity: arithmetic.remainingQuantity,
+        errorCode: (inventoryResult && inventoryResult.errorCode) || 'INVENTORY_ADJUSTMENT_RECORD_FAILED',
+        lineNotificationMessage: `⚠️ 單據 ${reservationNumber} 庫存異動紀錄失敗。`
+      };
+    }
+
+    return {
+      success: true,
+      reservationNumber,
+      action: arithmetic.action,
+      status: arithmetic.status,
+      fulfilledQuantity: arithmetic.fulfilledQuantity,
+      remainingQuantity: arithmetic.remainingQuantity,
+      lotDeductions: arithmetic.lotDeductions,
+      persisted: true,
+      lineNotificationMessage: `📦 單據 ${reservationNumber} 完成多批次出貨 (${arithmetic.fulfilledQuantity} PCS)，剩餘 ${arithmetic.remainingQuantity} PCS。`
+    };
+  }
 }
 
 module.exports = {

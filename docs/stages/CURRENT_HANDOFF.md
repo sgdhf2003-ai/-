@@ -5,22 +5,43 @@
 - repo root: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 - branch: `main`
 - source of truth: Canonical cloud-drive checkout path above
-- HEAD: `f2364a85eb14e3e64185ce173bcaf8c279b7ae97`
-- origin/main: `f2364a85eb14e3e64185ce173bcaf8c279b7ae97`
+- HEAD: `4468ab01c4139ea8b100584eeb5ef966db14684e`
+- origin/main: `4468ab01c4139ea8b100584eeb5ef966db14684e`
 - ahead / behind vs origin/main: `0 / 0`
 
 ## Current Stage
 
-- current stage: Phase 5-D Real Single-Recipient Production LINE Delivery Readiness & Safety Milestone Handoff
+- current stage: Phase 6-A Multi-Lot Fulfillment Arithmetic Reconciliation Implementation
 - previous completed deliveries:
-  - Phase 5-B Single-Recipient Controlled LINE Pilot Safety Handoff (`f2364a8`)
-  - Phase 5-C Production LINE Delivery Readiness Gate
-  - Phase 5-D Real Single-Recipient Production LINE Delivery Readiness & Safety Milestone Handoff
-- latest pushed main commit: `f2364a85eb14e3e64185ce173bcaf8c279b7ae97` (`docs: record Phase 5 single-recipient controlled LINE pilot safety handoff`)
+  - Phase 5-D Real Single-Recipient Production LINE Delivery Readiness & Safety Milestone Handoff (`4468ab0`)
+  - Return to Allocation Assistant Main-Axis Planning Gate
+  - Phase 6-A Multi-Lot Fulfillment Arithmetic Reconciliation Implementation (220 / 220 PASS)
+- latest pushed main commit: `4468ab01c4139ea8b100584eeb5ef966db14684e` (`docs: record Phase 5 fail-closed LINE delivery attempt handoff`)
 - backend deployed version: `99` (canonical deployment record - 101 versions headroom remaining)
 - LINE Bot deployed version: `1` (canonical deployment record - fresh project Version 1)
-- automated simulations: 212 / 212 PASS (`npm run simulate:all`)
+- automated simulations: 220 / 220 PASS (`npm run simulate:all`)
 - Web App URL: `https://script.google.com/macros/s/AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw/exec`
+
+## Phase 6 Summary & Multi-Lot Fulfillment Record
+
+- **Phase 6 Status**: **MULTI-LOT FULFILLMENT ARITHMETIC RECONCILIATION IMPLEMENTED & VERIFIED (220 / 220 PASS)**
+- **Implemented Components**:
+  - `FulfillmentAdapter.reconcileMultiLotArithmetic`: Pure static arithmetic reconciliation enforcing `totalFulfilled <= holdQuantity` and `remainingQuantity >= 0`.
+  - `FulfillmentAdapter.prototype.processMultiLotFulfillment`: Multi-lot split fulfillment processing enforcing ID equality contract (`reservationNumber === holdRecord.id === ledgerRow[0]`), 7-column ledger schema, and fail-closed role guards.
+  - `tests/simulations/allocation-multi-lot-fulfillment.sim.js`: 8 new simulation tests covering multi-lot split fulfillment, arithmetic bounds, role permission checks, missing adapter, hold not found, and writeback failures.
+- **Test & Verification Evidence**:
+  - `npm run check`: **PASS**
+  - `npm run simulate:allocation-multi-lot-fulfillment`: **8 / 8 PASS**
+  - `npm run simulate:all`: **220 / 220 PASS** (212 previous + 8 new)
+  - `python3 deploy.py backend --check`: **VALID**
+  - `python3 deploy.py line-bot --check`: **VALID**
+  - `git diff --check`: **PASS**
+- **Side Effect & Safety Summary**:
+  - LINE API Calls: `0` (`notificationBypassed: true` default preserved)
+  - Google Sheet Writes: `0`
+  - Tokens / Secrets Printed: `0`
+  - Deploys Executed: `0` (Backend Version 99 & LINE Bot Version 1 preserved)
+
 
 ## Phase 5 Summary & Single-Recipient Execution Record
 
