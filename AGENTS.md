@@ -92,30 +92,33 @@ git diff --check
 
 ### Current Known State
 
-- Current Stage: **Stage 32-B (Production Operating SOP Complete)**
-- Commit: `9d9ee786709fad924bf2929f68ada69245266e17` (`docs: create Production Operating SOP and complete Stage 32 handoff`)
+- Current Stage: **Stage 33-B (Standing Handoff Certified)**
+- Commit: `46bc869d3a82ce2e662bed0af68487a266d2309e` (`docs: certify Stage 33-B standing handoff`)
 - Status: Synced with `origin/main` (0 ahead / 0 behind)
-- Backend Web App production record: Version 96 (104 versions headroom remaining)
+- Working tree: Clean
+- Backend Web App production record: Version 100 (100 versions headroom remaining)
 - Fresh LINE Bot production record: Version 1 (Script ID: `1C_5hZKIlWl_B9pdRrzcrA9ZAWD2Xuqwd0ZetQ-lIt2CFlxZ8yELcTLJf`, Deployment ID: `AKfycbwskF_c2VpW6Cv3yR-wUevRXdrG754ZzxyYMorroqjwkjJZT10wp3DqIZ2kA-GrKK0a`)
-- Latest verified simulation baseline: `npm run simulate:all` = **181 / 181 PASS**
+- Latest verified simulation baseline: `npm run simulate:all` = **233 / 233 PASS**
 - Live production proofs:
   - Stage 30 Formal Hold Writeback (`RES-20260801-001`): `PASS`
   - Stage 31 Fulfillment & Cancel Release Lifecycle (`RES-20260801-002`): `PASS`
+  - Phase 8-D Live Production Pilot Lifecycle (`RES-20260805-PILOT88` 4/4 Steps): `PASS`
+  - Stage 33-A Routine Health Audit (`GET 200 OK`, `INVALID_SESSION_USER` fail-closed, `readbackRedacted: true`): `PASS`
   - ID Contract (`reservationNumber === holdRecord.id === rowData[0]`): `PASS`
 - Production Operating SOP: Formally documented in `docs/allocation-assistant/OPERATING_SOP.md`
 
 ### Historical Baseline Note
 
-The Stage 24-B warnings regarding hold writeback and fulfillment ledger persistence have been **fully resolved and proven on live Google Spreadsheets** during Stage 30 and Stage 31. Stage 24 follow-ups are retained as historical reference only.
+The Stage 24-B warnings regarding hold writeback and fulfillment ledger persistence have been **fully resolved and proven on live Google Spreadsheets** during Stage 30, Stage 31, and Phase 8-D. Stage 24 follow-ups are retained as historical reference only.
 
 ### Current Recommended Next Stage
 
-After Stage 32-B, the recommended next gate is:
+After Stage 33-B, the recommended next gate is:
 
-**Stage 33-A: Admin-Only Web App UI Endpoint Audit**
-- **Purpose**: Perform a read-only audit of PWA and Apps Script UI entrypoints before exposing formal hold, fulfillment, cancel release, cleanup, or correction controls to daily operations.
+**Stage 34: Read-Only Daily Operations Monitoring & Maintenance**
+- **Purpose**: Perform routine health audits against Backend Web App Version 100, monitoring endpoint health, fail-closed session guards, and sanitized readback output.
 - **Rules**:
-  - Confirm every write-capable workflow is admin-only or SalesAdmin/Assistant-only as documented in `OPERATING_SOP.md`.
+  - Read-only daily operations monitoring only.
   - Confirm readback/audit queries return redacted results for non-admin users.
   - Confirm LINE messaging remains disabled unless separately approved.
   - Read-only audit only: no code edits, no Google Sheet writes, no LINE API calls, no deploys, no commit/push without explicit owner approval.
