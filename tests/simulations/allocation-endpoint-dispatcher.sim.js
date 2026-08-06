@@ -152,17 +152,50 @@ runSuite("allocation-endpoint-dispatcher", [
       assert(emptyRes.ok === false, "empty query reservation number fails");
       assert(emptyRes.errorCode === "INVALID_QUERY_PAYLOAD", "errorCode matches");
 
-      // Authenticated sales readback succeeds with redacted record
-      const validRes = dispatcher.readbackAuditAction({
+      // Missing sheet adapter fails closed
+      const missingAdapterRes = dispatcher.readbackAuditAction({
         userContext: { username: "sales01", role: "sales" },
-        queryPayload: {
-          reservationNumber: "RES-20260805-001",
-          storeName: "台北展示中心",
-          item: "ART-101",
-          quantity: 10,
-          remainingQuantity: 5,
-          status: "PARTIAL_FULFILLED"
+        queryPayload: { reservationNumber: "RES-20260805-001" }
+      });
+      assert(missingAdapterRes.ok === false, "missing adapter readback fails closed");
+      assert(missingAdapterRes.errorCode === "READBACK_ADAPTER_MISSING", "errorCode is READBACK_ADAPTER_MISSING");
+
+      // Dispatcher with mock sheet adapter
+      const mockSheetAdapter = {
+        queryHoldByReservationNumber(resNo) {
+          if (resNo === "RES-20260805-001") {
+            return {
+              found: true,
+              record: {
+                id: resNo,
+                reservationNumber: resNo,
+                storeName: "台北展示中心",
+                item: "ART-101",
+                quantity: 10,
+                remainingQuantity: 5,
+                status: "PARTIAL_FULFILLED"
+              }
+            };
+          }
+          return { found: false };
         }
+      };
+
+      const configuredDispatcher = new AllocationEndpointDispatcher({ sheetAdapter: mockSheetAdapter });
+
+      // Non-existent reservation returns found: false
+      const nonexistentRes = configuredDispatcher.readbackAuditAction({
+        userContext: { username: "sales01", role: "sales" },
+        queryPayload: { reservationNumber: "RES-NONEXISTENT-000" }
+      });
+      assert(nonexistentRes.ok === true, "nonexistent readback succeeds");
+      assert(nonexistentRes.found === false, "nonexistent returns found: false");
+      assert(nonexistentRes.record === null, "nonexistent returns record: null");
+
+      // Authenticated sales readback with valid reservation returns found: true and redacted record
+      const validRes = configuredDispatcher.readbackAuditAction({
+        userContext: { username: "sales01", role: "sales" },
+        queryPayload: { reservationNumber: "RES-20260805-001" }
       });
       assert(validRes.ok === true, "authenticated readback succeeds");
       assert(validRes.found === true, "found is true");

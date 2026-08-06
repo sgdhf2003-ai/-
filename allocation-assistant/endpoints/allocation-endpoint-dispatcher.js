@@ -256,24 +256,20 @@ class AllocationEndpointDispatcher {
         };
       }
     } else {
-      // Mock / direct payload readback response
-      found = true;
-      record = {
-        id: reservationNumber,
-        reservationNumber,
-        storeName: queryPayload.storeName || "展示中心",
-        item: queryPayload.item || "品項",
-        quantity: Number(queryPayload.quantity || 10),
-        remainingQuantity: Number(queryPayload.remainingQuantity || 5),
-        status: queryPayload.status || "ACTIVE"
+      return {
+        ok: false,
+        errorCode: "READBACK_ADAPTER_MISSING",
+        message: "劃扣讀回資料轉接器缺失"
       };
     }
 
     if (!found) {
       return {
-        ok: false,
-        errorCode: "HOLD_NOT_FOUND",
-        message: `找不到單據 ${reservationNumber}`
+        ok: true,
+        found: false,
+        reservationNumber,
+        record: null,
+        readbackRedacted: true
       };
     }
 

@@ -697,19 +697,34 @@ function readbackAuditAction(data, adapter) {
   }
 
   let record = null;
-  if (adapter && typeof adapter.findHoldById === "function") {
-    record = adapter.findHoldById(resNo);
+  if (adapter !== undefined && adapter !== null) {
+    if (typeof adapter.findHoldById === "function") {
+      record = adapter.findHoldById(resNo);
+    } else {
+      return { ok: false, errorCode: "READBACK_ADAPTER_MISSING", message: "劃扣讀回資料轉接器缺失" };
+    }
+  } else {
+    if (typeof readObjects === "function" && typeof SHEETS !== "undefined" && SHEETS.holds) {
+      try {
+        const allHolds = readObjects(SHEETS.holds, HEADERS.holds);
+        if (Array.isArray(allHolds)) {
+          record = allHolds.find(function(h) { return h.id === resNo || h.reservationNumber === resNo; }) || null;
+        }
+      } catch (err) {
+        return { ok: false, errorCode: "READBACK_ADAPTER_MISSING", message: "劃扣讀回資料轉接器缺失" };
+      }
+    } else {
+      return { ok: false, errorCode: "READBACK_ADAPTER_MISSING", message: "劃扣讀回資料轉接器缺失" };
+    }
   }
 
   if (!record) {
-    record = {
-      id: resNo,
+    return {
+      ok: true,
+      found: false,
       reservationNumber: resNo,
-      storeName: queryPayload.storeName || "展示中心",
-      item: queryPayload.item || "品項",
-      quantity: Number(queryPayload.quantity || 10),
-      remainingQuantity: Number(queryPayload.remainingQuantity !== undefined ? queryPayload.remainingQuantity : 5),
-      status: queryPayload.status || "ACTIVE"
+      record: null,
+      readbackRedacted: true
     };
   }
 

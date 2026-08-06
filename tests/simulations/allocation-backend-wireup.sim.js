@@ -130,18 +130,45 @@ runSuite("allocation-backend-wireup", [
       assert(unauthRes.ok === false, "unauthenticated readback fails");
       assert(unauthRes.errorCode === "INVALID_SESSION_USER", "returns INVALID_SESSION_USER");
 
-      // Authenticated readback succeeds with redacted record
+      // Missing adapter fails closed
+      const missingAdapterRes = context.readbackAuditAction({
+        userContext: { username: "sales01", role: "sales" },
+        queryPayload: { reservationNumber: "RES-20260805-001" }
+      });
+      assert(missingAdapterRes.ok === false, "missing adapter readback fails closed");
+      assert(missingAdapterRes.errorCode === "READBACK_ADAPTER_MISSING", "returns READBACK_ADAPTER_MISSING");
+
+      const mockAdapter = {
+        findHoldById(id) {
+          if (id === "RES-20260805-001") {
+            return {
+              id: id,
+              reservationNumber: id,
+              storeName: "台北展示中心",
+              item: "ART-101",
+              quantity: 10,
+              remainingQuantity: 5,
+              status: "PARTIAL_FULFILLED"
+            };
+          }
+          return null;
+        }
+      };
+
+      // Non-existent reservation returns found: false
+      const nonexistentRes = context.readbackAuditAction({
+        userContext: { username: "sales01", role: "sales" },
+        queryPayload: { reservationNumber: "RES-NONEXISTENT-001" }
+      }, mockAdapter);
+      assert(nonexistentRes.ok === true, "nonexistent readback succeeds");
+      assert(nonexistentRes.found === false, "nonexistent returns found: false");
+      assert(nonexistentRes.record === null, "nonexistent returns record: null");
+
+      // Authenticated readback with mock adapter succeeds with redacted record
       const validRes = context.readbackAuditAction({
         userContext: { username: "sales01", role: "sales" },
-        queryPayload: {
-          reservationNumber: "RES-20260805-001",
-          storeName: "台北展示中心",
-          item: "ART-101",
-          quantity: 10,
-          remainingQuantity: 5,
-          status: "PARTIAL_FULFILLED"
-        }
-      });
+        queryPayload: { reservationNumber: "RES-20260805-001" }
+      }, mockAdapter);
       assert(validRes.ok === true, "authenticated readback succeeds");
       assert(validRes.found === true, "found is true");
       assert(validRes.readbackRedacted === true, "readbackRedacted is true");

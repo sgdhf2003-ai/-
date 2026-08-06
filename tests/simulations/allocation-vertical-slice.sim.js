@@ -258,5 +258,29 @@ runSuite("allocation-vertical-slice", [
       }, mockAdapter);
       assert(fulfillCancelled.ok === false && fulfillCancelled.errorCode === "HOLD_CANCELLED", "Fulfilling cancelled hold fails with HOLD_CANCELLED");
     }
+  },
+  {
+    name: "Production readback contract: non-existent reservation number returns found:false and missing adapter fails closed",
+    run() {
+      const adminUser = { username: "stage35_admin", role: "admin" };
+
+      // 1. Non-existent reservation number returns found: false and record: null
+      const nonexistentRes = context.readbackAuditAction({
+        userContext: adminUser,
+        queryPayload: { reservationNumber: "RES-NONEXISTENT-999" }
+      }, mockAdapter);
+      assert(nonexistentRes.ok === true, "nonexistent readback returns ok: true");
+      assert(nonexistentRes.found === false, "nonexistent readback returns found: false");
+      assert(nonexistentRes.record === null, "nonexistent readback returns record: null");
+      assert(nonexistentRes.reservationNumber === "RES-NONEXISTENT-999", "nonexistent readback matches reservationNumber");
+
+      // 2. Missing persistence adapter in non-sheet runtime fails closed
+      const missingAdapterRes = context.readbackAuditAction({
+        userContext: adminUser,
+        queryPayload: { reservationNumber: "RES-20260806-CHAIN35" }
+      });
+      assert(missingAdapterRes.ok === false, "missing adapter readback fails closed");
+      assert(missingAdapterRes.errorCode === "READBACK_ADAPTER_MISSING", "missing adapter returns READBACK_ADAPTER_MISSING");
+    }
   }
 ]);
