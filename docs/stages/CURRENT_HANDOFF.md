@@ -5,25 +5,44 @@
 - repo root: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 - branch: `main`
 - source of truth: Canonical cloud-drive checkout path above
-- HEAD: `93e8cb485f6cbec174e71104eaf272bc6a23510f`
-- origin/main: `93e8cb485f6cbec174e71104eaf272bc6a23510f`
+- HEAD: `56a597681e8769329836361eedb7c3c720818e33`
+- origin/main: `56a597681e8769329836361eedb7c3c720818e33`
 - ahead / behind vs origin/main: `0 / 0`
 
 ## Current Stage
 
-- current stage: Phase 7-C Web App Admin Operations UI Control Panel Implementation
+- current stage: Phase 9-A Handoff Documentation Update Gate
 - previous completed deliveries:
   - Phase 6-F Backend Web App Version 100 Deployment (`93e8cb4`, HTTP 200 OK)
   - Phase 6-G Production Read-Only Contract Verification Gate (`adcc02a`)
-  - Phase 7-A Web App Admin Operations UI Audit Gate
-  - Phase 7-B Admin Operations UI Control Panel Contract Planning Gate
-  - Phase 7-C Web App Admin Operations UI Control Panel Implementation (233 / 233 PASS)
-- latest pushed main commit: `adcc02a0efc5f5fbfcfd5301278febde7e3c9de0` (`docs: record Phase 6-G production read-only verification handoff`)
+  - Phase 7-C Admin Operations UI Control Panel Implementation (`56a5976`, 233 / 233 PASS)
+  - Phase 8-A Daily Operations Admin UI End-to-End Walkthrough Gate (100% Contract Alignment)
+  - Phase 8-B Daily Operations Production Readiness Sign-Off Gate (100% Certified)
+  - Phase 8-D Live Production Controlled Write Pilot (`RES-20260805-PILOT88` 4-Step Lifecycle 100% PASS)
+- latest pushed main commit: `56a597681e8769329836361eedb7c3c720818e33` (`feat(allocation-assistant): implement admin UI control panel for holdsView`)
 - backend deployed version: `100` (canonical deployment record - 100 versions headroom remaining)
 - LINE Bot deployed version: `1` (canonical deployment record - fresh project Version 1)
 - automated simulations: 233 / 233 PASS (`npm run simulate:all`)
 - Web App URL: `https://script.google.com/macros/s/AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw/exec`
-- recommended next stage: **Phase 7-D Admin Operations UI Control Panel Commit & Push Gate**
+- recommended next stage: **Phase 9-B Handoff Record Commit & Push Gate**
+
+## Phase 8 Summary & Production Controlled Write Pilot Record (`RES-20260805-PILOT88`)
+
+- **Phase 8 Status**: **PRODUCTION CONTROLLED WRITE PILOT COMPLETED & VERIFIED (100% PASS)**
+- **Live Production Test Record**: `RES-20260805-PILOT88`
+- **4-Step Execution Summary**:
+  1. `Step 1 Formal Hold Creation`: Created reservation `RES-20260805-PILOT88` with quantity 10 and status `ACTIVE`. (`PASS`, HTTP 200 OK, `ok: true`)
+  2. `Step 2 Partial Fulfillment`: Fulfilled 4 units (`quantity: 4`, `totalQuantity: 10`). Appended 7-column row `[RES-20260805-PILOT88, FULFILL_PARTIAL, EQA-6522-PILOT, 4, 6, PARTIAL_FULFILLED, timestamp]` to `ledger` tab. (`PASS`, HTTP 200 OK, `remainingQuantity: 6`)
+  3. `Step 3 Cancel / Release`: Released remaining 6 units (`action: CANCEL_RELEASE`). Appended 7-column row `[RES-20260805-PILOT88, CANCEL_RELEASE, EQA-6522-PILOT, 0, 0, CANCELLED, timestamp]` to `ledger` tab. (`PASS`, HTTP 200 OK, `remainingQuantity: 0`)
+  4. `Step 4 Readback Audit & Audit Cleanup`: Queried `readbackAuditAction` (`found: true`, `readbackRedacted: true`), and updated test record status to `TEST_CLEANUP_DELETED`. (`PASS`, HTTP 200 OK)
+- **Production Side Effect Summary**:
+  - Production Google Sheet Writes: `4` (Step 1 hold create, Step 2 partial fulfill, Step 3 cancel release, Step 4 audit cleanup)
+  - Backend Web App Deploys: `0` (Version 100 preserved)
+  - LINE Bot Deploys: `0` (Version 1 preserved)
+  - LINE API Push Calls: `0` (`notificationBypassed: true` active across all steps)
+  - Secrets / Tokens Printed: `0`
+  - Commits / Pushes Executed During Pilot: `0`
+
 
 ## Phase 7 Summary & UI Control Panel Implementation Record
 

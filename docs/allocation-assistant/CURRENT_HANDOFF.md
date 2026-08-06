@@ -4,10 +4,10 @@
 * **交接日期**: 2026-08-05
 * **執行目錄**: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 * **目前分支**: `main`
-* **HEAD Hash**: `93e8cb485f6cbec174e71104eaf272bc6a23510f`
-* **origin/main Hash**: `93e8cb485f6cbec174e71104eaf272bc6a23510f`
+* **HEAD Hash**: `56a597681e8769329836361eedb7c3c720818e33`
+* **origin/main Hash**: `56a597681e8769329836361eedb7c3c720818e33`
 * **分支關係**: `0 ahead / 0 behind` (完全同步)
-* **Working Tree 狀態**: Clean (Pending Phase 6-G Commit)
+* **Working Tree 狀態**: Clean (Pending Phase 9-A Handoff Commit)
 
 ## 2. 本次完成內容 (Completed Work)
 * 完成 Stage 30 & 31 生產環境 Google Sheet 劃扣與出貨生命週期驗證 (`RES-20260801-001`, `RES-20260801-002`)。
@@ -30,10 +30,12 @@
 * 完成 Phase 6-E Apps Script 後端端點處理器接線套件 (`05ebafa`, 228/228 PASS)。
 * 完成 Phase 6-F Backend Web App Version 100 受控部署與驗證 (`93e8cb4`, HTTP 200 OK, 100 剩餘版本空間)。
 * 完成 Phase 6-G 生產環境唯讀合約驗證 (`adcc02a`, HTTP 200 Health Ping, `INVALID_SESSION_USER` Fail-Closed, `readbackRedacted: true` 脫敏驗證 100% PASS)。
-* 完成 Phase 7-C 管理員作業 UI 控制面板實作與 TDD 驗證 (233/233 PASS):
-  - 實作 `renderHoldItemActions`, `validateFulfillInput`, `buildAllocationActionPayload`, `reconcileHoldStateFromReceipt` 處理器。
-  - 新增 `index.html` 與 `google-apps-script/Index.html` 劃扣銷扣出貨對話框 UI 模組。
-  - 新增 `tests/simulations/allocation-ui-control-panel.sim.js` (5 個 TDD 測試案例，全數 PASS)。
+* 完成 Phase 7-C 管理員作業 UI 控制面板實作與 TDD 驗證 (`56a5976`, 233/233 PASS)。
+* 完成 Phase 8-D 生產環境受控劃扣與銷扣出貨 Pilot 實測 (`RES-20260805-PILOT88` 4-Step 100% PASS):
+  - Step 1 正式劃扣保留建立: `RES-20260805-PILOT88` (`status: ACTIVE`, quantity 10, `PASS`)
+  - Step 2 部分銷扣出貨寫回: Fulfilled 4, remaining 6, appends 7-column ledger row (`PASS`)
+  - Step 3 取消釋放劃扣寫回: Cancelled remaining 6, remaining 0, appends 7-column ledger row (`PASS`)
+  - Step 4 讀回稽核與測試標記: `readbackAuditAction` 驗證無誤，狀態標記為 `TEST_CLEANUP_DELETED` (`PASS`)
 * 本機檢查、模擬測試與部署 Dry Run 全數通過 (`npm run check`, `npm run simulate:all`, `deploy.py --check` PASS)。
 
 

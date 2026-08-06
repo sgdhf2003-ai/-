@@ -94,11 +94,20 @@
     - `Unauthenticated Fulfill Action`: `INVALID_SESSION_USER` (Fail-Closed 驗證成功)
     - `Readback Audit Query`: `readbackRedacted: true` (脫敏讀回驗證成功)
 ### Phase 7: Web App Admin Operations UI Control Panel Suite
-* **狀態**: 完成並驗證 (233/233 PASS)
+* **狀態**: 完成並驗證 (`56a5976`, 233/233 PASS)
 * **交付內容**:
   - `app.js` UI 處理器 (`renderHoldItemActions`, `validateFulfillInput`, `buildAllocationActionPayload`, `reconcileHoldStateFromReceipt`)。
   - `index.html` 與 `google-apps-script/Index.html` (`#holdFulfillModal` 銷扣出貨對話框)。
   - `tests/simulations/allocation-ui-control-panel.sim.js` (5 個 TDD 測試案例，全數 PASS)。
+
+### Phase 8: Live Production Controlled Write Pilot (`RES-20260805-PILOT88`)
+* **狀態**: 完好完成並驗證 (100% 4-Step PASS)
+* **實測內容**:
+  - `Step 1`: 正式保留劃扣建立 `RES-20260805-PILOT88` (`status: ACTIVE`, quantity 10, HTTP 200 OK)。
+  - `Step 2`: 部分銷扣出貨寫回 (Fulfilled 4, remaining 6, 7 欄位 `ledger` 列追加成功)。
+  - `Step 3`: 取消釋放劃扣寫回 (Cancelled remaining 6, remaining 0, 7 欄位 `ledger` 列追加成功)。
+  - `Step 4`: 讀回稽核 (`readbackAuditAction` 驗證 `found: true`, `readbackRedacted: true`)，狀態標記為 `TEST_CLEANUP_DELETED`。
+  - **副作用統計**: Production Sheet Writes 4 筆, Deploys 0, LINE Calls 0, Secrets 0, Commits 0。
 
 ## 4. 自動化驗證基線 (Automated Verification Baseline)
 - `npm run check`: **PASS**
