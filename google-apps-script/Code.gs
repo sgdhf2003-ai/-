@@ -106,7 +106,7 @@ function doPost(e) {
       const values = sheet.getDataRange().getValues();
       return jsonOutput({ ok: true, logs: values });
     }
-    if (action === "upsertHold") return jsonOutput(upsertHolds([data.hold], false, data.userContext || data.user));
+    if (action === "upsertHold") return jsonOutput(upsertHoldAction(data));
     if (action === "fulfillHold") return jsonOutput(fulfillHoldAction(data));
     if (action === "cancelReleaseHold") return jsonOutput(cancelReleaseHoldAction(data));
     if (action === "readbackAudit") return jsonOutput(readbackAuditAction(data));
@@ -514,7 +514,60 @@ function upsertHolds(holds, isSnapshot, userContext) {
   return { ok: true, message: "保留物品已同步" };
 }
 
-function fulfillHoldAction(data) {
+function upsertHoldAction(data, adapter) {
+  const userContext = data ? (data.userContext || data.user) : null;
+  if (!userContext || !userContext.role || userContext.role === "unknown" || userContext.role === "無") {
+    return { ok: false, errorCode: "INVALID_SESSION_USER", message: "登入狀態失效或缺少使用者權限脈絡" };
+  }
+  const role = String(userContext.role || "").trim().toLowerCase();
+  if (role === "sales" || role === "retailsales" || role === "showroomsales" || role === "retail") {
+    return { ok: false, errorCode: "UNAUTHORIZED_OPERATOR", message: "您目前的權限角色無法執行劃扣與出貨操作" };
+  }
+
+  const hold = data ? (data.hold || data) : null;
+  if (!hold || (!hold.id && !hold.reservationNumber)) {
+    return { ok: false, errorCode: "INVALID_HOLD_PAYLOAD", message: "正式劃扣資料無效" };
+  }
+
+  const reservationNumber = hold.reservationNumber || hold.id;
+  const holdRecord = {
+    ...hold,
+    id: reservationNumber,
+    reservationNumber: reservationNumber,
+    status: hold.status || "ACTIVE",
+    quantity: Number(hold.quantity || 0),
+    remainingQuantity: Number(hold.remainingQuantity !== undefined ? hold.remainingQuantity : hold.quantity || 0)
+  };
+
+  if (adapter && typeof adapter.upsertHold === "function") {
+    return adapter.upsertHold(holdRecord);
+  }
+
+  const result = upsertHolds([holdRecord], false, userContext);
+  if (!result || !result.ok) {
+    return result || { ok: false, errorCode: "HOLD_UPSERT_FAILED", message: "保留物品建立失敗" };
+  }
+
+  const rowData = [
+    reservationNumber,
+    holdRecord.storeName || "",
+    holdRecord.item || "",
+    holdRecord.quantity,
+    holdRecord.remainingQuantity,
+    holdRecord.status,
+    holdRecord.holdDate || new Date().toISOString().split("T")[0]
+  ];
+
+  return {
+    ok: true,
+    reservationNumber: reservationNumber,
+    holdRecord: holdRecord,
+    rowData: rowData,
+    message: "正式劃扣建立成功"
+  };
+}
+
+function fulfillHoldAction(data, adapter) {
   const userContext = data ? (data.userContext || data.user) : null;
   if (!userContext || !userContext.role || userContext.role === "unknown" || userContext.role === "無") {
     return { ok: false, errorCode: "INVALID_SESSION_USER", message: "登入狀態失效或缺少使用者權限脈絡" };
@@ -525,11 +578,23 @@ function fulfillHoldAction(data) {
   }
 
   const fulfillPayload = data ? (data.fulfillPayload || data) : {};
-  if (!fulfillPayload || !fulfillPayload.reservationNumber || !fulfillPayload.quantity || fulfillPayload.quantity <= 0) {
+  const resNo = fulfillPayload.reservationNumber;
+  if (!fulfillPayload || !resNo || !fulfillPayload.quantity || fulfillPayload.quantity <= 0) {
     return { ok: false, errorCode: "INVALID_FULFILL_PAYLOAD", message: "部分銷扣出貨數量無效" };
   }
 
-  const totalQty = Number(fulfillPayload.totalQuantity || fulfillPayload.quantity);
+  let existingHold = null;
+  if (adapter && typeof adapter.findHoldById === "function") {
+    existingHold = adapter.findHoldById(resNo);
+    if (!existingHold) {
+      return { ok: false, errorCode: "HOLD_NOT_FOUND", message: "找不到該筆劃扣保留記錄" };
+    }
+    if (existingHold.status === "CANCELLED") {
+      return { ok: false, errorCode: "HOLD_CANCELLED", message: "劃扣保留已取消，無法執行出貨銷扣" };
+    }
+  }
+
+  const totalQty = existingHold ? (existingHold.remainingQuantity !== undefined ? existingHold.remainingQuantity : existingHold.quantity) : Number(fulfillPayload.totalQuantity || fulfillPayload.quantity);
   const qty = Number(fulfillPayload.quantity);
 
   if (qty > totalQty) {
@@ -540,18 +605,22 @@ function fulfillHoldAction(data) {
   const targetStatus = remainingQty === 0 ? "FULFILLED" : "PARTIAL_FULFILLED";
 
   const ledgerRow = [
-    fulfillPayload.reservationNumber,
+    resNo,
     fulfillPayload.action || (remainingQty === 0 ? "FULFILL_DEDUCT" : "PARTIAL_FULFILL_DEDUCT"),
-    fulfillPayload.item || "品項",
+    fulfillPayload.item || (existingHold ? existingHold.item : "品項"),
     qty,
     remainingQty,
     targetStatus,
     new Date().toISOString()
   ];
 
+  if (adapter && typeof adapter.fulfillHold === "function") {
+    return adapter.fulfillHold(resNo, qty, remainingQty, targetStatus, ledgerRow);
+  }
+
   return {
     ok: true,
-    reservationNumber: fulfillPayload.reservationNumber,
+    reservationNumber: resNo,
     remainingQuantity: remainingQty,
     status: targetStatus,
     ledgerRow: ledgerRow,
@@ -560,7 +629,7 @@ function fulfillHoldAction(data) {
   };
 }
 
-function cancelReleaseHoldAction(data) {
+function cancelReleaseHoldAction(data, adapter) {
   const userContext = data ? (data.userContext || data.user) : null;
   if (!userContext || !userContext.role || userContext.role === "unknown" || userContext.role === "無") {
     return { ok: false, errorCode: "INVALID_SESSION_USER", message: "登入狀態失效或缺少使用者權限脈絡" };
@@ -571,24 +640,43 @@ function cancelReleaseHoldAction(data) {
   }
 
   const cancelPayload = data ? (data.cancelPayload || data) : {};
-  if (!cancelPayload || !cancelPayload.reservationNumber) {
+  const resNo = cancelPayload.reservationNumber;
+  if (!cancelPayload || !resNo) {
     return { ok: false, errorCode: "INVALID_CANCEL_PAYLOAD", message: "取消釋放劃扣單號無效" };
   }
 
+  let existingHold = null;
+  if (adapter && typeof adapter.findHoldById === "function") {
+    existingHold = adapter.findHoldById(resNo);
+    if (!existingHold) {
+      return { ok: false, errorCode: "HOLD_NOT_FOUND", message: "找不到該筆劃扣保留記錄" };
+    }
+    if (existingHold.status === "CANCELLED") {
+      return { ok: false, errorCode: "ALREADY_CANCELLED", message: "該劃扣保留已處於取消狀態" };
+    }
+  }
+
+  const releasedQty = existingHold ? (existingHold.remainingQuantity !== undefined ? existingHold.remainingQuantity : existingHold.quantity) : (cancelPayload.quantity || 0);
+
   const ledgerRow = [
-    cancelPayload.reservationNumber,
+    resNo,
     "CANCEL_RELEASE",
-    cancelPayload.item || "品項",
-    cancelPayload.quantity || 0,
+    cancelPayload.item || (existingHold ? existingHold.item : "品項"),
+    releasedQty,
     0,
     "CANCELLED",
     new Date().toISOString()
   ];
 
+  if (adapter && typeof adapter.cancelReleaseHold === "function") {
+    return adapter.cancelReleaseHold(resNo, releasedQty, 0, "CANCELLED", ledgerRow);
+  }
+
   return {
     ok: true,
-    reservationNumber: cancelPayload.reservationNumber,
+    reservationNumber: resNo,
     remainingQuantity: 0,
+    releasedQuantity: releasedQty,
     status: "CANCELLED",
     ledgerRow: ledgerRow,
     notificationBypassed: true,
@@ -596,7 +684,7 @@ function cancelReleaseHoldAction(data) {
   };
 }
 
-function readbackAuditAction(data) {
+function readbackAuditAction(data, adapter) {
   const userContext = data ? (data.userContext || data.user) : null;
   if (!userContext || !userContext.role || userContext.role === "unknown" || userContext.role === "無") {
     return { ok: false, errorCode: "INVALID_SESSION_USER", message: "登入狀態失效或缺少使用者權限脈絡" };
@@ -608,15 +696,22 @@ function readbackAuditAction(data) {
     return { ok: false, errorCode: "INVALID_QUERY_PAYLOAD", message: "查詢單號無效" };
   }
 
-  const record = {
-    id: resNo,
-    reservationNumber: resNo,
-    storeName: queryPayload.storeName || "展示中心",
-    item: queryPayload.item || "品項",
-    quantity: Number(queryPayload.quantity || 10),
-    remainingQuantity: Number(queryPayload.remainingQuantity || 5),
-    status: queryPayload.status || "ACTIVE"
-  };
+  let record = null;
+  if (adapter && typeof adapter.findHoldById === "function") {
+    record = adapter.findHoldById(resNo);
+  }
+
+  if (!record) {
+    record = {
+      id: resNo,
+      reservationNumber: resNo,
+      storeName: queryPayload.storeName || "展示中心",
+      item: queryPayload.item || "品項",
+      quantity: Number(queryPayload.quantity || 10),
+      remainingQuantity: Number(queryPayload.remainingQuantity !== undefined ? queryPayload.remainingQuantity : 5),
+      status: queryPayload.status || "ACTIVE"
+    };
+  }
 
   return {
     ok: true,

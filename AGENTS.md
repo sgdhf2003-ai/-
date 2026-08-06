@@ -92,8 +92,8 @@ git diff --check
 
 ### Current Known State
 
-- Current Stage: **Stage 33-B (Standing Handoff Certified)**
-- Commit: `46bc869d3a82ce2e662bed0af68487a266d2309e` (`docs: certify Stage 33-B standing handoff`)
+- Current Stage: **Stage 34 (Read-Only Monitoring Complete)**
+- Commit: `2eb5f234b94803b1aefe0cf7892838bf912e3c16` (`docs: synchronize Stage 34 standing handoff state`)
 - Status: Synced with `origin/main` (0 ahead / 0 behind)
 - Working tree: Clean
 - Backend Web App production record: Version 100 (100 versions headroom remaining)
@@ -104,6 +104,7 @@ git diff --check
   - Stage 31 Fulfillment & Cancel Release Lifecycle (`RES-20260801-002`): `PASS`
   - Phase 8-D Live Production Pilot Lifecycle (`RES-20260805-PILOT88` 4/4 Steps): `PASS`
   - Stage 33-A Routine Health Audit (`GET 200 OK`, `INVALID_SESSION_USER` fail-closed, `readbackRedacted: true`): `PASS`
+  - Stage 34 Read-Only Routine Monitoring (`HTTP 200 OK`, `INVALID_SESSION_USER` fail-closed, `readbackRedacted: true`): `PASS`
   - ID Contract (`reservationNumber === holdRecord.id === rowData[0]`): `PASS`
 - Production Operating SOP: Formally documented in `docs/allocation-assistant/OPERATING_SOP.md`
 
@@ -113,15 +114,14 @@ The Stage 24-B warnings regarding hold writeback and fulfillment ledger persiste
 
 ### Current Recommended Next Stage
 
-After Stage 33-B, the recommended next gate is:
+After Stage 34, the recommended next gate is:
 
-**Stage 34: Read-Only Daily Operations Monitoring & Maintenance**
-- **Purpose**: Perform routine health audits against Backend Web App Version 100, monitoring endpoint health, fail-closed session guards, and sanitized readback output.
+**Stage 35: Business Operations Vertical Slice Proof Gate**
+- **Purpose**: Contract-first vertical slice verification across formal hold write + immediate readback (35-A), partial/full fulfillment + immediate readback (35-B), and cancel/release + final audit (35-C).
 - **Rules**:
-  - Read-only daily operations monitoring only.
-  - Confirm readback/audit queries return redacted results for non-admin users.
-  - Confirm LINE messaging remains disabled unless separately approved.
-  - Read-only audit only: no code edits, no Google Sheet writes, no LINE API calls, no deploys, no commit/push without explicit owner approval.
+  - TDD workflow mandatory: failing simulation test first, minimal implementation, passing test.
+  - Contract-first verification: proof beyond `success:true` (ID parity, status, quantity, 7-column ledger row).
+  - No production Google Sheet write, LINE API call, deploy, or commit/push without explicit owner approval.
 
 ## 1. Canonical Workspace
 
