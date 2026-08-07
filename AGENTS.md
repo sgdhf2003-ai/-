@@ -92,19 +92,19 @@ git diff --check
 
 ### Current Known State
 
-- Current Stage: **Stage 34 (Read-Only Monitoring Complete)**
-- Commit: `2eb5f234b94803b1aefe0cf7892838bf912e3c16` (`docs: synchronize Stage 34 standing handoff state`)
+- Current Stage: **Stage 36 (Business Operations Vertical Slice & Readback Fix Certified)**
+- Commit: `a4f5d233917ebe20d3f7fe91c8042f6c26c814ed` (`fix: enforce fail-closed production readback contract for nonexistent reservations and missing adapters`)
 - Status: Synced with `origin/main` (0 ahead / 0 behind)
-- Working tree: Clean
-- Backend Web App production record: Version 100 (100 versions headroom remaining)
+- Working tree: Pending Stage 36 Handoff Commit
+- Backend Web App production record: Version 103 (Deployment ID: [REDACTED_DEPLOYMENT_ID] - 97 versions headroom remaining; Version 102 was an unattached script snapshot)
 - Fresh LINE Bot production record: Version 1 (Script ID: `1C_5hZKIlWl_B9pdRrzcrA9ZAWD2Xuqwd0ZetQ-lIt2CFlxZ8yELcTLJf`, Deployment ID: `AKfycbwskF_c2VpW6Cv3yR-wUevRXdrG754ZzxyYMorroqjwkjJZT10wp3DqIZ2kA-GrKK0a`)
-- Latest verified simulation baseline: `npm run simulate:all` = **233 / 233 PASS**
+- Latest verified simulation baseline: `npm run simulate:all` = **236 / 236 PASS**
 - Live production proofs:
   - Stage 30 Formal Hold Writeback (`RES-20260801-001`): `PASS`
   - Stage 31 Fulfillment & Cancel Release Lifecycle (`RES-20260801-002`): `PASS`
   - Phase 8-D Live Production Pilot Lifecycle (`RES-20260805-PILOT88` 4/4 Steps): `PASS`
-  - Stage 33-A Routine Health Audit (`GET 200 OK`, `INVALID_SESSION_USER` fail-closed, `readbackRedacted: true`): `PASS`
-  - Stage 34 Read-Only Routine Monitoring (`HTTP 200 OK`, `INVALID_SESSION_USER` fail-closed, `readbackRedacted: true`): `PASS`
+  - Stage 35 Chained Vertical Slice (`RES-20260806-CHAIN35`): `PASS`
+  - Version 103 Live Production Health & Readback Contract Audit (`HTTP 200 OK`, `INVALID_SESSION_USER` fail-closed, nonexistent reservation `found: false` & `record: null`): `PASS`
   - ID Contract (`reservationNumber === holdRecord.id === rowData[0]`): `PASS`
 - Production Operating SOP: Formally documented in `docs/allocation-assistant/OPERATING_SOP.md`
 
@@ -114,13 +114,12 @@ The Stage 24-B warnings regarding hold writeback and fulfillment ledger persiste
 
 ### Current Recommended Next Stage
 
-After Stage 34, the recommended next gate is:
+After Stage 36, the recommended next gate is:
 
-**Stage 35: Business Operations Vertical Slice Proof Gate**
-- **Purpose**: Contract-first vertical slice verification across formal hold write + immediate readback (35-A), partial/full fulfillment + immediate readback (35-B), and cancel/release + final audit (35-C).
+**Stage 37: Business Operations Daily Operations Monitoring & Maintenance Gate**
+- **Purpose**: Execute routine health audits and daily operations monitoring against Backend Web App Version 103 and maintain system health baseline.
 - **Rules**:
-  - TDD workflow mandatory: failing simulation test first, minimal implementation, passing test.
-  - Contract-first verification: proof beyond `success:true` (ID parity, status, quantity, 7-column ledger row).
+  - Read-only health monitoring checks only.
   - No production Google Sheet write, LINE API call, deploy, or commit/push without explicit owner approval.
 
 ## 1. Canonical Workspace

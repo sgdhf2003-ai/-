@@ -5,40 +5,45 @@
 - repo root: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 - branch: `main`
 - source of truth: Canonical cloud-drive checkout path above
-- HEAD: `2eb5f234b94803b1aefe0cf7892838bf912e3c16`
-- origin/main: `2eb5f234b94803b1aefe0cf7892838bf912e3c16`
+- HEAD: `a4f5d233917ebe20d3f7fe91c8042f6c26c814ed`
+- origin/main: `a4f5d233917ebe20d3f7fe91c8042f6c26c814ed`
 - ahead / behind vs origin/main: `0 / 0`
 
 ## Current Stage
 
-- current stage: Stage 34 Daily Operations Read-Only Routine Monitoring (Completed)
+- current stage: Stage 36 Business Operations Vertical Slice & Production Readback Fix Certification (Completed)
 - previous completed deliveries:
   - Phase 6-F Backend Web App Version 100 Deployment (`93e8cb4`, HTTP 200 OK)
   - Phase 7-C Admin Operations UI Control Panel Implementation (`56a5976`, 233 / 233 PASS)
   - Phase 8-D Live Production Controlled Write Pilot (`RES-20260805-PILOT88` 4-Step Lifecycle 100% PASS)
-  - Phase 9-A / 9-B Handoff Documentation Gate (`c4d5f4e`, committed and pushed)
   - Stage 33-A / 33-B Routine Health Audit & Standing Handoff Gate (`46bc869`, 100% PASS)
-  - Stage 34-A Documentation Consistency Repair Gate (`2eb5f23`, committed and pushed)
-  - Stage 34 Daily Operations Read-Only Routine Monitoring Gate (100% PASS)
-- latest pushed main commit: `2eb5f234b94803b1aefe0cf7892838bf912e3c16` (`docs: synchronize Stage 34 standing handoff state`)
-- backend deployed version: `100` (canonical deployment record - 100 versions headroom remaining)
+  - Stage 34-A / 34 Read-Only Daily Operations Monitoring Gate (`2eb5f23`, 100% PASS)
+  - Stage 35 Business Operations Vertical Slice Proof Gate (`RES-20260806-CHAIN35`, 234 / 234 PASS)
+  - Production Readback Contract Fix Gate (`a4f5d23`, 236 / 236 PASS)
+  - Backend Web App Version 103 Deployment & Live Audit Gate (HTTP 200 OK, `found: false` on nonexistent reservations)
+- latest pushed main commit: `a4f5d233917ebe20d3f7fe91c8042f6c26c814ed` (`fix: enforce fail-closed production readback contract for nonexistent reservations and missing adapters`)
+- backend deployed version: `103` (canonical deployment record - 97 versions headroom remaining; Version 102 was an unattached script snapshot)
 - LINE Bot deployed version: `1` (canonical deployment record - fresh project Version 1)
-- automated simulations: 233 / 233 PASS (`npm run simulate:all`)
-- Web App URL: `https://script.google.com/macros/s/AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw/exec`
-- recommended next stage: **Stage 35 Business Operations Vertical Slice Proof Gate**
+- automated simulations: 236 / 236 PASS (`npm run simulate:all`)
+- Web App URL: `[REDACTED_WEB_APP_URL]`
+- recommended next stage: **Stage 37 Routine Monitoring & Business Operations Maintenance Gate**
 
-## Stage 34 Summary & Read-Only Routine Monitoring Record
+## Stage 36 Summary & Version 103 Live Audit Record
 
-- **Stage 34 Status**: **DAILY OPERATIONS READ-ONLY ROUTINE MONITORING COMPLETED & VERIFIED (100% PASS)**
-- **Baseline Commit**: `2eb5f234b94803b1aefe0cf7892838bf912e3c16`
-- **System Health Verification Evidence**:
-  - `GET Health Ping`: **HTTP 200 OK** (65,588 bytes HTML served, verified title `勁揚業務管家`)
+- **Stage 36 Status**: **BUSINESS OPERATIONS VERTICAL SLICE & PRODUCTION READBACK FIX CERTIFIED (100% PASS)**
+- **Baseline Commit**: `a4f5d233917ebe20d3f7fe91c8042f6c26c814ed`
+- **System Health & Readback Audit Evidence (Version 103)**:
+  - `GET Health Ping`: **HTTP 200 OK** (66,590 bytes HTML served, verified title `勁揚業務管家`)
   - `Unauthenticated Request Guard`: `{ ok: false, errorCode: "INVALID_SESSION_USER", message: "登入狀態失效或缺少使用者權限脈絡" }` (**Fail-closed verified!**)
-  - `Sanitized Readback Audit`: `{ ok: true, found: true, record: {...}, readbackRedacted: true }` (**Redacted output verified!**)
+  - `Live Record Readback Audit`: `{ ok: true, found: true, record: {...}, readbackRedacted: true }` (**Live record query verified!**)
+  - `Nonexistent Reservation Readback`: `{ ok: true, found: false, reservationNumber: "RES-NONEXISTENT-V103-999", record: null, readbackRedacted: true }` (**Production contract fix verified!**)
+- **Version History Clarification**:
+  - Version 102 was generated as an unattached script snapshot during Apps Script versioning, but was never bound to the production deployment ID.
+  - Version 103 is the active production deployment bound to `[REDACTED_DEPLOYMENT_ID]`.
 - **Automated Verification Baseline**:
   - `npm run check`: **PASS**
-  - `npm run simulate:allocation-ui-control-panel`: **5 / 5 PASS**
-  - `npm run simulate:all`: **233 / 233 PASS**
+  - `npm run simulate:allocation-vertical-slice`: **2 / 2 PASS**
+  - `npm run simulate:all`: **236 / 236 PASS**
   - `python3 deploy.py backend --check`: **VALID**
   - `python3 deploy.py line-bot --check`: **VALID**
   - `git diff --check`: **PASS**

@@ -120,7 +120,15 @@
 - `python3 deploy.py line-bot --check`: **VALID** (LINE Bot Apps Script dry-run safe)
 - `read-only Web App HTTP ping`: **HTTP 200 OK**
 - `git diff --check`: **PASS** (0 空白字元錯誤)
-- **生產環境部署記錄**: Backend Web App Version 100 (已生效), LINE Bot Project Version 1 完好保留。
+- **生產環境部署記錄**: Backend Web App Version 103 (已生效，離 200 版本上限剩餘 97 個空間；Version 102 為未綁定快照), LINE Bot Project Version 1 完好保留。
+
+### Phase 8-D & Stage 35: Business Operations Vertical Slice & Readback Contract Fix
+* **狀態**: 完成並記錄 (`a4f5d233917ebe20d3f7fe91c8042f6c26c814ed`)
+* **交付與驗證內容**:
+  - Phase 8-D 生產環境 controlled write pilot 4/4 步驟完好通過 (`RES-20260805-PILOT88` -> `TEST_CLEANUP_DELETED`)。
+  - Stage 35 單一鏈條 A -> B -> C 連貫垂直切片模擬驗證完好通過 (`RES-20260806-CHAIN35`, 234/234 PASS)。
+  - 生產環境讀回合約修復: 不存在單號傳回 `found: false` & `record: null`；缺失 Persistence Adapter 傳回 `READBACK_ADAPTER_MISSING` 嚴格 Fail-Closed (`a4f5d23`, 236/236 PASS)。
+  - Backend Web App 成功部署至 **Version 103**，線上 Health Audit 測試 (GET HTTP 200 OK, `INVALID_SESSION_USER` Fail-Closed, `found: false` & `record: null` 不存在單號讀回合約) 全數通過。
 
 
 

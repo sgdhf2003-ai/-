@@ -1,13 +1,13 @@
 # JYAI Allocation Assistant - CURRENT HANDOFF
 
 ## 1. 專案基線狀態 (Project Baseline)
-* **交接日期**: 2026-08-05
+* **交接日期**: 2026-08-07
 * **執行目錄**: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 * **目前分支**: `main`
-* **HEAD Hash**: `56a597681e8769329836361eedb7c3c720818e33`
-* **origin/main Hash**: `56a597681e8769329836361eedb7c3c720818e33`
+* **HEAD Hash**: `a4f5d233917ebe20d3f7fe91c8042f6c26c814ed`
+* **origin/main Hash**: `a4f5d233917ebe20d3f7fe91c8042f6c26c814ed`
 * **分支關係**: `0 ahead / 0 behind` (完全同步)
-* **Working Tree 狀態**: Clean (Pending Phase 9-A Handoff Commit)
+* **Working Tree 狀態**: Clean (Pending Stage 36 Handoff Commit)
 
 ## 2. 本次完成內容 (Completed Work)
 * 完成 Stage 30 & 31 生產環境 Google Sheet 劃扣與出貨生命週期驗證 (`RES-20260801-001`, `RES-20260801-002`)。
@@ -31,13 +31,11 @@
 * 完成 Phase 6-F Backend Web App Version 100 受控部署與驗證 (`93e8cb4`, HTTP 200 OK, 100 剩餘版本空間)。
 * 完成 Phase 6-G 生產環境唯讀合約驗證 (`adcc02a`, HTTP 200 Health Ping, `INVALID_SESSION_USER` Fail-Closed, `readbackRedacted: true` 脫敏驗證 100% PASS)。
 * 完成 Phase 7-C 管理員作業 UI 控制面板實作與 TDD 驗證 (`56a5976`, 233/233 PASS)。
-* 完成 Phase 8-D 生產環境受控劃扣與銷扣出貨 Pilot 實測 (`RES-20260805-PILOT88` 4-Step 100% PASS):
-  - Step 1 正式劃扣保留建立: `RES-20260805-PILOT88` (`status: ACTIVE`, quantity 10, `PASS`)
-  - Step 2 部分銷扣出貨寫回: Fulfilled 4, remaining 6, appends 7-column ledger row (`PASS`)
-  - Step 3 取消釋放劃扣寫回: Cancelled remaining 6, remaining 0, appends 7-column ledger row (`PASS`)
-  - Step 4 讀回稽核與測試標記: `readbackAuditAction` 驗證無誤，狀態標記為 `TEST_CLEANUP_DELETED` (`PASS`)
+* 完成 Phase 8-D 生產環境受控劃扣與銷扣出貨 Pilot 實測 (`RES-20260805-PILOT88` 4-Step 100% PASS)。
+* 完成 Stage 35 配貨與出貨單一鏈條連貫垂直切片驗證 (`RES-20260806-CHAIN35`, 234/234 PASS)。
+* 完成生產環境讀回合約修復 (`a4f5d23`, 不存在單號傳回 `found: false` & `record: null`；缺失 Adapter 傳回 `READBACK_ADAPTER_MISSING` Fail-Closed, 236/236 PASS)。
+* 完成 Backend Web App **Version 103** 部署與線上實測驗證 (澄清 Version 102 為 Apps Script 產生之未綁定快照，Version 103 為線上綁定版本)。
 * 本機檢查、模擬測試與部署 Dry Run 全數通過 (`npm run check`, `npm run simulate:all`, `deploy.py --check` PASS)。
-
 
 ## 3. 未完成內容與未啟用功能 (Deactivated Features)
 * LINE API 主動 Push/Send 維持關閉 (`notificationBypassed: true`)。
