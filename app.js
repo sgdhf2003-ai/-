@@ -397,7 +397,7 @@ document.querySelector("#loginForm")?.addEventListener("submit", async (event) =
 
     const rememberCheckbox = document.querySelector("#loginRememberMe");
     if (rememberCheckbox && rememberCheckbox.checked) {
-      localStorage.setItem(REMEMBER_ME_KEY, JSON.stringify({ username, password }));
+      localStorage.setItem(REMEMBER_ME_KEY, JSON.stringify({ username }));
     } else {
       localStorage.removeItem(REMEMBER_ME_KEY);
     }
@@ -1297,13 +1297,11 @@ function fillRememberedCredentials() {
   try {
     const saved = localStorage.getItem(REMEMBER_ME_KEY);
     if (!saved) return;
-    const { username, password } = JSON.parse(saved);
+    const { username } = JSON.parse(saved);
     const usernameInput = document.querySelector("#loginForm input[name='username']");
-    const passwordInput = document.querySelector("#loginForm input[name='password']");
     const rememberCheckbox = document.querySelector("#loginRememberMe");
     
     if (usernameInput && !usernameInput.value) usernameInput.value = username || "";
-    if (passwordInput && !passwordInput.value) passwordInput.value = password || "";
     if (rememberCheckbox) rememberCheckbox.checked = true;
   } catch (e) {
     console.error("Failed to load remembered credentials", e);
@@ -1745,6 +1743,7 @@ function holdCard(hold, compact = false) {
   const store = getStore(hold.storeId);
   const timing = getHoldTiming(hold);
   const badge = dueBadge(hold);
+  const actionsHtml = typeof renderHoldItemActions === "function" ? renderHoldItemActions(hold, state.currentUser) : "";
   return `
     <details class="info-card hold-card" ${compact ? "open" : ""}>
       <summary class="hold-summary">
@@ -1763,7 +1762,8 @@ function holdCard(hold, compact = false) {
         ${timing.rule === "oneWeek" ? "一週追蹤日" : "兩個月到期日"}：${timing.expiresAt ? formatDate(timing.expiresAt) : "不留貨"}<br />
         提醒日：${timing.reminderAt ? formatDate(timing.reminderAt) : "不提醒"}<br />
         ${escapeHtml(timing.message)}<br />
-        ${escapeHtml(hold.note || "無提醒備註")}
+        ${escapeHtml(hold.note || "無提醒備註")}<br />
+        ${actionsHtml}
       </div>
       ${compact ? "" : `<div class="card-actions">
         <button class="small-button" data-action="done" data-id="${hold.id}">${hold.status === "done" ? "重新開啟" : "標記完成"}</button>
