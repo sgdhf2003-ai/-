@@ -100,7 +100,10 @@ git diff --check
 - Working tree: Clean (synced with origin/main)
 - Backend Web App production record: Version 103 (Deployment ID: [REDACTED_DEPLOYMENT_ID] - 97 versions headroom remaining; Version 102 was an unattached script snapshot)
 - Fresh LINE Bot production record: Version 1 (Script ID: `1C_5hZKIlWl_B9pdRrzcrA9ZAWD2Xuqwd0ZetQ-lIt2CFlxZ8yELcTLJf`, Deployment ID: `AKfycbwskF_c2VpW6Cv3yR-wUevRXdrG754ZzxyYMorroqjwkjJZT10wp3DqIZ2kA-GrKK0a`)
-- Latest verified simulation baseline: `npm run simulate:all` = **243 / 243 PASS**
+- Latest verified simulation baseline: `npm run simulate:all` = **246 / 246 PASS**
+- Entrypoint Responsibility Boundary:
+  - `APP_ENTRYPOINT = Vercel (https://brown-phi.vercel.app/)`: Sole user-facing App entrypoint for browser operation and mobile PWA installation.
+  - `API_BACKEND = Google Apps Script Web App (/exec)`: API & database service endpoint. Direct browser entrance serves self-contained `BackendLandingView.html` with Vercel App link.
 - Live production proofs:
   - Stage 30 Formal Hold Writeback (`RES-20260801-001`): `PASS`
   - Stage 31 Fulfillment & Cancel Release Lifecycle (`RES-20260801-002`): `PASS`
@@ -111,6 +114,7 @@ git diff --check
   - Stage 39 Allocation Production Contract Audit (ID parity, arithmetic reconciliation, `notificationBypassed: true`, fail-closed Guards): `PASS`
   - Stage 40 Security & Permission Audit (Role permission matrix, fail-closed auth, credential non-persistence in localStorage, side-effect free): `PASS`
   - Stage 41 Final Security & Permission Regression Gate (243/243 PASS, 0 side effects, dry-run deployment readiness certified): `PASS`
+  - Backend Entrypoint Guard Closure (`BackendLandingView.html`, 246/246 PASS, dry-run certified): `PASS`
   - ID Contract (`reservationNumber === holdRecord.id === rowData[0]`): `PASS`
 - Production Operating SOP: Formally documented in `docs/allocation-assistant/OPERATING_SOP.md`
 
@@ -120,10 +124,10 @@ The Stage 24-B warnings regarding hold writeback and fulfillment ledger persiste
 
 ### Current Recommended Next Stage
 
-After Stage 41 completion, the recommended standing operational gate is:
+After Backend Entrypoint Guard documentation closure, the recommended standing operational gate is:
 
 **Daily Operations Standing Health Monitoring & Maintenance Gate**
-- **Purpose**: Maintain daily system health baseline, execute routine read-only health checks against Backend Web App Version 103, and monitor system operation.
+- **Purpose**: Maintain daily system health baseline, execute routine read-only health checks against Backend Web App Version 104, and monitor system operation.
 - **Rules**:
   - Read-only health monitoring checks only.
   - No production Google Sheet write, LINE API call, deploy, or commit/push without explicit owner approval.

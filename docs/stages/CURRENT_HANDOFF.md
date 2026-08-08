@@ -27,10 +27,11 @@
   - Stage 39 Allocation Production Contract Gate (`57b0d1c`, committed and pushed, 236 / 236 PASS)
   - Stage 40 Security and Permission Closure Gate (`a3a2764`, 243 / 243 PASS, 7/7 new security tests PASS)
   - Stage 41 Security & Permission Final Regression & Release Gate (`a3a2764`, 243 / 243 PASS, dry-run deployment readiness certified)
-- latest pushed main commit: `a3a276409f1d2fe06986b2ca17e6b6ecac9ebb66` (`security: close stage 40 permission gate`)
+  - Backend Entrypoint Guard & Boundary Hardening Gate (`BackendLandingView.html`, 246 / 246 PASS, entrypoint responsibility boundary documented)
+- latest pushed main commit: `2eb4427df7b2a5f51dab5735b81a9a082c0d733d` (`security: close stage 41 release regression gate`)
 - backend deployed version: `103` (canonical deployment record - 97 versions headroom remaining; Version 102 was an unattached script snapshot)
 - LINE Bot deployed version: `1` (canonical deployment record - fresh project Version 1)
-- automated simulations: 243 / 243 PASS (`npm run simulate:all`)
+- automated simulations: 246 / 246 PASS (`npm run simulate:all`)
 - Web App URL: `[REDACTED_WEB_APP_URL]`
 - recommended next stage: **Daily Operations Standing Health Monitoring & Maintenance Gate**
 

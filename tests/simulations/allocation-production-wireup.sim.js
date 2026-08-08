@@ -70,7 +70,7 @@ runTest('google-apps-script/Code.gs contains dual route dispatcher for Web App H
 
   assert.ok(codeGsContent.includes('function doGet('));
   assert.ok(codeGsContent.includes('if (data && data.action)'));
-  assert.ok(codeGsContent.includes('HtmlService.createTemplateFromFile("Index")'));
+  assert.ok(codeGsContent.includes('HtmlService.createTemplateFromFile("BackendLandingView")'));
 });
 
 // 6. Verify Stage 24-B9 Boundary 3A test_b8_readiness gated action route and execution key protection

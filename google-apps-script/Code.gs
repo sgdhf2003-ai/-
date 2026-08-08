@@ -57,11 +57,10 @@ function doGet(e) {
         .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
     }
 
-    // Default Entrance: Serve Web App Index Page
-    const template = HtmlService.createTemplateFromFile("Index");
-    template.initialPage = page;
-    return template.evaluate()
-      .setTitle("勁揚業務管家 (配貨試算沙盒)")
+    // Default Entrance: Serve Self-Contained Backend Service Landing Page
+    return HtmlService.createTemplateFromFile("BackendLandingView")
+      .evaluate()
+      .setTitle("勁揚業務管家 Backend Service")
       .addMetaTag("viewport", "width=device-width, initial-scale=1, viewport-fit=cover")
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   } catch (error) {

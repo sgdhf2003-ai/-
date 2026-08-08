@@ -161,6 +161,14 @@
   - 驗證 Web App Version 103 與 LINE Bot Version 1 發行轉接器受控 Dry-Run 部署檢查 (`deploy.py --check` VALID)。
   - 驗證權限拒絕、 Session 過期、未授權請求之 Side-Effect 嚴格隔離 (`0 Sheet writes`, `0 LINE API calls`, `0 deploys`, `0 secrets printed`)。
   - 完成最終 Release Evidence 包與 Handoff 同步。
+### Backend Entrypoint Guard & Boundary Hardening
+* **狀態**: Backend Service Landing Page 與責任邊界文件收尾 Completed & Certified (`246 / 246 PASS`)
+* **交付與驗證內容**:
+  - 正式入口責任分工明確化: `APP_ENTRYPOINT = Vercel (https://brown-phi.vercel.app/)` (唯一使用者介面與 PWA 入口), `API_BACKEND = Google Apps Script Web App (/exec)` (資料 API 服務端點)。
+  - 無參數直接開啟 `/exec` 顯示獨立自包含 `BackendLandingView.html`，提供明確 Vercel App 連結，且不引用 Apps Script 無法提供的相對 CSS/JS 資產。
+  - 保留所有 `?action=...` API 路由、`doPost` API 路由與 `?page=allocation-view` 沙盒視圖相容性。
+  - 新增專用測試套件 `simulate:backend-landing-boundary` (3/3 PASS)，測試總基線提升至 `246 / 246 PASS`。
+  - 通過 Dry-run 部署檢查 (`deploy.py backend --check`, `deploy.py line-bot --check` VALID)。
   - 後續常態維護定案為 Daily Operations Standing Health Monitoring & Maintenance Gate。
 
 
