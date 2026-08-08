@@ -142,7 +142,17 @@
 * **交付與驗證內容**:
   - Stage 38 跨工作台 Context Gate (`CONTEXT_GATE=PASS`, `CHECKOUT_KIND=CANONICAL`) 建立與全量證據分類標註完成 (`6382491`, `6bc7973`)。
   - Stage 39 5 大核心合約唯讀與模擬審查 (ID parity、算術 reconciliation `remainingQuantity = holdQuantity - totalFulfilled`、`notificationBypassed: true` 隔離、IDEMPOTENT Replay、Fail-Closed Guards) 全數通過 (236/236 PASS)。
-  - 下一個推薦階段定案為 Stage 40: Security and Permission Closure Gate。
+
+### Stage 40: Security and Permission Closure Gate
+* **狀態**: Stage 40 伺服端角色權限與安全關閉門檻 Completed & Verified (`243 / 243 PASS`)
+* **交付與驗證內容**:
+  - 建立專用 Stage 40 安全與權限測試套件 (`tests/simulations/security-permission-closure.sim.js`)，新增 7 大核心安全情境測試，全量模擬基線提升至 `243 / 243 PASS`。
+  - 驗證並封閉 5 大角色 (`admin`, `boss`, `assistant` 允許寫入；`sales`, `retail` 嚴格唯讀，回傳 `UNAUTHORIZED_ROLE` Fail-Closed)。
+  - 驗證未登入與缺少 Session 情境 (回傳 `INVALID_SESSION_USER` Fail-Closed)，過期 Session 拒絕所有讀寫請求。
+  - 驗證未知與格式錯誤角色 (回傳 `UNAUTHORIZED_ROLE` Fail-Closed)，拒絕降級與失敗開路 (Fail-Open)。
+  - 驗證前端 `localStorage` R7 密碼安全防護 (0% 明文密碼/憑證/Bearer Token 持久化)。
+  - 驗證拒絕請求之 Side-Effect 隔離性 (`0 Sheet writes`, `0 LINE API calls`, `notificationBypassed: true`)。
+  - 下一個推薦階段定案為 Stage 41: Security & Permission Final Regression & Release Gate。
 
 
 
