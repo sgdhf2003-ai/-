@@ -5,13 +5,13 @@
 - repo root: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 - branch: `main`
 - source of truth: Canonical cloud-drive checkout path above
-- HEAD: `e1eddfadf806fc9325968a8418b99a35c53bd45f`
-- origin/main: `e1eddfadf806fc9325968a8418b99a35c53bd45f`
+- HEAD: `c2200e043d2fda6a5df8bd5d2fc0ae06fce3dce2`
+- origin/main: `c2200e043d2fda6a5df8bd5d2fc0ae06fce3dce2`
 - ahead / behind vs origin/main: `0 / 0`
 
 ## Current Stage
 
-- current stage: Stage 37 Daily Operations Read-Only Routine Monitoring (Completed)
+- current stage: Stage 37 Daily Operations Read-Only Routine Monitoring & UI Entrance Wiring (Completed)
 - previous completed deliveries:
   - Phase 6-F Backend Web App Version 100 Deployment (`93e8cb4`, HTTP 200 OK)
   - Phase 7-C Admin Operations UI Control Panel Implementation (`56a5976`, 233 / 233 PASS)
@@ -22,8 +22,8 @@
   - Production Readback Contract Fix Gate (`a4f5d23`, 236 / 236 PASS)
   - Backend Web App Version 103 Deployment & Live Audit Gate (HTTP 200 OK, `found: false` on nonexistent reservations)
   - Stage 36 Handoff Documentation Gate (`e1eddfa`, committed and pushed)
-  - Stage 37 Read-Only Routine Health Audit (100% PASS)
-- latest pushed main commit: `e1eddfadf806fc9325968a8418b99a35c53bd45f` (`docs: synchronize Stage 36 handoff state for backend Version 103 deployment`)
+  - Stage 37 UI Control Panel Entrance Wiring & R7 Password Security Refinement (`c2200e0`, committed and pushed)
+- latest pushed main commit: `c2200e043d2fda6a5df8bd5d2fc0ae06fce3dce2` (`feat(allocation-assistant): wire holdsView UI control panel and remove plain text password storage`)
 - backend deployed version: `103` (canonical deployment record - 97 versions headroom remaining; Version 102 was an unattached script snapshot)
 - LINE Bot deployed version: `1` (canonical deployment record - fresh project Version 1)
 - automated simulations: 236 / 236 PASS (`npm run simulate:all`)
