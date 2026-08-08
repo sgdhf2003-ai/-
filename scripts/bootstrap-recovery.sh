@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")" && pwd -P)"
-RECOVERY="$ROOT/recovery-jingyang-sales-app"
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd -P)"
+RECOVERY="$REPO_ROOT/recovery-jingyang-sales-app"
 REMOTE="https://github.com/sgdhf2003-ai/-.git"
 
 if [[ ! -d "$RECOVERY/.git" ]]; then

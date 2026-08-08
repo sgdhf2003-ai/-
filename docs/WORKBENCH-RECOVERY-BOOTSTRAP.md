@@ -29,7 +29,7 @@ without explicit owner approval and a verified project handoff.
 At the start of a new workbench session, run:
 
 ```bash
-./bootstrap-recovery.sh
+scripts/bootstrap-recovery.sh
 ```
 
 Then read `recovery-jingyang-sales-app/AGENTS.md` and the required handoff
