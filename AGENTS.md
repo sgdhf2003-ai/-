@@ -92,10 +92,10 @@ git diff --check
 
 ### Current Known State
 
-- Current Stage: **Stage 40 (Security and Permission Closure Gate Complete)**
-- Stage 39 & Stage 40 Security Audit: **Completed & Verified (100% PASS)**
-- Stage 40 Handoff Documentation: **Completed & Synchronized**
-- Commit: `57b0d1ca310dbf4866d79335630756de1bb88fa6` (`docs: close stage 39 and align next-stage handoff`)
+- Current Stage: **Stage 41 (Security & Permission Final Regression & Release Gate Complete)**
+- Stage 40 & Stage 41 Security Regression: **Completed & Certified (100% PASS)**
+- Stage 41 Handoff Documentation: **Completed & Synchronized**
+- Commit: `a3a276409f1d2fe06986b2ca17e6b6ecac9ebb66` (`security: close stage 40 permission gate`)
 - Status: Synced with `origin/main` (0 ahead / 0 behind)
 - Working tree: Clean (synced with origin/main)
 - Backend Web App production record: Version 103 (Deployment ID: [REDACTED_DEPLOYMENT_ID] - 97 versions headroom remaining; Version 102 was an unattached script snapshot)
@@ -110,6 +110,7 @@ git diff --check
   - Stage 38 Baseline & Evidence Closure: `PASS`
   - Stage 39 Allocation Production Contract Audit (ID parity, arithmetic reconciliation, `notificationBypassed: true`, fail-closed Guards): `PASS`
   - Stage 40 Security & Permission Audit (Role permission matrix, fail-closed auth, credential non-persistence in localStorage, side-effect free): `PASS`
+  - Stage 41 Final Security & Permission Regression Gate (243/243 PASS, 0 side effects, dry-run deployment readiness certified): `PASS`
   - ID Contract (`reservationNumber === holdRecord.id === rowData[0]`): `PASS`
 - Production Operating SOP: Formally documented in `docs/allocation-assistant/OPERATING_SOP.md`
 
@@ -119,12 +120,12 @@ The Stage 24-B warnings regarding hold writeback and fulfillment ledger persiste
 
 ### Current Recommended Next Stage
 
-After Stage 40 closure, the recommended next gate is:
+After Stage 41 completion, the recommended standing operational gate is:
 
-**Stage 41: Regression and Release Gate**
-- **Purpose**: Consolidate release evidence bundle, run full regression suite (`npm run simulate:all` 243/243 PASS), verify dry-run deployment readiness, and verify no unmitigated risks.
+**Daily Operations Standing Health Monitoring & Maintenance Gate**
+- **Purpose**: Maintain daily system health baseline, execute routine read-only health checks against Backend Web App Version 103, and monitor system operation.
 - **Rules**:
-  - Full automated regression verification.
+  - Read-only health monitoring checks only.
   - No production Google Sheet write, LINE API call, deploy, or commit/push without explicit owner approval.
 
 ## 1. Canonical Workspace

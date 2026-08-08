@@ -151,8 +151,17 @@
   - 驗證未登入與缺少 Session 情境 (回傳 `INVALID_SESSION_USER` Fail-Closed)，過期 Session 拒絕所有讀寫請求。
   - 驗證未知與格式錯誤角色 (回傳 `UNAUTHORIZED_ROLE` Fail-Closed)，拒絕降級與失敗開路 (Fail-Open)。
   - 驗證前端 `localStorage` R7 密碼安全防護 (0% 明文密碼/憑證/Bearer Token 持久化)。
-  - 驗證拒絕請求之 Side-Effect 隔離性 (`0 Sheet writes`, `0 LINE API calls`, `notificationBypassed: true`)。
-  - 下一個推薦階段定案為 Stage 41: Security & Permission Final Regression & Release Gate。
+  - 階段完成度與 release readiness 認證通過。
+
+### Stage 41: Security & Permission Final Regression & Release Gate
+* **狀態**: Stage 41 最終安全與權限迴歸與發行準備度門檻 Completed & Certified (`243 / 243 PASS`)
+* **交付與驗證內容**:
+  - 全量自動化模擬測試基線全數通過 (`npm run simulate:all` 243/243 PASS, 0 迴歸, 0 失敗)。
+  - 專用安全與權限測試套件 100% 綠燈 (`simulate:security-permission-closure` 7/7 PASS)。
+  - 驗證 Web App Version 103 與 LINE Bot Version 1 發行轉接器受控 Dry-Run 部署檢查 (`deploy.py --check` VALID)。
+  - 驗證權限拒絕、 Session 過期、未授權請求之 Side-Effect 嚴格隔離 (`0 Sheet writes`, `0 LINE API calls`, `0 deploys`, `0 secrets printed`)。
+  - 完成最終 Release Evidence 包與 Handoff 同步。
+  - 後續常態維護定案為 Daily Operations Standing Health Monitoring & Maintenance Gate。
 
 
 

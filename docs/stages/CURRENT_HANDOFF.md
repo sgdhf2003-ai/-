@@ -5,13 +5,13 @@
 - repo root: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 - branch: `main`
 - source of truth: Canonical cloud-drive checkout path above
-- HEAD: `57b0d1ca310dbf4866d79335630756de1bb88fa6`
-- origin/main: `57b0d1ca310dbf4866d79335630756de1bb88fa6`
+- HEAD: `a3a276409f1d2fe06986b2ca17e6b6ecac9ebb66`
+- origin/main: `a3a276409f1d2fe06986b2ca17e6b6ecac9ebb66`
 - ahead / behind vs origin/main: `0 / 0`
 
 ## Current Stage
 
-- current stage: Stage 40 Security and Permission Closure Gate (Completed)
+- current stage: Stage 41 Security & Permission Final Regression & Release Gate (Completed)
 - previous completed deliveries:
   - Phase 6-F Backend Web App Version 100 Deployment (`93e8cb4`, HTTP 200 OK)
   - Phase 7-C Admin Operations UI Control Panel Implementation (`56a5976`, 233 / 233 PASS)
@@ -25,13 +25,14 @@
   - Stage 37 UI Control Panel Entrance Wiring & R7 Password Security Refinement (`c2200e0`, committed and pushed)
   - Stage 38 Canonical Baseline & Evidence Closure Gate (`6382491`, committed and pushed)
   - Stage 39 Allocation Production Contract Gate (`57b0d1c`, committed and pushed, 236 / 236 PASS)
-  - Stage 40 Security and Permission Closure Gate (243 / 243 PASS, 7/7 new security tests PASS)
-- latest pushed main commit: `57b0d1ca310dbf4866d79335630756de1bb88fa6` (`docs: close stage 39 and align next-stage handoff`)
+  - Stage 40 Security and Permission Closure Gate (`a3a2764`, 243 / 243 PASS, 7/7 new security tests PASS)
+  - Stage 41 Security & Permission Final Regression & Release Gate (`a3a2764`, 243 / 243 PASS, dry-run deployment readiness certified)
+- latest pushed main commit: `a3a276409f1d2fe06986b2ca17e6b6ecac9ebb66` (`security: close stage 40 permission gate`)
 - backend deployed version: `103` (canonical deployment record - 97 versions headroom remaining; Version 102 was an unattached script snapshot)
 - LINE Bot deployed version: `1` (canonical deployment record - fresh project Version 1)
 - automated simulations: 243 / 243 PASS (`npm run simulate:all`)
 - Web App URL: `[REDACTED_WEB_APP_URL]`
-- recommended next stage: **Stage 41 Security & Permission Final Regression & Release Gate**
+- recommended next stage: **Daily Operations Standing Health Monitoring & Maintenance Gate**
 
 ## Stage 37 Summary & Version 103 Live Audit Record
 
