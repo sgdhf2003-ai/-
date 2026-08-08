@@ -137,6 +137,13 @@
   - Stage 37 生產環境 Version 103 4 大合約常態監控測試 (GET 200 Health Ping, Session Guard, Existing Readback, Nonexistent Readback `found: false` & `record: null`) 100% PASS。
   - Stage 37 PWA 控制面板入口接線與 R7 移除明文密碼 persistence 安全修復完畢並提交 (`c2200e0`, 236/236 PASS)。
 
+### Stage 38 & Stage 39: Canonical Baseline & Allocation Production Contract Closure
+* **狀態**: Stage 38 基準結算 & Stage 39 配貨生產合約審查 Completed & Verified (`236 / 236 PASS`)
+* **交付與驗證內容**:
+  - Stage 38 跨工作台 Context Gate (`CONTEXT_GATE=PASS`, `CHECKOUT_KIND=CANONICAL`) 建立與全量證據分類標註完成 (`6382491`, `6bc7973`)。
+  - Stage 39 5 大核心合約唯讀與模擬審查 (ID parity、算術 reconciliation `remainingQuantity = holdQuantity - totalFulfilled`、`notificationBypassed: true` 隔離、IDEMPOTENT Replay、Fail-Closed Guards) 全數通過 (236/236 PASS)。
+  - 下一個推薦階段定案為 Stage 40: Security and Permission Closure Gate。
+
 
 
 

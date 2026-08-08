@@ -92,10 +92,10 @@ git diff --check
 
 ### Current Known State
 
-- Current Stage: **Stage 37 (Routine Monitoring & UI Entrance Wiring Complete)**
-- Stage 37 Health Monitoring & UI Entrance Wiring: **Completed & Verified (100% PASS)**
-- Stage 37 Handoff Documentation: **Pending Owner Review**
-- Commit: `c2200e043d2fda6a5df8bd5d2fc0ae06fce3dce2` (`feat(allocation-assistant): wire holdsView UI control panel and remove plain text password storage`)
+- Current Stage: **Stage 39 (Allocation Production Contract Gate Complete)**
+- Stage 38 Baseline & Stage 39 Contract Audit: **Completed & Verified (100% PASS)**
+- Stage 39 Handoff Documentation: **Completed & Synchronized**
+- Commit: `6bc7973b9d6bb587e94c840c37c1842e449c94d4` (`chore: align recovery bootstrap paths`)
 - Status: Synced with `origin/main` (0 ahead / 0 behind)
 - Working tree: Clean (synced with origin/main)
 - Backend Web App production record: Version 103 (Deployment ID: [REDACTED_DEPLOYMENT_ID] - 97 versions headroom remaining; Version 102 was an unattached script snapshot)
@@ -107,6 +107,8 @@ git diff --check
   - Phase 8-D Live Production Pilot Lifecycle (`RES-20260805-PILOT88` 4/4 Steps): `PASS`
   - Stage 35 Chained Vertical Slice (`RES-20260806-CHAIN35`): `PASS`
   - Stage 37 Routine Health Audit against Version 103 (`HTTP 200 OK`, `INVALID_SESSION_USER` fail-closed, nonexistent reservation `found: false` & `record: null`): `PASS`
+  - Stage 38 Baseline & Evidence Closure: `PASS`
+  - Stage 39 Allocation Production Contract Audit (ID parity, arithmetic reconciliation, `notificationBypassed: true`, fail-closed Guards): `PASS`
   - ID Contract (`reservationNumber === holdRecord.id === rowData[0]`): `PASS`
 - Production Operating SOP: Formally documented in `docs/allocation-assistant/OPERATING_SOP.md`
 
@@ -116,12 +118,12 @@ The Stage 24-B warnings regarding hold writeback and fulfillment ledger persiste
 
 ### Current Recommended Next Stage
 
-After Stage 37, the recommended next gate is:
+After Stage 39 closure, the recommended next gate is:
 
-**Stage 38: Daily Operations Standing Health Monitoring & Maintenance Gate**
-- **Purpose**: Execute routine health audits and daily operations monitoring against Backend Web App Version 103 and maintain system health baseline.
+**Stage 40: Security and Permission Closure Gate**
+- **Purpose**: Verify server-side role authorization (`admin`, `boss`, `assistant` vs `sales`, `retail`), fail-closed authentication handling, session expiration, and non-persistence of credentials in `localStorage`.
 - **Rules**:
-  - Read-only health monitoring checks only.
+  - Read-only security audit and negative-path simulation checks first.
   - No production Google Sheet write, LINE API call, deploy, or commit/push without explicit owner approval.
 
 ## 1. Canonical Workspace

@@ -5,13 +5,13 @@
 - repo root: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 - branch: `main`
 - source of truth: Canonical cloud-drive checkout path above
-- HEAD: `c2200e043d2fda6a5df8bd5d2fc0ae06fce3dce2`
-- origin/main: `c2200e043d2fda6a5df8bd5d2fc0ae06fce3dce2`
+- HEAD: `6bc7973b9d6bb587e94c840c37c1842e449c94d4`
+- origin/main: `6bc7973b9d6bb587e94c840c37c1842e449c94d4`
 - ahead / behind vs origin/main: `0 / 0`
 
 ## Current Stage
 
-- current stage: Stage 37 Daily Operations Read-Only Routine Monitoring & UI Entrance Wiring (Completed)
+- current stage: Stage 39 Allocation Production Contract Gate (Completed)
 - previous completed deliveries:
   - Phase 6-F Backend Web App Version 100 Deployment (`93e8cb4`, HTTP 200 OK)
   - Phase 7-C Admin Operations UI Control Panel Implementation (`56a5976`, 233 / 233 PASS)
@@ -23,12 +23,14 @@
   - Backend Web App Version 103 Deployment & Live Audit Gate (HTTP 200 OK, `found: false` on nonexistent reservations)
   - Stage 36 Handoff Documentation Gate (`e1eddfa`, committed and pushed)
   - Stage 37 UI Control Panel Entrance Wiring & R7 Password Security Refinement (`c2200e0`, committed and pushed)
-- latest pushed main commit: `c2200e043d2fda6a5df8bd5d2fc0ae06fce3dce2` (`feat(allocation-assistant): wire holdsView UI control panel and remove plain text password storage`)
+  - Stage 38 Canonical Baseline & Evidence Closure Gate (`6382491`, committed and pushed)
+  - Stage 39 Allocation Production Contract Gate (`6bc7973`, committed and pushed, 236 / 236 PASS)
+- latest pushed main commit: `6bc7973b9d6bb587e94c840c37c1842e449c94d4` (`chore: align recovery bootstrap paths`)
 - backend deployed version: `103` (canonical deployment record - 97 versions headroom remaining; Version 102 was an unattached script snapshot)
 - LINE Bot deployed version: `1` (canonical deployment record - fresh project Version 1)
 - automated simulations: 236 / 236 PASS (`npm run simulate:all`)
 - Web App URL: `[REDACTED_WEB_APP_URL]`
-- recommended next stage: **Stage 38 Daily Operations Standing Health Monitoring & Maintenance Gate**
+- recommended next stage: **Stage 40 Security and Permission Closure Gate**
 
 ## Stage 37 Summary & Version 103 Live Audit Record
 
