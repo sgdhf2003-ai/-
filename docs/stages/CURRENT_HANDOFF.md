@@ -5,8 +5,8 @@
 - repo root: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 - branch: `main`
 - source of truth: Canonical cloud-drive checkout path above
-- HEAD: `70f78b931d87e8fc82c8e2951fdbe81869c005d4`
-- origin/main: `70f78b931d87e8fc82c8e2951fdbe81869c005d4`
+- latest feature commit: `70f78b931d87e8fc82c8e2951fdbe81869c005d4` (`feat: add backend entrypoint landing boundary`)
+- metadata sync commit: `53da7f85eab713c45d16ef1d5ff790ae50329f01` (`docs: sync handoff metadata after entrypoint push`)
 - ahead / behind vs origin/main: `0 / 0`
 
 ## Current Stage
@@ -28,7 +28,8 @@
   - Stage 40 Security and Permission Closure Gate (`a3a2764`, 243 / 243 PASS, 7/7 new security tests PASS)
   - Stage 41 Security & Permission Final Regression & Release Gate (`a3a2764`, 243 / 243 PASS, dry-run deployment readiness certified)
   - Backend Entrypoint Guard & Boundary Hardening Gate (`BackendLandingView.html`, 246 / 246 PASS, entrypoint responsibility boundary documented)
-- latest pushed main commit: `70f78b931d87e8fc82c8e2951fdbe81869c005d4` (`feat: add backend entrypoint landing boundary`)
+- latest feature commit: `70f78b931d87e8fc82c8e2951fdbe81869c005d4` (`feat: add backend entrypoint landing boundary`)
+- latest metadata sync commit: `53da7f85eab713c45d16ef1d5ff790ae50329f01` (`docs: sync handoff metadata after entrypoint push`)
 - backend deployed version: `103` (canonical deployment record - 97 versions headroom remaining; Version 102 was an unattached script snapshot)
 - LINE Bot deployed version: `1` (canonical deployment record - fresh project Version 1)
 - automated simulations: 246 / 246 PASS (`npm run simulate:all`)
