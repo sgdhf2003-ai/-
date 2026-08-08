@@ -5,8 +5,8 @@
 - repo root: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 - branch: `main`
 - source of truth: Canonical cloud-drive checkout path above
-- HEAD: `a3a276409f1d2fe06986b2ca17e6b6ecac9ebb66`
-- origin/main: `a3a276409f1d2fe06986b2ca17e6b6ecac9ebb66`
+- HEAD: `70f78b931d87e8fc82c8e2951fdbe81869c005d4`
+- origin/main: `70f78b931d87e8fc82c8e2951fdbe81869c005d4`
 - ahead / behind vs origin/main: `0 / 0`
 
 ## Current Stage
@@ -28,7 +28,7 @@
   - Stage 40 Security and Permission Closure Gate (`a3a2764`, 243 / 243 PASS, 7/7 new security tests PASS)
   - Stage 41 Security & Permission Final Regression & Release Gate (`a3a2764`, 243 / 243 PASS, dry-run deployment readiness certified)
   - Backend Entrypoint Guard & Boundary Hardening Gate (`BackendLandingView.html`, 246 / 246 PASS, entrypoint responsibility boundary documented)
-- latest pushed main commit: `2eb4427df7b2a5f51dab5735b81a9a082c0d733d` (`security: close stage 41 release regression gate`)
+- latest pushed main commit: `70f78b931d87e8fc82c8e2951fdbe81869c005d4` (`feat: add backend entrypoint landing boundary`)
 - backend deployed version: `103` (canonical deployment record - 97 versions headroom remaining; Version 102 was an unattached script snapshot)
 - LINE Bot deployed version: `1` (canonical deployment record - fresh project Version 1)
 - automated simulations: 246 / 246 PASS (`npm run simulate:all`)
