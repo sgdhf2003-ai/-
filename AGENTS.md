@@ -390,3 +390,35 @@ Governance, security, and documentation work should support the Allocation Assis
 - blockers: [details]
 - warnings: [details]
 ```
+
+## Workbench Context Gate
+
+<!-- WORKBENCH_CONTEXT_GATE_START -->
+
+Before any project work, run:
+
+```bash
+scripts/workbench-context-gate.sh --check
+```
+
+The gate must report `CONTEXT_GATE=PASS`, `BRANCH=main`, `WORKING_TREE=CLEAN`,
+and a non-empty `ORIGIN`. Run `--remote-check` when remote parity is required.
+
+The checkout classification is authoritative:
+
+- `CANONICAL`: the durable Mac Google Drive checkout; normal changes are allowed only with the user's explicit scope.
+- `RECOVERY_OR_UNKNOWN`: a temporary checkout used when the canonical Mac path is unavailable; allow read-only inspection, tests, and dry-runs only.
+- A directory without `AGENTS.md`, the expected remote, or the expected branch is not an authorised project checkout.
+
+Never claim that a scratch directory is the canonical project. Never deploy,
+write Google Sheets, call LINE APIs, access or rotate secrets, commit, or push
+from a recovery checkout unless the user explicitly authorises that exact
+operation and the checkout has first been reclassified and verified.
+
+When a new workbench cannot see the Mac Google Drive path, clone the private
+`origin` into a temporary recovery directory, run the gate there, and keep all
+durable project files in the canonical checkout. Do not ask the user to paste
+the project context again when `AGENTS.md` and the remote repository are
+available.
+
+<!-- WORKBENCH_CONTEXT_GATE_END -->
