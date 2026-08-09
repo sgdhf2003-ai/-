@@ -1,11 +1,11 @@
 # JYAI Allocation Assistant - CURRENT HANDOFF
 
 ## 1. 專案基線狀態 (Project Baseline)
-* **交接日期**: 2026-08-07
+* **交接日期**: 2026-08-09
 * **執行目錄**: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 * **目前分支**: `main`
-* **Latest Feature Commit**: `70f78b931d87e8fc82c8e2951fdbe81869c005d4` (`feat: add backend entrypoint landing boundary`)
-* **Metadata Sync Commit**: `53da7f85eab713c45d16ef1d5ff790ae50329f01` (`docs: sync handoff metadata after entrypoint push`)
+* **Latest Feature Commit**: `fd67b58dcf3134ec54f52f8cac1587608f960048` (`feat: harden LINE identity resolution contract`)
+* **Metadata Sync Commit**: `fd67b58dcf3134ec54f52f8cac1587608f960048` (`feat: harden LINE identity resolution contract`)
 * **分支關係**: `0 ahead / 0 behind` (完全同步)
 * **Working Tree 狀態**: Clean (synced with origin/main as of metadata sync)
 

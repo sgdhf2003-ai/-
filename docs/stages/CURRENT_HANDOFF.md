@@ -5,13 +5,13 @@
 - repo root: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 - branch: `main`
 - source of truth: Canonical cloud-drive checkout path above
-- latest feature commit: `70f78b931d87e8fc82c8e2951fdbe81869c005d4` (`feat: add backend entrypoint landing boundary`)
-- metadata sync commit: `53da7f85eab713c45d16ef1d5ff790ae50329f01` (`docs: sync handoff metadata after entrypoint push`)
+- latest feature commit: `fd67b58dcf3134ec54f52f8cac1587608f960048` (`feat: harden LINE identity resolution contract`)
+- metadata sync commit: `fd67b58dcf3134ec54f52f8cac1587608f960048` (`feat: harden LINE identity resolution contract`)
 - ahead / behind vs origin/main: `0 / 0`
 
 ## Current Stage
 
-- current stage: Stage 41 Security & Permission Final Regression & Release Gate (Completed)
+- current stage: Stage 42 LINE Identity Resolution Contract Hardening Gate (Completed & Deployed)
 - previous completed deliveries:
   - Phase 6-F Backend Web App Version 100 Deployment (`93e8cb4`, HTTP 200 OK)
   - Phase 7-C Admin Operations UI Control Panel Implementation (`56a5976`, 233 / 233 PASS)
@@ -28,11 +28,12 @@
   - Stage 40 Security and Permission Closure Gate (`a3a2764`, 243 / 243 PASS, 7/7 new security tests PASS)
   - Stage 41 Security & Permission Final Regression & Release Gate (`a3a2764`, 243 / 243 PASS, dry-run deployment readiness certified)
   - Backend Entrypoint Guard & Boundary Hardening Gate (`BackendLandingView.html`, 246 / 246 PASS, entrypoint responsibility boundary documented)
-- latest feature commit: `70f78b931d87e8fc82c8e2951fdbe81869c005d4` (`feat: add backend entrypoint landing boundary`)
-- latest metadata sync commit: `53da7f85eab713c45d16ef1d5ff790ae50329f01` (`docs: sync handoff metadata after entrypoint push`)
-- backend deployed version: `103` (canonical deployment record - 97 versions headroom remaining; Version 102 was an unattached script snapshot)
-- LINE Bot deployed version: `1` (canonical deployment record - fresh project Version 1)
-- automated simulations: 246 / 246 PASS (`npm run simulate:all`)
+  - Stage 42 LINE Identity Resolution Contract Hardening & Production Deployment Gate (`fd67b58`, 255 / 255 PASS, Backend Version 105 & LINE Bot Version 3 deployed)
+- latest feature commit: `fd67b58dcf3134ec54f52f8cac1587608f960048` (`feat: harden LINE identity resolution contract`)
+- latest metadata sync commit: `fd67b58dcf3134ec54f52f8cac1587608f960048` (`feat: harden LINE identity resolution contract`)
+- backend deployed version: `105` (canonical deployment record - Version 105 deployed at 11:34 PM)
+- LINE Bot deployed version: `3` (canonical deployment record - Version 3 deployed at 11:34 PM)
+- automated simulations: 255 / 255 PASS (`npm run simulate:all`)
 - Web App URL: `[REDACTED_WEB_APP_URL]`
 - recommended next stage: **Daily Operations Standing Health Monitoring & Maintenance Gate**
 
