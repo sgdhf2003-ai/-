@@ -71,7 +71,7 @@ function createRouterSandbox(userMock = null) {
         getProperty: () => ""
       })
     },
-    JingyangAssistant_readUsers_: () => (userMock ? [userMock] : []),
+    JingyangAssistant_readUsers_: () => (userMock ? (Array.isArray(userMock) ? userMock : [userMock]) : []),
     JingyangAssistant_buildAppViewUrl_: (v) => `https://app.test/${v}`,
     replyToLine: () => {}
   };
@@ -86,7 +86,7 @@ function createRouterSandbox(userMock = null) {
   vm.createContext(sandbox);
   vm.runInContext(assistantCode, sandbox);
   vm.runInContext(routerCode, sandbox);
-  sandbox.JingyangAssistant_readUsers_ = () => (userMock ? [userMock] : []);
+  sandbox.JingyangAssistant_readUsers_ = () => (userMock ? (Array.isArray(userMock) ? userMock : [userMock]) : []);
   return sandbox;
 }
 
@@ -177,14 +177,22 @@ runSuite("line-integration", [
         role: "assistant",
         status: "啟用"
       };
-      const sandbox = createRouterSandbox(staffUser);
+      const customerUser = {
+        id: "USR-003",
+        lineUserId: "U_CUSTOMER_001",
+        username: "customer1",
+        displayName: "張客戶",
+        role: "customer",
+        status: "啟用"
+      };
+      const sandbox = createRouterSandbox([staffUser, customerUser]);
       const staffContext = sandbox.getLineUserContext("U_STAFF_001");
       assert(staffContext.mode === "staff", "expected staff mode");
 
       const staffIntent = sandbox.detectLineIntent("選單", staffContext);
       assert(staffIntent.intent === "staff_menu", "staff should detect staff_menu");
 
-      const customerContext = sandbox.getLineUserContext("U_UNKNOWN_CUSTOMER");
+      const customerContext = sandbox.getLineUserContext("U_CUSTOMER_001");
       assert(customerContext.mode === "customer", "expected customer mode");
 
       const customerIntent = sandbox.detectLineIntent("選單", customerContext);

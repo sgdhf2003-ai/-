@@ -57,54 +57,143 @@ function LineIntent_getUserField_(user, fieldName) {
   return String(user[fieldName] || "").trim();
 }
 
+function LineIntent_normalizeUserStatus_(user) {
+  return String(LineIntent_getUserField_(user, "status") || "")
+    .trim()
+    .toLowerCase();
+}
+
 function isStaffUser(user) {
   if (!user) return false;
-  var status = LineIntent_getUserField_(user, "status").toLowerCase();
+  var status = LineIntent_normalizeUserStatus_(user);
   if (status === "停用" || status === "disabled" || status === "inactive") return false;
   var role = LineIntent_getUserField_(user, "role");
   return LINE_STAFF_ROLES[role] === true;
 }
 
-function getLineUserContext(lineUserId) {
-  var fallback = {
-    ok: true,
-    mode: "customer",
-    userId: "",
-    lineUserId: String(lineUserId || ""),
-    username: "",
-    displayName: "",
-    role: "customer",
-    salesOwner: "",
-    status: ""
-  };
-
-  try {
-    if (typeof JingyangAssistant_readUsers_ !== "function") return fallback;
-    var users = JingyangAssistant_readUsers_() || [];
-    var targetLineId = String(lineUserId || "").trim();
-    for (var i = 0; i < users.length; i++) {
-      var user = users[i] || {};
-      var userLineId = LineIntent_getUserField_(user, "lineUserId");
-      if (userLineId !== targetLineId) continue;
-
-      if (!isStaffUser(user)) return fallback;
-      return {
-        ok: true,
-        mode: "staff",
-        userId: LineIntent_getUserField_(user, "id"),
-        lineUserId: targetLineId,
-        username: LineIntent_getUserField_(user, "username"),
-        displayName: LineIntent_getUserField_(user, "displayName"),
-        role: LineIntent_getUserField_(user, "role"),
-        salesOwner: LineIntent_getUserField_(user, "salesOwner"),
-        status: LineIntent_getUserField_(user, "status")
-      };
-    }
-  } catch (err) {
-    Logger.log("[LINE_MODE] context lookup failed: " + String(err));
+function resolveUserIdentity(lineUserId, usersList) {
+  var targetId = String(lineUserId || "").trim();
+  if (!targetId) {
+    return {
+      ok: false,
+      errorCode: "INVALID_LINE_USER_ID",
+      mode: "customer",
+      role: "customer",
+      userId: "",
+      lineUserId: "",
+      username: "",
+      displayName: "",
+      salesOwner: "",
+      status: ""
+    };
   }
 
-  return fallback;
+  var users = usersList;
+  if (!users) {
+    try {
+      if (typeof JingyangAssistant_readUsers_ === "function") {
+        users = JingyangAssistant_readUsers_() || [];
+      } else {
+        users = [];
+      }
+    } catch (err) {
+      users = [];
+    }
+  }
+
+  var matches = [];
+  for (var i = 0; i < users.length; i++) {
+    var u = users[i] || {};
+    var uLineId = LineIntent_getUserField_(u, "lineUserId");
+    if (uLineId === targetId) {
+      matches.push(u);
+    }
+  }
+
+  if (matches.length === 0) {
+    return {
+      ok: false,
+      errorCode: "INTERNAL_USER_UNBOUND",
+      mode: "unbound",
+      role: "unbound",
+      userId: "",
+      lineUserId: targetId,
+      username: "",
+      displayName: "",
+      salesOwner: "",
+      status: ""
+    };
+  }
+
+  if (matches.length > 1) {
+    return {
+      ok: false,
+      errorCode: "DUPLICATE_LINE_USER_ID",
+      mode: "error",
+      role: "error",
+      userId: "",
+      lineUserId: targetId,
+      username: "",
+      displayName: "",
+      salesOwner: "",
+      status: ""
+    };
+  }
+
+  var user = matches[0];
+  var status = LineIntent_normalizeUserStatus_(user);
+  if (status === "停用" || status === "disabled" || status === "inactive") {
+    return {
+      ok: false,
+      errorCode: "ACCOUNT_INACTIVE",
+      mode: "inactive",
+      role: LineIntent_getUserField_(user, "role"),
+      userId: LineIntent_getUserField_(user, "id"),
+      lineUserId: targetId,
+      username: LineIntent_getUserField_(user, "username"),
+      displayName: LineIntent_getUserField_(user, "displayName"),
+      salesOwner: LineIntent_getUserField_(user, "salesOwner"),
+      status: LineIntent_getUserField_(user, "status"),
+      rawUser: user
+    };
+  }
+
+  var role = LineIntent_getUserField_(user, "role");
+  var isStaff = isStaffUser(user);
+
+  if (!isStaff && role === "customer") {
+    return {
+      ok: true,
+      errorCode: null,
+      mode: "customer",
+      role: "customer",
+      userId: LineIntent_getUserField_(user, "id"),
+      lineUserId: targetId,
+      username: LineIntent_getUserField_(user, "username"),
+      displayName: LineIntent_getUserField_(user, "displayName"),
+      salesOwner: LineIntent_getUserField_(user, "salesOwner"),
+      status: LineIntent_getUserField_(user, "status"),
+      rawUser: user
+    };
+  }
+
+  return {
+    ok: true,
+    errorCode: null,
+    mode: isStaff ? "staff" : "customer",
+    userId: LineIntent_getUserField_(user, "id"),
+    lineUserId: targetId,
+    username: LineIntent_getUserField_(user, "username"),
+    displayName: LineIntent_getUserField_(user, "displayName"),
+    role: role,
+    salesOwner: LineIntent_getUserField_(user, "salesOwner"),
+    status: LineIntent_getUserField_(user, "status"),
+    rawUser: user
+  };
+}
+
+function getLineUserContext(lineUserId, usersList) {
+  return resolveUserIdentity(lineUserId, usersList);
 }
 
 function isInventoryLikeText(text) {
@@ -161,6 +250,25 @@ function detectLineIntent(text, userContext) {
 
   if (isCustomerCommand(rawText)) {
     result.intent = "customer_help";
+    result.confidence = 1;
+    return result;
+  }
+
+  var errorCode = userContext && userContext.errorCode || null;
+  if (errorCode === "INTERNAL_USER_UNBOUND" && isStaffCommand(rawText)) {
+    result.intent = "unbound_warning";
+    result.confidence = 1;
+    return result;
+  }
+
+  if (errorCode === "DUPLICATE_LINE_USER_ID" && isStaffCommand(rawText)) {
+    result.intent = "duplicate_error";
+    result.confidence = 1;
+    return result;
+  }
+
+  if (errorCode === "ACCOUNT_INACTIVE" && isStaffCommand(rawText)) {
+    result.intent = "inactive_error";
     result.confidence = 1;
     return result;
   }
@@ -432,6 +540,18 @@ function LineIntent_getWorkCenterUrl_(view) {
   return "https://brown-phi.vercel.app/";
 }
 
+function replyUnboundWarning(userContext) {
+  return "⚠️ 您的 LINE 帳號尚未綁定內部人員身分 (INTERNAL_USER_UNBOUND)。\n請聯繫管理員協助綁定，或在 App 登入頁面完成帳號綁定。";
+}
+
+function replyDuplicateError(userContext) {
+  return "⚠️ 系統偵測到重複的 LINE 帳號綁定紀錄 (DUPLICATE_LINE_USER_ID)。請聯繫管理員清理重複資料。";
+}
+
+function replyInactiveError(userContext) {
+  return "⚠️ 您的內部人員帳號處於停用狀態 (ACCOUNT_INACTIVE)。請聯繫管理員。";
+}
+
 function LineIntent_defaultHandlers_() {
   return {
     inventory: function() { return false; },
@@ -443,6 +563,9 @@ function LineIntent_defaultHandlers_() {
     replyBossOverview: replyBossOverview,
     replyCustomerHelp: replyCustomerHelp,
     replyWhoamiInfo: replyWhoamiInfo,
+    replyUnboundWarning: replyUnboundWarning,
+    replyDuplicateError: replyDuplicateError,
+    replyInactiveError: replyInactiveError,
     customerFallback: buildCustomerLineFallback,
     staffFallback: buildStaffLineFallback
   };
@@ -461,6 +584,9 @@ function routeLineIntent(intentResult, userContext, event, handlers) {
   }
 
   if (intent === "whoami") handlerName = "replyWhoamiInfo";
+  else if (intent === "unbound_warning") handlerName = "replyUnboundWarning";
+  else if (intent === "duplicate_error") handlerName = "replyDuplicateError";
+  else if (intent === "inactive_error") handlerName = "replyInactiveError";
   else if (intent === "staff_menu") handlerName = "replyStaffRoleMenu";
   else if (intent === "work_today") handlerName = "replyMyTasks";
   else if (intent === "work_create") handlerName = "startWorkCaptureFlow";

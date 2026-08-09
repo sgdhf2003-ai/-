@@ -360,8 +360,24 @@ function JingyangAssistant_getHeaders_(sheet) {
 }
 
 function JingyangAssistant_findUserByLineId_(data, lineUserId) {
-  var users = (data && data.users) || [];
+  var users = (data && data.users) || (typeof JingyangAssistant_readUsers_ === "function" ? JingyangAssistant_readUsers_() : []);
+  if (typeof resolveUserIdentity === "function") {
+    var identity = resolveUserIdentity(lineUserId, users);
+    if (!identity.ok) return null;
+    return identity.rawUser || {
+      id: identity.userId,
+      username: identity.username,
+      displayName: identity.displayName,
+      role: identity.role,
+      salesOwner: identity.salesOwner,
+      lineUserId: identity.lineUserId,
+      status: identity.status
+    };
+  }
+
   var targetId = String(lineUserId || "").trim();
+  if (!targetId) return null;
+  var matches = [];
   for (var i = 0; i < users.length; i++) {
     var u = users[i] || {};
     var uLineId = String(
@@ -374,10 +390,11 @@ function JingyangAssistant_findUserByLineId_(data, lineUserId) {
       ""
     ).trim();
     if (uLineId === targetId) {
-      return users[i];
+      matches.push(users[i]);
     }
   }
-  return null;
+  if (matches.length !== 1) return null;
+  return matches[0];
 }
 
 function JingyangAssistant_visibleHolds_(holds, user) {
