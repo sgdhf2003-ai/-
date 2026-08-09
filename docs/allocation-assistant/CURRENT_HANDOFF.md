@@ -5,7 +5,7 @@
 * **執行目錄**: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 * **目前分支**: `main`
 * **Latest Feature Commit**: `fd67b58dcf3134ec54f52f8cac1587608f960048` (`feat: harden LINE identity resolution contract`)
-* **Metadata Sync Commit**: `fd67b58dcf3134ec54f52f8cac1587608f960048` (`feat: harden LINE identity resolution contract`)
+* **Metadata Sync Commit**: `2375acb2b18aa2fe30ae0cd59e09d13ac6ef8d3f` (`docs: sync handoff metadata for Stage 42 deployment`)
 * **分支關係**: `0 ahead / 0 behind` (完全同步)
 * **Working Tree 狀態**: Clean (synced with origin/main as of metadata sync)
 
@@ -36,6 +36,7 @@
 * 完成生產環境讀回合約修復 (`a4f5d23`, 不存在單號傳回 `found: false` & `record: null`；缺失 Adapter 傳回 `READBACK_ADAPTER_MISSING` Fail-Closed, 236/236 PASS)。
 * 完成 Backend Web App **Version 103** 與 LINE Bot **Version 1** 常態健康與邊界維護 (本輪文件與入口防護零部署變更)。
 * 完成 Backend 入口防護與責任邊界文件收尾 (`BackendLandingView.html`, `APP_ENTRYPOINT = Vercel`, `API_BACKEND = Apps Script Web App`, 246/246 PASS)。
+* 完成 Stage 42 LINE 身份解析合約加固與生產環境部署 (`fd67b58`, 255/255 PASS, Backend Version 105, LINE Bot Version 3 完好上線)。
 * 本機檢查、模擬測試與部署 Dry Run 全數通過 (`npm run check`, `npm run simulate:backend-landing-boundary`, `npm run simulate:all`, `deploy.py --check` PASS)。
 
 ## 3. 未完成內容與未啟用功能 (Deactivated Features)
