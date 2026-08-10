@@ -5,7 +5,7 @@
 * **執行目錄**: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 * **目前分支**: `main`
 * **Latest Feature Commit**: `fd67b58dcf3134ec54f52f8cac1587608f960048` (`feat: harden LINE identity resolution contract`)
-* **Metadata Sync Commit**: `2375acb2b18aa2fe30ae0cd59e09d13ac6ef8d3f` (`docs: sync handoff metadata for Stage 42 deployment`)
+* **Metadata Sync Commit**: `cfe573523f2b43b679fa7297e68ad5fb9d41d13f` (`docs: sync metadata commit reference in CURRENT_HANDOFF.md`)
 * **分支關係**: `0 ahead / 0 behind` (完全同步)
 * **Working Tree 狀態**: Clean (synced with origin/main as of metadata sync)
 

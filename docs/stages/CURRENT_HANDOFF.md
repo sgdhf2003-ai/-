@@ -6,7 +6,7 @@
 - branch: `main`
 - source of truth: Canonical cloud-drive checkout path above
 - latest feature commit: `fd67b58dcf3134ec54f52f8cac1587608f960048` (`feat: harden LINE identity resolution contract`)
-- metadata sync commit: `e7c217036a1005fa70cb8ebf9efee9adfa25e683` (`docs: finalize allocation assistant handoff record for Stage 42 deployment`)
+- metadata sync commit: `cfe573523f2b43b679fa7297e68ad5fb9d41d13f` (`docs: sync metadata commit reference in CURRENT_HANDOFF.md`)
 - ahead / behind vs origin/main: `0 / 0`
 
 ## Current Stage
@@ -30,7 +30,7 @@
   - Backend Entrypoint Guard & Boundary Hardening Gate (`BackendLandingView.html`, 246 / 246 PASS, entrypoint responsibility boundary documented)
   - Stage 42 LINE Identity Resolution Contract Hardening & Production Deployment Gate (`fd67b58`, 255 / 255 PASS, Backend Version 105 & LINE Bot Version 3 deployed)
 - latest feature commit: `fd67b58dcf3134ec54f52f8cac1587608f960048` (`feat: harden LINE identity resolution contract`)
-- latest metadata sync commit: `e7c217036a1005fa70cb8ebf9efee9adfa25e683` (`docs: finalize allocation assistant handoff record for Stage 42 deployment`)
+- latest metadata sync commit: `cfe573523f2b43b679fa7297e68ad5fb9d41d13f` (`docs: sync metadata commit reference in CURRENT_HANDOFF.md`)
 - backend deployed version: `105` (canonical deployment record - Version 105 deployed at 11:34 PM)
 - LINE Bot deployed version: `3` (canonical deployment record - Version 3 deployed at 11:34 PM)
 - automated simulations: 255 / 255 PASS (`npm run simulate:all`)
