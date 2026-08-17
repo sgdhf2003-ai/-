@@ -57,6 +57,7 @@ const views = {
   inventory: document.querySelector("#inventoryView"),
   admin: document.querySelector("#adminView"),
   tasks: document.querySelector("#tasksView"),
+  allocation: document.querySelector("#view-allocation-sandbox"),
 };
 
 const viewNames = {
@@ -71,6 +72,7 @@ const viewNames = {
   inventory: "庫存查詢",
   admin: "後台管理",
   tasks: "工作任務",
+  allocation: "配貨建議試算",
 };
 
 document.addEventListener("click", (event) => {
@@ -1254,6 +1256,8 @@ function render() {
     renderCloudStatus();
     renderAppSettings();
     populateSettingsUI();
+  } else if (activeView === "allocation") {
+    renderAllocationSandbox();
   }
 
   const openReportLink = document.querySelector("#openOriginalReportLink");
@@ -2141,7 +2145,7 @@ function updatePhotoUploadRequirement() {
 
 
 function normalizeInitialView(view) {
-  const allowed = new Set(["home", "stores", "holds", "projects", "samples", "complaints", "calculator", "salesReport", "inventory", "admin", "tasks"]);
+  const allowed = new Set(["home", "stores", "holds", "projects", "samples", "complaints", "calculator", "salesReport", "inventory", "admin", "tasks", "allocation"]);
   const normalized = String(view || "").trim();
   return allowed.has(normalized) ? normalized : "";
 }
@@ -6239,10 +6243,288 @@ function reconcileHoldStateFromReceipt(holdState, receipt) {
   return updatedHold;
 }
 
+const ALLOCATION_SANDBOX_STOCK = {
+  "EQA-6522": [
+    { warehouseName: "林口倉", batchNumber: "7J25", availableQuantity: 50 }
+  ],
+  "顧佳 575": [
+    { warehouseName: "林口倉", batchNumber: "8K11", availableQuantity: 8 },
+    { warehouseName: "五股倉", batchNumber: "8K12", availableQuantity: 12 }
+  ],
+  "艾美 336": [
+    { warehouseName: "林口倉", batchNumber: "9A01", availableQuantity: 30 }
+  ]
+};
+
+function executeSandboxFormalWrite(params) {
+  throw new Error("SANDBOX_WRITE_FORBIDDEN: Formal spreadsheet writes are strictly prohibited in sandbox mode");
+}
+
+function evaluateAllocationSandbox(rawInputText, options = {}) {
+  const text = String(rawInputText || "").trim();
+  if (!text) {
+    return {
+      ok: false,
+      errorCode: "EMPTY_INPUT",
+      message: "請輸入需求文字 (例如: EQA-6522 * 10)",
+      suggestions: [],
+      warnings: []
+    };
+  }
+
+  let productCode = "";
+  let requestedQty = 0;
+  let hasLowConfidence = text.includes("??");
+
+  const match = text.match(/^(.+?)\s*(?:\*|\?{2}|x|X)\s*(\d+)/);
+  if (match) {
+    productCode = match[1].trim();
+    requestedQty = parseInt(match[2], 10) || 0;
+  } else {
+    productCode = text;
+    requestedQty = 1;
+  }
+
+  if (hasLowConfidence) {
+    return {
+      ok: true,
+      status: "OCR_REVIEW",
+      rawOrderText: text,
+      suggestions: [],
+      warnings: [
+        {
+          warningCode: "LOW_OCR_CONFIDENCE",
+          severity: "WARNING",
+          message: "OCR 辨識可信度過低 (0.65 < 0.85)，強制切換至 OCR_REVIEW 置灰審查。"
+        }
+      ],
+      rationale: "OCR 辨識可信度過低，需人工覆核。"
+    };
+  }
+
+  const stockList = ALLOCATION_SANDBOX_STOCK[productCode];
+  if (!stockList || stockList.length === 0) {
+    return {
+      ok: true,
+      status: "ALLOCATION_REVIEW",
+      rawOrderText: text,
+      suggestions: [],
+      warnings: [
+        {
+          warningCode: "PRODUCT_NOT_FOUND",
+          severity: "CRITICAL",
+          message: `查無品項 [${productCode}] 之沙盒庫存資料。`
+        }
+      ],
+      rationale: "查無此品項庫存。"
+    };
+  }
+
+  let totalAvailable = 0;
+  const singleBatches = [];
+  stockList.forEach((b) => {
+    totalAvailable += b.availableQuantity;
+    if (b.availableQuantity >= requestedQty) {
+      singleBatches.push(b);
+    }
+  });
+
+  if (totalAvailable < requestedQty) {
+    return {
+      ok: true,
+      status: "ALLOCATION_REVIEW",
+      rawOrderText: text,
+      suggestions: [],
+      warnings: [
+        {
+          warningCode: "INSUFFICIENT_STOCK",
+          severity: "CRITICAL",
+          message: `總可用庫存 (${totalAvailable}) 小於需求數量 (${requestedQty})。`
+        }
+      ],
+      rationale: "整體庫存不足。"
+    };
+  }
+
+  if (singleBatches.length > 0) {
+    singleBatches.sort((a, b) => (a.availableQuantity - requestedQty) - (b.availableQuantity - requestedQty));
+    const chosen = singleBatches[0];
+    return {
+      ok: true,
+      status: "ALLOCATION_CONFIRMED",
+      rawOrderText: text,
+      suggestions: [
+        {
+          productCode: productCode,
+          warehouseName: chosen.warehouseName,
+          batchNumber: chosen.batchNumber,
+          allocatedQuantity: requestedQty
+        }
+      ],
+      warnings: [],
+      rationale: `已為您選擇單一最優批號 ${chosen.batchNumber} (${chosen.warehouseName}) 配貨 ${requestedQty} PCS。`
+    };
+  }
+
+  const allowMixed = Boolean(options.customerApprovedMixedBatch);
+  if (!allowMixed) {
+    return {
+      ok: true,
+      status: "ALLOCATION_REVIEW",
+      rawOrderText: text,
+      suggestions: [],
+      warnings: [
+        {
+          warningCode: "BATCH_MIXING_REQUIRED",
+          severity: "WARNING",
+          message: "單批庫存不足需求數量，需要跨倉或跨批號混批配貨。"
+        }
+      ],
+      rationale: "需要混批授權。"
+    };
+  }
+
+  let remainingNeed = requestedQty;
+  const allocations = [];
+  for (const b of stockList) {
+    if (remainingNeed <= 0) break;
+    const alloc = Math.min(b.availableQuantity, remainingNeed);
+    allocations.push({
+      productCode: productCode,
+      warehouseName: b.warehouseName,
+      batchNumber: b.batchNumber,
+      allocatedQuantity: alloc
+    });
+    remainingNeed -= alloc;
+  }
+
+  return {
+    ok: true,
+    status: "ALLOCATION_CONFIRMED",
+    rawOrderText: text,
+    suggestions: allocations,
+    warnings: [],
+    rationale: `已跨倉/批號配貨 ${requestedQty} PCS (混批已授權)。`
+  };
+}
+
+function renderAllocationSandbox() {
+  const container = document.querySelector("#view-allocation-sandbox");
+  if (!container) return;
+
+  const demoCardsMount = document.querySelector("#sandboxDemoCardsSection");
+  const resultMount = document.querySelector("#sandboxResultSection");
+  const evalBtn = document.querySelector("#sandboxEvalBtn");
+  const orderInput = document.querySelector("#sandboxOrderInput");
+
+  if (demoCardsMount && demoCardsMount.children.length === 0) {
+    demoCardsMount.innerHTML = `
+      <div class="sandbox-demo-cards-container" style="border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 12px; background: rgba(255,255,255,0.02);">
+        <h4 style="margin: 0 0 12px 0; color: #f59e0b; font-size: 14px;">⚡ 沙盒真實體驗情境 (點擊一鍵代入試算)</h4>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
+          <div class="demo-card" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);">
+            <div style="font-weight: bold; color: #60a5fa; font-size: 13px;">範例一：單倉足量</div>
+            <div style="font-size: 12px; color: #9ca3af;">EQA-6522 * 10</div>
+            <button class="primary-button btn-demo-scenario" data-demo-text="EQA-6522 * 10" style="margin-top: 8px; padding: 4px 10px; font-size: 12px; width: 100%;">一鍵試算</button>
+          </div>
+          <div class="demo-card" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);">
+            <div style="font-weight: bold; color: #f59e0b; font-size: 13px;">範例二：混批授權</div>
+            <div style="font-size: 12px; color: #9ca3af;">顧佳 575 * 15</div>
+            <button class="primary-button btn-demo-scenario" data-demo-text="顧佳 575 * 15" style="margin-top: 8px; padding: 4px 10px; font-size: 12px; width: 100%;">一鍵試算</button>
+          </div>
+          <div class="demo-card" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);">
+            <div style="font-weight: bold; color: #ef4444; font-size: 13px;">範例三：低可信度審查</div>
+            <div style="font-size: 12px; color: #9ca3af;">艾美 336 ?? 20</div>
+            <button class="primary-button btn-demo-scenario" data-demo-text="艾美 336 ?? 20" style="margin-top: 8px; padding: 4px 10px; font-size: 12px; width: 100%;">一鍵試算</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    demoCardsMount.querySelectorAll(".btn-demo-scenario").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        const text = btn.dataset.demoText;
+        if (orderInput) orderInput.value = text;
+        runSandboxEvaluation(text);
+      });
+    });
+  }
+
+  if (evalBtn && !evalBtn.dataset.bound) {
+    evalBtn.dataset.bound = "true";
+    evalBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      const text = orderInput ? orderInput.value : "";
+      runSandboxEvaluation(text);
+    });
+  }
+
+  function runSandboxEvaluation(text) {
+    if (!resultMount) return;
+    const res = evaluateAllocationSandbox(text);
+    if (!res.ok) {
+      resultMount.innerHTML = `<div style="padding: 12px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 8px; color: #fca5a5;">${res.message}</div>`;
+      return;
+    }
+
+    let statusBadge = `<span style="display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4);">${res.status}</span>`;
+    if (res.status === "ALLOCATION_CONFIRMED") {
+      statusBadge = `<span style="display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4);">ALLOCATION_CONFIRMED</span>`;
+    } else if (res.status === "OCR_REVIEW") {
+      statusBadge = `<span style="display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; background: rgba(156, 163, 175, 0.2); color: #9ca3af; border: 1px solid rgba(156, 163, 175, 0.4);">OCR_REVIEW</span>`;
+    } else if (res.status === "ALLOCATION_REVIEW") {
+      statusBadge = `<span style="display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4);">ALLOCATION_REVIEW</span>`;
+    }
+
+    let suggestionsHtml = "";
+    if (res.suggestions && res.suggestions.length > 0) {
+      suggestionsHtml = res.suggestions.map((s) => `
+        <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: rgba(255,255,255,0.03); border-radius: 6px; margin-bottom: 6px; font-size: 13px;">
+          <div><strong style="color: #fff;">${s.productCode}</strong> - ${s.warehouseName} (批號: ${s.batchNumber})</div>
+          <div style="color: #34d399; font-weight: bold;">+${s.allocatedQuantity} PCS</div>
+        </div>
+      `).join("");
+    }
+
+    let warningsHtml = "";
+    if (res.warnings && res.warnings.length > 0) {
+      warningsHtml = res.warnings.map((w) => `
+        <div style="padding: 8px 12px; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 6px; margin-bottom: 6px; color: #fbbf24; font-size: 12px;">
+          ⚠️ [${w.warningCode}] ${w.message}
+        </div>
+      `).join("");
+    }
+
+    resultMount.innerHTML = `
+      <div class="sandbox-result-card" style="border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 14px; background: rgba(255,255,255,0.02);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <h4 style="margin: 0; color: #fff; font-size: 14px;">試算結果評估</h4>
+          ${statusBadge}
+        </div>
+        ${warningsHtml}
+        <div style="margin-bottom: 10px;">${suggestionsHtml}</div>
+        <p style="margin: 8px 0 0 0; font-size: 12px; color: #9ca3af;">💡 說明: ${res.rationale}</p>
+        <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 11px; color: #6b7280; text-align: right;">
+          [唯讀沙盒模式] 0 Google Sheet 寫入 / 0 LINE 通知
+        </div>
+      </div>
+    `;
+  }
+}
+
 const targetScope = typeof window !== "undefined" ? window : (typeof globalThis !== "undefined" ? globalThis : this);
 if (targetScope) {
+  targetScope.views = views;
+  targetScope.viewNames = viewNames;
+  targetScope.state = state;
+  targetScope.setView = setView;
+  targetScope.normalizeInitialView = normalizeInitialView;
   targetScope.renderHoldItemActions = renderHoldItemActions;
   targetScope.validateFulfillInput = validateFulfillInput;
   targetScope.buildAllocationActionPayload = buildAllocationActionPayload;
   targetScope.reconcileHoldStateFromReceipt = reconcileHoldStateFromReceipt;
+  targetScope.executeSandboxFormalWrite = executeSandboxFormalWrite;
+  targetScope.evaluateAllocationSandbox = evaluateAllocationSandbox;
+  targetScope.renderAllocationSandbox = renderAllocationSandbox;
 }
