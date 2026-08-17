@@ -164,5 +164,21 @@ runSuite("allocation-route-browser", [
         env.executeSandboxFormalWrite({ reservationNumber: "RES-TEST" });
       }, /SANDBOX_WRITE_FORBIDDEN/);
     }
+  },
+  {
+    name: "allocation view is an independent root view in index.html and NOT nested inside adminView",
+    run() {
+      const adminPos = indexHtmlContent.indexOf('id="adminView"');
+      const sandboxPos = indexHtmlContent.indexOf('id="view-allocation-sandbox"');
+      assert(adminPos !== -1, "adminView MUST exist in index.html");
+      assert(sandboxPos !== -1, "view-allocation-sandbox MUST exist in index.html");
+
+      const substringBetween = indexHtmlContent.substring(adminPos, sandboxPos);
+      const openSections = (substringBetween.match(/<section/g) || []).length;
+      const closeSections = (substringBetween.match(/<\/section>/g) || []).length;
+
+      assert.strictEqual(closeSections, openSections, "adminView and all inner panels MUST be fully closed before view-allocation-sandbox starts");
+      assert(substringBetween.includes("</div>") && substringBetween.includes("</section>"), "adminView MUST be closed with </div></section> before sandbox section");
+    }
   }
 ]);
