@@ -56,7 +56,9 @@ class SimulationProvider extends AllocationProvider {
     // Simple OCR parsing fallback if rawText provided and items empty
     if (items.length === 0 && payload.rawText) {
       const parts = payload.rawText.split('*');
-      const productCode = (parts[0] || 'UNKNOWN_ITEM').trim();
+      const rawCode = (parts[0] || 'UNKNOWN_ITEM').trim();
+      const codeMatch = rawCode.match(/^(?:([^\s]+)\s+)?([A-Za-z0-9-]+)$/);
+      const productCode = (codeMatch && codeMatch[2]) ? codeMatch[2].trim() : rawCode;
       const requestedQuantity = parseInt(parts[1] || '1', 10) || 1;
       items.push({
         itemId: `item_1`,

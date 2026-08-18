@@ -33,9 +33,9 @@ const viewHtmlPath = path.join(rootDir, 'google-apps-script/AllocationAssistantV
 
 const prodSheetRows = [
   ['品名與規格', '倉庫名稱', '批號', '可用數量', '單位'],
-  ['EQA-6522', '林口倉', '7J25', '100', 'PCS'],
-  ['顧佳 575', '林口倉', '8K11', '8', 'PCS'],
-  ['顧佳 575', '五股倉', '8K12', '12', 'PCS']
+  ['APT-5201', '林口倉', '04', '5062', 'PCS'],
+  ['STU-6101', '林口倉', 'J013', '2', 'PCS'],
+  ['STU-6101', '忠義倉', 'J013', '1', 'PCS']
 ];
 
 function createProdValidationEnvironment() {
@@ -61,9 +61,9 @@ runTest('Production AllocationAssistantView.html template contains sandbox warni
 runTest('Production sandbox provider calculates stock allocation from sheet snapshot and handles batch mixing warning', () => {
   const { demoCards, uiState } = createProdValidationEnvironment();
 
-  const res = demoCards.loadDemoScenario('DEMO_GUJIA_575');
+  const res = demoCards.loadDemoScenario('DEMO_STU_6101');
   assert.strictEqual(res.success, true);
-  assert.strictEqual(uiState.rawOrderText, '顧佳 575 * 15');
+  assert.strictEqual(uiState.rawOrderText, '美麗空間 STU-6101 * 3');
   assert.ok(uiState.warnings.some(w => w.warningCode === 'BATCH_MIXING_REQUIRED' || w.code === 'BATCH_MIXING_REQUIRED'));
 });
 

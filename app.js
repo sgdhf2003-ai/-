@@ -6034,7 +6034,7 @@ function renderAssistantPendingDigest_(stats, activities, tasks) {
           <div style="font-size: 14px; font-weight: bold; color: #ff756f; margin-top: 2px;">${stats.blocked}</div>
         </div>
         <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; padding: 6px; text-align: center;">
-          <div style="font-size: 10px; color: rgba(255,255,255,0.55);">等資料</div>
+          <div style="font-size: 10px; color: rgba(255,255,255,0.55);">待補資料</div>
           <div style="font-size: 14px; font-weight: bold; color: #f4bf58; margin-top: 2px;">${stats.waiting}</div>
         </div>
         <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; padding: 6px; text-align: center;">
@@ -6244,15 +6244,16 @@ function reconcileHoldStateFromReceipt(holdState, receipt) {
 }
 
 const ALLOCATION_SANDBOX_STOCK = {
-  "EQA-6522": [
-    { warehouseName: "林口倉", batchNumber: "7J25", availableQuantity: 50 }
+  "APT-5201": [
+    { warehouseName: "林口倉", batchNumber: "04", availableQuantity: 5062, productName: "上山人下山神 (SNOW) 5X20" }
   ],
-  "顧佳 575": [
-    { warehouseName: "林口倉", batchNumber: "8K11", availableQuantity: 8 },
-    { warehouseName: "五股倉", batchNumber: "8K12", availableQuantity: 12 }
+  "STU-6101": [
+    { warehouseName: "林口倉", batchNumber: "J013", availableQuantity: 2, productName: "STU 60X120 (PEARL)" },
+    { warehouseName: "忠義倉", batchNumber: "J013", availableQuantity: 1, productName: "STU 60X120 (PEARL)" }
   ],
-  "艾美 336": [
-    { warehouseName: "林口倉", batchNumber: "9A01", availableQuantity: 30 }
+  "SHN-6101F": [
+    { warehouseName: "林口倉", batchNumber: "100", availableQuantity: 46, productName: "SANCHIS 艾斯卡諾 (DESHA CREAM) 60X120" },
+    { warehouseName: "忠義倉", batchNumber: "100", availableQuantity: 56, productName: "SANCHIS 艾斯卡諾 (DESHA CREAM) 60X120" }
   ]
 };
 
@@ -6266,29 +6267,40 @@ function evaluateAllocationSandbox(rawInputText, options = {}) {
     return {
       ok: false,
       errorCode: "EMPTY_INPUT",
-      message: "請輸入需求文字 (例如: EQA-6522 * 10)",
+      message: "請輸入需求文字 (例如: 漢樺企業 APT-5201 * 10)",
       suggestions: [],
       warnings: []
     };
   }
 
+  let customerName = "";
   let productCode = "";
   let requestedQty = 0;
   let hasLowConfidence = text.includes("??");
 
-  const match = text.match(/^(.+?)\s*(?:\*|\?{2}|x|X)\s*(\d+)/);
+  // Format: [CustomerName] [ProductCode] [*|??|x|X] [Qty] OR [ProductCode] [*|...] [Qty]
+  const match = text.match(/^(?:([^\s]+)\s+)?([A-Za-z0-9-]+)\s*(?:\*|\?{2}|x|X)\s*(\d+)/);
   if (match) {
-    productCode = match[1].trim();
-    requestedQty = parseInt(match[2], 10) || 0;
+    customerName = match[1] ? match[1].trim() : "客戶";
+    productCode = match[2].trim();
+    requestedQty = parseInt(match[3], 10) || 0;
   } else {
     productCode = text;
     requestedQty = 1;
+    customerName = "客戶";
   }
+
+  const stockList = ALLOCATION_SANDBOX_STOCK[productCode];
+  const productName = (stockList && stockList[0] && stockList[0].productName) || productCode;
 
   if (hasLowConfidence) {
     return {
       ok: true,
       status: "OCR_REVIEW",
+      customerName,
+      productCode,
+      productName,
+      requestedQty,
       rawOrderText: text,
       suggestions: [],
       warnings: [
@@ -6302,11 +6314,14 @@ function evaluateAllocationSandbox(rawInputText, options = {}) {
     };
   }
 
-  const stockList = ALLOCATION_SANDBOX_STOCK[productCode];
   if (!stockList || stockList.length === 0) {
     return {
       ok: true,
       status: "ALLOCATION_REVIEW",
+      customerName,
+      productCode,
+      productName,
+      requestedQty,
       rawOrderText: text,
       suggestions: [],
       warnings: [
@@ -6333,13 +6348,17 @@ function evaluateAllocationSandbox(rawInputText, options = {}) {
     return {
       ok: true,
       status: "ALLOCATION_REVIEW",
+      customerName,
+      productCode,
+      productName,
+      requestedQty,
       rawOrderText: text,
       suggestions: [],
       warnings: [
         {
           warningCode: "INSUFFICIENT_STOCK",
           severity: "CRITICAL",
-          message: `總可用庫存 (${totalAvailable}) 小於需求數量 (${requestedQty})。`
+          message: `總庫存 (${totalAvailable}) 小於需求數量 (${requestedQty})。`
         }
       ],
       rationale: "整體庫存不足。"
@@ -6352,17 +6371,23 @@ function evaluateAllocationSandbox(rawInputText, options = {}) {
     return {
       ok: true,
       status: "ALLOCATION_CONFIRMED",
+      customerName,
+      productCode,
+      productName,
+      requestedQty,
       rawOrderText: text,
       suggestions: [
         {
-          productCode: productCode,
+          customerName,
+          productCode,
+          productName,
           warehouseName: chosen.warehouseName,
           batchNumber: chosen.batchNumber,
           allocatedQuantity: requestedQty
         }
       ],
       warnings: [],
-      rationale: `已為您選擇單一最優批號 ${chosen.batchNumber} (${chosen.warehouseName}) 配貨 ${requestedQty} PCS。`
+      rationale: `已為 [${customerName}] 選擇單一最優批號 ${chosen.batchNumber} (${chosen.warehouseName}) 配貨 ${requestedQty} PCS。`
     };
   }
 
@@ -6371,6 +6396,10 @@ function evaluateAllocationSandbox(rawInputText, options = {}) {
     return {
       ok: true,
       status: "ALLOCATION_REVIEW",
+      customerName,
+      productCode,
+      productName,
+      requestedQty,
       rawOrderText: text,
       suggestions: [],
       warnings: [
@@ -6390,7 +6419,9 @@ function evaluateAllocationSandbox(rawInputText, options = {}) {
     if (remainingNeed <= 0) break;
     const alloc = Math.min(b.availableQuantity, remainingNeed);
     allocations.push({
-      productCode: productCode,
+      customerName,
+      productCode,
+      productName,
       warehouseName: b.warehouseName,
       batchNumber: b.batchNumber,
       allocatedQuantity: alloc
@@ -6401,10 +6432,14 @@ function evaluateAllocationSandbox(rawInputText, options = {}) {
   return {
     ok: true,
     status: "ALLOCATION_CONFIRMED",
+    customerName,
+    productCode,
+    productName,
+    requestedQty,
     rawOrderText: text,
     suggestions: allocations,
     warnings: [],
-    rationale: `已跨倉/批號配貨 ${requestedQty} PCS (混批已授權)。`
+    rationale: `已為 [${customerName}] 跨倉/批號配貨 ${requestedQty} PCS (混批已授權)。`
   };
 }
 
@@ -6420,22 +6455,26 @@ function renderAllocationSandbox() {
   if (demoCardsMount && demoCardsMount.children.length === 0) {
     demoCardsMount.innerHTML = `
       <div class="sandbox-demo-cards-container" style="border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 12px; background: rgba(255,255,255,0.02);">
-        <h4 style="margin: 0 0 12px 0; color: #f59e0b; font-size: 14px;">⚡ 沙盒真實體驗情境 (點擊一鍵代入試算)</h4>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
+        <h4 style="margin: 0 0 4px 0; color: #f59e0b; font-size: 14px;">⚡ 沙盒真實體驗情境 (點擊一鍵代入試算)</h4>
+        <div style="font-size: 11px; color: #9ca3af; margin-bottom: 12px;">📊 資料來源：115年庫存試算表網路連結版資料快照 (僅供沙盒演算法體驗)</div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px;">
           <div class="demo-card" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);">
             <div style="font-weight: bold; color: #60a5fa; font-size: 13px;">範例一：單倉足量</div>
-            <div style="font-size: 12px; color: #9ca3af;">EQA-6522 * 10</div>
-            <button class="primary-button btn-demo-scenario" data-demo-text="EQA-6522 * 10" style="margin-top: 8px; padding: 4px 10px; font-size: 12px; width: 100%;">一鍵試算</button>
+            <div style="font-size: 11px; color: #cbd5e1; margin-top: 2px;">漢樺企業｜APT-5201</div>
+            <div style="font-size: 11px; color: #9ca3af;">需求: 10 PCS (林口倉: 5062 PCS)</div>
+            <button class="primary-button btn-demo-scenario" data-demo-text="漢樺企業 APT-5201 * 10" style="margin-top: 8px; padding: 4px 10px; font-size: 12px; width: 100%;">一鍵試算</button>
           </div>
           <div class="demo-card" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);">
             <div style="font-weight: bold; color: #f59e0b; font-size: 13px;">範例二：混批授權</div>
-            <div style="font-size: 12px; color: #9ca3af;">顧佳 575 * 15</div>
-            <button class="primary-button btn-demo-scenario" data-demo-text="顧佳 575 * 15" style="margin-top: 8px; padding: 4px 10px; font-size: 12px; width: 100%;">一鍵試算</button>
+            <div style="font-size: 11px; color: #cbd5e1; margin-top: 2px;">美麗空間｜STU-6101</div>
+            <div style="font-size: 11px; color: #9ca3af;">需求: 3 PCS (林口倉: 2, 忠義倉: 1)</div>
+            <button class="primary-button btn-demo-scenario" data-demo-text="美麗空間 STU-6101 * 3" style="margin-top: 8px; padding: 4px 10px; font-size: 12px; width: 100%;">一鍵試算</button>
           </div>
           <div class="demo-card" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);">
             <div style="font-weight: bold; color: #ef4444; font-size: 13px;">範例三：低可信度審查</div>
-            <div style="font-size: 12px; color: #9ca3af;">艾美 336 ?? 20</div>
-            <button class="primary-button btn-demo-scenario" data-demo-text="艾美 336 ?? 20" style="margin-top: 8px; padding: 4px 10px; font-size: 12px; width: 100%;">一鍵試算</button>
+            <div style="font-size: 11px; color: #cbd5e1; margin-top: 2px;">艾美磁磚｜SHN-6101F</div>
+            <div style="font-size: 11px; color: #9ca3af;">需求: 20 PCS (?? 低可信度)</div>
+            <button class="primary-button btn-demo-scenario" data-demo-text="艾美磁磚 SHN-6101F ?? 20" style="margin-top: 8px; padding: 4px 10px; font-size: 12px; width: 100%;">一鍵試算</button>
           </div>
         </div>
       </div>
@@ -6460,9 +6499,9 @@ function renderAllocationSandbox() {
     });
   }
 
-  function runSandboxEvaluation(text) {
+  function runSandboxEvaluation(text, options = {}) {
     if (!resultMount) return;
-    const res = evaluateAllocationSandbox(text);
+    const res = evaluateAllocationSandbox(text, options);
     if (!res.ok) {
       resultMount.innerHTML = `<div style="padding: 12px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 8px; color: #fca5a5;">${res.message}</div>`;
       return;
@@ -6481,35 +6520,60 @@ function renderAllocationSandbox() {
     if (res.suggestions && res.suggestions.length > 0) {
       suggestionsHtml = res.suggestions.map((s) => `
         <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: rgba(255,255,255,0.03); border-radius: 6px; margin-bottom: 6px; font-size: 13px;">
-          <div><strong style="color: #fff;">${s.productCode}</strong> - ${s.warehouseName} (批號: ${s.batchNumber})</div>
+          <div>
+            <span style="color: #60a5fa; font-weight: bold;">[${s.customerName}]</span>
+            <strong style="color: #fff;">${s.productCode}</strong> (${s.productName}) - ${s.warehouseName} (批號: ${s.batchNumber})
+          </div>
           <div style="color: #34d399; font-weight: bold;">+${s.allocatedQuantity} PCS</div>
         </div>
       `).join("");
     }
 
     let warningsHtml = "";
+    let mixedBatchToggleHtml = "";
     if (res.warnings && res.warnings.length > 0) {
-      warningsHtml = res.warnings.map((w) => `
-        <div style="padding: 8px 12px; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 6px; margin-bottom: 6px; color: #fbbf24; font-size: 12px;">
-          ⚠️ [${w.warningCode}] ${w.message}
-        </div>
-      `).join("");
+      warningsHtml = res.warnings.map((w) => {
+        if (w.warningCode === "BATCH_MIXING_REQUIRED") {
+          mixedBatchToggleHtml = `
+            <div style="margin-top: 8px; padding: 8px 12px; background: rgba(245, 158, 11, 0.1); border: 1px dashed rgba(245, 158, 11, 0.4); border-radius: 6px;">
+              <label style="display: flex; align-items: center; gap: 8px; color: #fbbf24; font-size: 13px; cursor: pointer;">
+                <input type="checkbox" id="chkApprovedMixedBatch" ${options.customerApprovedMixedBatch ? "checked" : ""} />
+                <strong>客戶同意混批授權</strong> (勾選後解鎖跨倉/跨批號配貨明細)
+              </label>
+            </div>
+          `;
+        }
+        return `
+          <div style="padding: 8px 12px; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 6px; margin-bottom: 6px; color: #fbbf24; font-size: 12px;">
+            ⚠️ [${w.warningCode}] ${w.message}
+          </div>
+        `;
+      }).join("");
     }
 
     resultMount.innerHTML = `
       <div class="sandbox-result-card" style="border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 14px; background: rgba(255,255,255,0.02);">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-          <h4 style="margin: 0; color: #fff; font-size: 14px;">試算結果評估</h4>
+          <h4 style="margin: 0; color: #fff; font-size: 14px;">試算結果評估 (店家: ${res.customerName || "客戶"}｜品號: ${res.productCode || "-"})</h4>
           ${statusBadge}
         </div>
         ${warningsHtml}
-        <div style="margin-bottom: 10px;">${suggestionsHtml}</div>
+        ${mixedBatchToggleHtml}
+        <div style="margin-top: 10px; margin-bottom: 10px;">${suggestionsHtml}</div>
         <p style="margin: 8px 0 0 0; font-size: 12px; color: #9ca3af;">💡 說明: ${res.rationale}</p>
-        <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 11px; color: #6b7280; text-align: right;">
-          [唯讀沙盒模式] 0 Google Sheet 寫入 / 0 LINE 通知
+        <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; font-size: 11px; color: #6b7280;">
+          <span>資料來源：115年庫存試算表快照</span>
+          <span>[唯讀沙盒模式] 0 Google Sheet 寫入 / 0 LINE 通知</span>
         </div>
       </div>
     `;
+
+    const chkMixed = resultMount.querySelector("#chkApprovedMixedBatch");
+    if (chkMixed) {
+      chkMixed.addEventListener("change", (e) => {
+        runSandboxEvaluation(text, { customerApprovedMixedBatch: e.target.checked });
+      });
+    }
   }
 }
 

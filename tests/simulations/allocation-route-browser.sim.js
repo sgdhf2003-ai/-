@@ -140,16 +140,59 @@ runSuite("allocation-route-browser", [
     }
   },
   {
-    name: "sandbox evaluation runs read-only calculation using DEMO_PRESETS without errors",
+    name: "sandbox evaluation uses 115 inventory sheet snapshot, separates customerName and productCode, and restricts warehouses to 林口倉/忠義倉",
     run() {
       const { env } = createTestEnvironment();
       if (typeof env.evaluateAllocationSandbox !== "function") {
         throw new Error("evaluateAllocationSandbox is missing");
       }
 
-      const result = env.evaluateAllocationSandbox("EQA-6522 * 10");
-      assert(result && result.ok === true, "evaluateAllocationSandbox MUST return ok: true");
-      assert(result.suggestions && result.suggestions.length > 0, "MUST return at least one suggestion for EQA-6522");
+      // 1. Scenario 1 (APT-5201 * 10)
+      const res1 = env.evaluateAllocationSandbox("漢樺企業 APT-5201 * 10");
+      assert.strictEqual(res1.ok, true);
+      assert.strictEqual(res1.customerName, "漢樺企業", "customerName MUST be '漢樺企業'");
+      assert.strictEqual(res1.productCode, "APT-5201", "productCode MUST be 'APT-5201'");
+      assert.strictEqual(res1.status, "ALLOCATION_CONFIRMED");
+      assert.strictEqual(res1.suggestions.length, 1);
+      assert.strictEqual(res1.suggestions[0].warehouseName, "林口倉");
+      assert.strictEqual(res1.suggestions[0].allocatedQuantity, 10);
+
+      // 2. Scenario 2 Unchecked (STU-6101 * 3) -> ALLOCATION_REVIEW & BATCH_MIXING_REQUIRED
+      const res2a = env.evaluateAllocationSandbox("美麗空間 STU-6101 * 3", { customerApprovedMixedBatch: false });
+      assert.strictEqual(res2a.ok, true);
+      assert.strictEqual(res2a.customerName, "美麗空間");
+      assert.strictEqual(res2a.productCode, "STU-6101");
+      assert.strictEqual(res2a.status, "ALLOCATION_REVIEW");
+      assert.ok(res2a.warnings.some(w => w.warningCode === "BATCH_MIXING_REQUIRED"));
+      assert.strictEqual(res2a.suggestions.length, 0, "Unchecked mixed batch MUST NOT output suggestions");
+
+      // 3. Scenario 2 Checked (STU-6101 * 3) -> ALLOCATION_CONFIRMED with split 林口倉 (2 PCS) + 忠義倉 (1 PCS)
+      const res2b = env.evaluateAllocationSandbox("美麗空間 STU-6101 * 3", { customerApprovedMixedBatch: true });
+      assert.strictEqual(res2b.ok, true);
+      assert.strictEqual(res2b.status, "ALLOCATION_CONFIRMED");
+      assert.strictEqual(res2b.suggestions.length, 2, "MUST split across 林口倉 and 忠義倉");
+      assert.strictEqual(res2b.suggestions[0].warehouseName, "林口倉");
+      assert.strictEqual(res2b.suggestions[0].allocatedQuantity, 2);
+      assert.strictEqual(res2b.suggestions[1].warehouseName, "忠義倉");
+      assert.strictEqual(res2b.suggestions[1].allocatedQuantity, 1);
+      const totalAllocated = res2b.suggestions.reduce((sum, s) => sum + s.allocatedQuantity, 0);
+      assert.strictEqual(totalAllocated, 3, "Total allocated MUST equal requested quantity 3");
+
+      // 4. Scenario 3 (SHN-6101F ?? 20) -> OCR_REVIEW
+      const res3 = env.evaluateAllocationSandbox("艾美磁磚 SHN-6101F ?? 20");
+      assert.strictEqual(res3.ok, true);
+      assert.strictEqual(res3.customerName, "艾美磁磚");
+      assert.strictEqual(res3.productCode, "SHN-6101F");
+      assert.strictEqual(res3.status, "OCR_REVIEW");
+      assert.ok(res3.warnings.some(w => w.warningCode === "LOW_OCR_CONFIDENCE"));
+      assert.strictEqual(res3.suggestions.length, 0, "OCR_REVIEW MUST NOT output automatic suggestions");
+
+      // 5. Verify warehouse restrictions (No 五股倉 or 汐止倉)
+      [res1, res2b].forEach((r) => {
+        (r.suggestions || []).forEach((s) => {
+          assert(["林口倉", "忠義倉"].includes(s.warehouseName), `Warehouse '${s.warehouseName}' MUST be 林口倉 or 忠義倉`);
+        });
+      });
     }
   },
   {

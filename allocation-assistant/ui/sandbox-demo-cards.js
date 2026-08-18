@@ -4,24 +4,30 @@
 
 const DEMO_PRESETS = [
   {
-    id: 'DEMO_EQA_6522',
+    id: 'DEMO_APT_5201',
     title: '範例一：單倉足量',
-    productCode: 'EQA-6522',
-    rawText: 'EQA-6522 * 10',
-    description: '林口倉單一批號 (7J25) 足量劃扣 10 PCS'
+    customerName: '漢樺企業',
+    productCode: 'APT-5201',
+    productName: '上山人下山神 (SNOW) 5X20',
+    rawText: '漢樺企業 APT-5201 * 10',
+    description: '林口倉單一批號 (04) 足量劃扣 10 PCS'
   },
   {
-    id: 'DEMO_GUJIA_575',
+    id: 'DEMO_STU_6101',
     title: '範例二：混批授權',
-    productCode: '顧佳 575',
-    rawText: '顧佳 575 * 15',
-    description: '單批不足 15 PCS，觸發 BATCH_MIXING_REQUIRED 警告'
+    customerName: '美麗空間',
+    productCode: 'STU-6101',
+    productName: 'STU 60X120 (PEARL)',
+    rawText: '美麗空間 STU-6101 * 3',
+    description: '單倉庫存不足 3 PCS，需林口倉 (2 PCS) 與忠義倉 (1 PCS) 跨倉混批'
   },
   {
-    id: 'DEMO_LOW_CONFIDENCE',
+    id: 'DEMO_SHN_6101F',
     title: '範例三：低可信度審查',
-    productCode: '艾美 336',
-    rawText: '艾美 336 ?? 20',
+    customerName: '艾美磁磚',
+    productCode: 'SHN-6101F',
+    productName: 'SANCHIS 艾斯卡諾 (DESHA CREAM) 60X120',
+    rawText: '艾美磁磚 SHN-6101F ?? 20',
     description: 'OCR 低可信度提醒，強制切換至 OCR_REVIEW 置灰審查'
   }
 ];
@@ -62,7 +68,7 @@ class SandboxDemoCards {
       throw new Error('gatewayClient and uiState are required for loadDemoScenario');
     }
 
-    if (demoId === 'DEMO_LOW_CONFIDENCE') {
+    if (demoId === 'DEMO_SHN_6101F' || demoId === 'DEMO_LOW_CONFIDENCE') {
       this.uiState.setRawOrderText(preset.rawText);
       this.uiState.status = 'OCR_REVIEW';
       this.uiState.suggestions = [];

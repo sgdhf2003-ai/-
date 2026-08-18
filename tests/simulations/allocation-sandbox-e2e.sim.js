@@ -29,9 +29,9 @@ function runTest(description, testFn) {
 
 const demoSheetRows = [
   ['品名與規格', '倉庫名稱', '批號', '可用數量', '單位'],
-  ['EQA-6522', '林口倉', '7J25', '50', 'PCS'],
-  ['顧佳 575', '林口倉', '8K11', '8', 'PCS'],
-  ['顧佳 575', '五股倉', '8K12', '12', 'PCS']
+  ['APT-5201', '林口倉', '04', '5062', 'PCS'],
+  ['STU-6101', '林口倉', 'J013', '2', 'PCS'],
+  ['STU-6101', '忠義倉', 'J013', '1', 'PCS']
 ];
 
 function createSandboxEnvironment() {
@@ -56,10 +56,10 @@ runTest('Sandbox E2E Step 1: Mounting sandbox tab renders amber warning banner w
 });
 
 // 2. E2E Step 2: Load Demo Preset Card & Render Warning Block
-runTest('Sandbox E2E Step 2: Clicking DEMO_GUJIA_575 loads snapshot data and renders BATCH_MIXING_REQUIRED warning', () => {
+runTest('Sandbox E2E Step 2: Clicking DEMO_STU_6101 loads snapshot data and renders BATCH_MIXING_REQUIRED warning', () => {
   const { demoCards, uiState } = createSandboxEnvironment();
 
-  const loadRes = demoCards.loadDemoScenario('DEMO_GUJIA_575');
+  const loadRes = demoCards.loadDemoScenario('DEMO_STU_6101');
   assert.strictEqual(loadRes.success, true);
   assert.strictEqual(uiState.status, 'ALLOCATION_REVIEW');
   assert.ok(uiState.warnings.some(w => w.warningCode === 'BATCH_MIXING_REQUIRED' || w.code === 'BATCH_MIXING_REQUIRED'));
@@ -69,7 +69,7 @@ runTest('Sandbox E2E Step 2: Clicking DEMO_GUJIA_575 loads snapshot data and ren
 runTest('Sandbox E2E Step 3: Toggling mixed batch consent switch triggers instant re-evaluation and updates ViewModel', () => {
   const { demoCards, gatewayClient, uiState } = createSandboxEnvironment();
 
-  demoCards.loadDemoScenario('DEMO_GUJIA_575');
+  demoCards.loadDemoScenario('DEMO_STU_6101');
   assert.strictEqual(uiState.customerApprovedMixedBatch, false);
 
   const toggleRes = gatewayClient.toggleMixedBatch(true);

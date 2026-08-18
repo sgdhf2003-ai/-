@@ -25,12 +25,12 @@ function runTest(description, testFn) {
   }
 }
 
-// Mock sheet raw rows for testing
+// Mock sheet raw rows for testing (115 Sheet Snapshot)
 const sampleSheetRows = [
   ['品名與規格', '倉庫名稱', '批號', '可用數量', '單位'],
-  ['EQA-6522', '林口倉', '7J25', '50', 'PCS'],
-  ['顧佳 575', '林口倉', '8K11', '8', 'PCS'],
-  ['顧佳 575', '五股倉', '8K12', '12', 'PCS']
+  ['APT-5201', '林口倉', '04', '5062', 'PCS'],
+  ['STU-6101', '林口倉', 'J013', '2', 'PCS'],
+  ['STU-6101', '忠義倉', 'J013', '1', 'PCS']
 ];
 
 // 1. Sandbox Provider Wireup
@@ -53,11 +53,11 @@ runTest('submitting text through client generates allocation suggestion based on
   const uiState = new AllocationUIState();
   const client = provider.createGatewayClient({ uiState });
 
-  client.submitRawText('EQA-6522 * 10');
+  client.submitRawText('漢樺企業 APT-5201 * 10');
 
   assert.strictEqual(uiState.status, 'ALLOCATION_REVIEW');
   assert.strictEqual(uiState.suggestions.length, 1);
-  assert.strictEqual(uiState.suggestions[0].productCode, 'EQA-6522');
+  assert.strictEqual(uiState.suggestions[0].productCode, 'APT-5201');
   assert.strictEqual(uiState.suggestions[0].warehouseName, '林口倉');
 });
 
@@ -68,7 +68,7 @@ runTest('single batch insufficiency in snapshot triggers BATCH_MIXING_REQUIRED w
   const uiState = new AllocationUIState();
   const client = provider.createGatewayClient({ uiState });
 
-  client.submitRawText('顧佳 575 * 15');
+  client.submitRawText('美麗空間 STU-6101 * 3');
 
   assert.strictEqual(uiState.status, 'ALLOCATION_REVIEW');
   assert.ok(uiState.warnings.some(w => w.warningCode === 'BATCH_MIXING_REQUIRED' || w.code === 'BATCH_MIXING_REQUIRED'));

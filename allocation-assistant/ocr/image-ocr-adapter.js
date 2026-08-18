@@ -8,11 +8,11 @@ const { OcrCandidateMatcher } = require('./ocr-candidate-matcher');
 class ImageOcrAdapter {
   constructor(options = {}) {
     this.defaultMasterProducts = options.defaultMasterProducts || [
-      'EQA-6522',
-      '顧佳 575',
-      '艾美 336',
-      '白玉大理石 30x60',
-      '皇家灰 60x60'
+      'APT-5201',
+      'STU-6101',
+      'SHN-6101F',
+      'WOS-1253',
+      'STF-6103'
     ];
   }
 
@@ -28,14 +28,20 @@ class ImageOcrAdapter {
       confidenceScore = 0.6;
     }
 
-    // Basic regex extraction for Product * Qty
-    const match = textToParse.match(/([^\*\s]+)\s*\*?\s*(\d+)?/);
-    if (match) {
-      productCode = match[1].trim();
-      requestedQuantity = match[2] ? parseInt(match[2], 10) : 10;
+    // Enhanced regex extraction for [CustomerName] [ProductCode] * Qty or ProductCode * Qty
+    const match = textToParse.match(/^(?:([^\s]+)\s+)?([A-Za-z0-9-]+)\s*\*?\s*(\d+)?/);
+    if (match && match[2]) {
+      productCode = match[2].trim();
+      requestedQuantity = match[3] ? parseInt(match[3], 10) : 10;
     } else {
-      productCode = textToParse || 'UNKNOWN_ITEM';
-      requestedQuantity = 10;
+      const simpleMatch = textToParse.match(/([^\*\s]+)\s*\*?\s*(\d+)?/);
+      if (simpleMatch) {
+        productCode = simpleMatch[1].trim();
+        requestedQuantity = simpleMatch[2] ? parseInt(simpleMatch[2], 10) : 10;
+      } else {
+        productCode = textToParse || 'UNKNOWN_ITEM';
+        requestedQuantity = 10;
+      }
     }
 
     const candidateOptions = OcrCandidateMatcher.findTopCandidates(productCode, productsList, 3);
