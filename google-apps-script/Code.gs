@@ -355,13 +355,7 @@ function loginUser(data) {
   const safeUser = sanitizeUser(user);
   const sessionToken = "SESS-" + ((typeof Utilities !== "undefined" && Utilities.getUuid) ? Utilities.getUuid() : (Date.now() + "-" + Math.random().toString(36).substring(2)));
 
-  if (typeof CacheService !== "undefined" && CacheService.getScriptCache) {
-    try {
-      CacheService.getScriptCache().put("SESSION:" + sessionToken, JSON.stringify({ user: safeUser, createdAt: new Date().toISOString() }), 21600);
-    } catch (e) {
-      console.warn("Failed to cache session: " + e.toString());
-    }
-  }
+  storeServerSession(sessionToken, safeUser);
 
   return {
     ok: true,
@@ -378,10 +372,8 @@ function loginUser(data) {
 
 function logoutUserAction(data) {
   const token = data ? (data.sessionToken || data.token) : null;
-  if (token && typeof CacheService !== "undefined" && CacheService.getScriptCache) {
-    try {
-      CacheService.getScriptCache().remove("SESSION:" + token);
-    } catch (e) {}
+  if (token) {
+    removeServerSession(token);
   }
   return { ok: true, message: "已成功登出" };
 }
@@ -6230,6 +6222,67 @@ function isProductCodeMatchInRow(row, targetProductCode) {
   return false;
 }
 
+function getSessionCacheKey(token) {
+  if (!token) return "";
+  return "SESS_" + String(token).replace(/[^a-zA-Z0-9]/g, "");
+}
+
+function storeServerSession(sessionToken, userObj) {
+  if (!sessionToken || !userObj) return;
+  const key = getSessionCacheKey(sessionToken);
+  const val = JSON.stringify({ user: userObj, createdAt: new Date().toISOString() });
+
+  if (typeof CacheService !== "undefined" && CacheService.getScriptCache) {
+    try {
+      CacheService.getScriptCache().put(key, val, 21600);
+    } catch (e) {}
+  }
+
+  if (typeof PropertiesService !== "undefined" && PropertiesService.getScriptProperties) {
+    try {
+      PropertiesService.getScriptProperties().setProperty(key, val);
+    } catch (e) {}
+  }
+}
+
+function removeServerSession(sessionToken) {
+  if (!sessionToken) return;
+  const key = getSessionCacheKey(sessionToken);
+  if (typeof CacheService !== "undefined" && CacheService.getScriptCache) {
+    try { CacheService.getScriptCache().remove(key); } catch (e) {}
+  }
+  if (typeof PropertiesService !== "undefined" && PropertiesService.getScriptProperties) {
+    try { PropertiesService.getScriptProperties().deleteProperty(key); } catch (e) {}
+  }
+}
+
+function lookupServerSession(sessionToken) {
+  if (!sessionToken) return null;
+  const key = getSessionCacheKey(sessionToken);
+
+  if (typeof CacheService !== "undefined" && CacheService.getScriptCache) {
+    try {
+      const cachedStr = CacheService.getScriptCache().get(key);
+      if (cachedStr) {
+        const obj = JSON.parse(cachedStr);
+        if (obj && obj.user) return obj.user;
+      }
+    } catch (e) {}
+  }
+
+  if (typeof PropertiesService !== "undefined" && PropertiesService.getScriptProperties) {
+    try {
+      const propStr = PropertiesService.getScriptProperties().getProperty(key);
+      if (propStr) {
+        const obj = JSON.parse(propStr);
+        if (obj && obj.user) return obj.user;
+      }
+    } catch (e) {}
+  }
+
+  return null;
+}
+
 function validateServerSession(data, options) {
   if (data && data._rawQueryString && String(data._rawQueryString).toLowerCase().indexOf("sessiontoken=") !== -1) {
     return {
@@ -6248,17 +6301,10 @@ function validateServerSession(data, options) {
     return { ok: false, errorCode: "INVALID_SESSION_USER", message: "登入狀態失效或缺少使用者權限脈絡" };
   }
 
-  if (token && typeof CacheService !== "undefined" && CacheService.getScriptCache) {
-    try {
-      const cachedStr = CacheService.getScriptCache().get("SESSION:" + token);
-      if (cachedStr) {
-        const cachedObj = JSON.parse(cachedStr);
-        if (cachedObj && cachedObj.user && cachedObj.user.role) {
-          return { ok: true, userContext: cachedObj.user };
-        }
-      }
-    } catch (e) {
-      console.warn("CacheService lookup failed: " + e.toString());
+  if (token) {
+    const userFromSession = lookupServerSession(token);
+    if (userFromSession && userFromSession.role && userFromSession.role !== "unknown" && userFromSession.role !== "無") {
+      return { ok: true, userContext: userFromSession };
     }
   }
 

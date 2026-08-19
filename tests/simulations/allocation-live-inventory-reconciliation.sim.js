@@ -19,14 +19,17 @@ function loadCodeGsContext() {
   const codeContent = fs.readFileSync(codeGsPath, 'utf8');
 
   const cacheStore = {};
+  const propsStore = {};
 
   const context = {
     console: console,
     Logger: console,
     PropertiesService: {
       getScriptProperties: () => ({
-        getProperty: () => '',
-        getProperties: () => ({})
+        getProperty: (key) => propsStore[key] || '',
+        setProperty: (key, val) => { propsStore[key] = val; },
+        deleteProperty: (key) => { delete propsStore[key]; },
+        getProperties: () => ({ ...propsStore })
       })
     },
     CacheService: {
@@ -206,11 +209,9 @@ function runSimulations() {
     assert.strictEqual(forgedRes.ok, false);
     assert.strictEqual(forgedRes.errorCode, 'INVALID_SESSION_USER', 'Forged userContext in body MUST be blocked as INVALID_SESSION_USER');
 
-    // 4.3: 建立正式 Session (模擬 CacheService)
+    // 4.3: 建立正式 Session (測試 storeServerSession)
     const validToken = 'SESS-TEST-UUID-12345';
-    codeGs.CacheService.getScriptCache().put('SESSION:' + validToken, JSON.stringify({
-      user: { id: 'user-cai', username: 'cai', role: 'sales' }
-    }), 21600);
+    codeGs.storeServerSession(validToken, { id: 'user-cai', username: 'cai', role: 'sales' });
 
     // 4.4: 帶入合法 Session Token 查詢 -> 成功 (STU-6101 reconciled: true)
     const validRes = codeGs.getInventorySnapshotAction({
