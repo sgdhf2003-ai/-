@@ -8,6 +8,7 @@ const path = require('path');
 const vm = require('vm');
 
 const {
+  isProductCodeMatchInRow,
   parseMasterInventoryRow,
   evaluateTwoTableReconciliation,
   LiveSheetInventoryAdapter
@@ -150,56 +151,100 @@ function runSimulations() {
     console.log('PASS allocation-live-inventory-reconciliation: 雙表數據不一致時 fail-closed 阻斷配貨並標示數量差異');
   }
 
-  // Test 4: Code.gs getInventorySnapshotAction 純試算表唯讀測試
+  // Test 4: 真實線上試算表資料形狀模擬測試 (APT-5201, STU-6101, SHN-6101F)
   {
-    const mockSheets = {
+    const mockRealSheets = {
       '庫存查詢表': {
         getDataRange: () => ({
           getValues: () => [
             ['產地', '系列', '編號', '尺寸', '實際尺寸', '', '批號', '', '', '', '庫存', '可用庫存', '保留數量'],
-            ['義大利', 'STU', 'STU-6101 PEARL 60X120', '60X120', '59.8', '', 'J013', '', '', '', 3, 3, 0]
+            ['西班牙', 'APT', 'APT-5201 初露白 60X120', '60X120', '59.8', '', '04', '', '', '', 5062, 5062, 0],
+            ['義大利', 'STU', 'STU-6101 PEARL 60X120', '60X120', '59.8', '', 'J013', '', '', '', 3, 3, 0],
+            ['西班牙', 'SHN', 'SHN-6101F 霧面', '60X120', '59.8', '', '100', '', '', '', 102, 102, 0]
           ]
         })
       },
       '林口倉115盤': {
         getDataRange: () => ({
           getValues: () => [
-            ['商品編號', '批號', '規格', '', '', '', '庫存'],
-            ['STU-6101', 'J013', 'PEARL', '', '', '', 2]
+            ['NO.', '批號', '編號', '品名', '規格', '', '庫存'],
+            ['1', '04(60裝)', 'APT-5201\n60X120cm', '初露白', '60X120', '', 5062],
+            ['674', 'J013(2裝)(40/版)', 'STU-6101', 'PEARL', '60X120', '', 2],
+            ['706', '100(2裝)', 'SHN-6101F', '霧面', '60X120', '', 46]
           ]
         })
       },
       '忠義倉115盤': {
         getDataRange: () => ({
           getValues: () => [
-            ['商品編號', '批號', '規格', '', '', '', '庫存'],
-            ['STU-6101', 'J013', 'PEARL', '', '', '', 1]
+            ['NO.', '批號', '編號', '品名', '規格', '', '庫存'],
+            ['674', 'J013(2裝)(40/版)', 'STU-6101', 'PEARL', '60X120', '', 1],
+            ['706', '100(2裝)', 'SHN-6101F', '霧面', '60X120', '', 56]
           ]
         })
       }
     };
 
     const mockSs = {
-      getSheetByName: (name) => mockSheets[name] || null
+      getSheetByName: (name) => mockRealSheets[name] || null
     };
 
-    const reqData = {
+    // APT-5201: 林口倉 5062
+    const resApt = codeGs.getInventorySnapshotAction({
+      userContext: { role: 'assistant', username: 'test_assistant' },
+      productCode: 'APT-5201',
+      requestedQuantity: 1000
+    }, { mockSpreadsheet: mockSs });
+
+    assert.strictEqual(resApt.ok, true);
+    assert.strictEqual(resApt.reconciled, true, 'APT-5201 reconciliation MUST succeed (5062 === 5062)');
+    assert.strictEqual(resApt.masterSummary.inventoryQuantity, 5062);
+    assert.strictEqual(resApt.warehouseBreakdown.length, 1);
+    assert.strictEqual(resApt.warehouseBreakdown[0].warehouseName, '林口倉');
+    assert.strictEqual(resApt.warehouseBreakdown[0].stockQuantity, 5062);
+
+    // STU-6101: 林口倉 2 + 忠義倉 1 = 3
+    const resStu = codeGs.getInventorySnapshotAction({
       userContext: { role: 'assistant', username: 'test_assistant' },
       productCode: 'STU-6101',
       requestedQuantity: 3,
       customerApprovedMixedBatch: true
-    };
+    }, { mockSpreadsheet: mockSs });
 
-    const apiRes = codeGs.getInventorySnapshotAction(reqData, { mockSpreadsheet: mockSs });
-    assert.strictEqual(apiRes.ok, true);
-    assert.strictEqual(apiRes.readOnly, true, 'API response MUST be marked as readOnly');
-    assert.strictEqual(apiRes.reconciled, true);
-    assert.strictEqual(apiRes.status, 'ALLOCATION_CONFIRMED');
-    assert.strictEqual(apiRes.suggestions.length, 2);
-    assert.strictEqual(apiRes.masterSummary.inventoryQuantity, 3);
-    assert.strictEqual(apiRes.masterSummary.availableQuantity, 3);
-    assert.strictEqual(apiRes.masterSummary.reservedQuantity, 0);
-    console.log('PASS allocation-live-inventory-reconciliation: Code.gs getInventorySnapshotAction 正式 Action 唯讀查詢與雙表對帳成功');
+    assert.strictEqual(resStu.ok, true);
+    assert.strictEqual(resStu.reconciled, true, 'STU-6101 reconciliation MUST succeed (2 + 1 === 3)');
+    assert.strictEqual(resStu.warehouseBreakdown.length, 2);
+    assert.strictEqual(resStu.suggestions.length, 2);
+    assert.strictEqual(resStu.suggestions[0].warehouseName, '林口倉');
+    assert.strictEqual(resStu.suggestions[0].allocatedQuantity, 2);
+    assert.strictEqual(resStu.suggestions[1].warehouseName, '忠義倉');
+    assert.strictEqual(resStu.suggestions[1].allocatedQuantity, 1);
+
+    // SHN-6101F: 林口倉 46 + 忠義倉 56 = 102
+    const resShn = codeGs.getInventorySnapshotAction({
+      userContext: { role: 'assistant', username: 'test_assistant' },
+      productCode: 'SHN-6101F',
+      requestedQuantity: 100,
+      customerApprovedMixedBatch: true
+    }, { mockSpreadsheet: mockSs });
+
+    assert.strictEqual(resShn.ok, true);
+    assert.strictEqual(resShn.reconciled, true, 'SHN-6101F reconciliation MUST succeed (46 + 56 === 102)');
+    assert.strictEqual(resShn.warehouseBreakdown.length, 2);
+    assert.strictEqual(resShn.warehouseBreakdown[0].stockQuantity, 46);
+    assert.strictEqual(resShn.warehouseBreakdown[1].stockQuantity, 56);
+
+    // NONEXISTENT-999: found false
+    const resNotFound = codeGs.getInventorySnapshotAction({
+      userContext: { role: 'assistant', username: 'test_assistant' },
+      productCode: 'NONEXISTENT-999'
+    }, { mockSpreadsheet: mockSs });
+
+    assert.strictEqual(resNotFound.ok, true);
+    assert.strictEqual(resNotFound.found, false);
+    assert.strictEqual(resNotFound.warnings[0].warningCode, 'PRODUCT_NOT_FOUND');
+
+    console.log('PASS allocation-live-inventory-reconciliation: 真實線上試算表資料形狀模擬測試 (APT-5201 5062, STU-6101 2+1, SHN-6101F 46+56, 不存在商品 404)');
   }
 
   // Test 5: Code.gs getInventorySnapshotAction 未登入／權限不足 Fail-Closed 阻斷

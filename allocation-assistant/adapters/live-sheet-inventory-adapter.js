@@ -4,6 +4,35 @@
 
 const { ReadOnlyInventoryAdapter } = require('./readonly-inventory-adapter');
 
+function isProductCodeMatchInRow(row, targetProductCode) {
+  if (!Array.isArray(row) || !targetProductCode) return false;
+  const targetUpper = targetProductCode.toString().trim().toUpperCase();
+  if (!targetUpper) return false;
+
+  for (let colIdx = 0; colIdx <= 4; colIdx++) {
+    const val = (row[colIdx] || '').toString().trim();
+    if (!val) continue;
+
+    const lines = val.replace(/\r/g, '').split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim().toUpperCase();
+      if (!line) continue;
+
+      if (line === targetUpper) return true;
+
+      const firstWord = line.split(/\s+/)[0];
+      if (firstWord === targetUpper) return true;
+
+      if (line.indexOf(targetUpper) === 0) {
+        const nextChar = line.charAt(targetUpper.length);
+        if (!nextChar || /[\s\-\/_()（）]/.test(nextChar)) return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 function parseMasterInventoryRow(row) {
   if (!Array.isArray(row)) {
     return {
@@ -273,6 +302,7 @@ class LiveSheetInventoryAdapter extends ReadOnlyInventoryAdapter {
 }
 
 module.exports = {
+  isProductCodeMatchInRow,
   parseMasterInventoryRow,
   evaluateTwoTableReconciliation,
   LiveSheetInventoryAdapter

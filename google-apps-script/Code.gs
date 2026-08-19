@@ -6178,6 +6178,35 @@ function evaluateLineNotificationPolicy_(request) {
   };
 }
 
+function isProductCodeMatchInRow(row, targetProductCode) {
+  if (!Array.isArray(row) || !targetProductCode) return false;
+  const targetUpper = targetProductCode.toString().trim().toUpperCase();
+  if (!targetUpper) return false;
+
+  for (let colIdx = 0; colIdx <= 4; colIdx++) {
+    const val = (row[colIdx] || "").toString().trim();
+    if (!val) continue;
+
+    const lines = val.replace(/\r/g, "").split("\n");
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim().toUpperCase();
+      if (!line) continue;
+
+      if (line === targetUpper) return true;
+
+      const firstWord = line.split(/\s+/)[0];
+      if (firstWord === targetUpper) return true;
+
+      if (line.indexOf(targetUpper) === 0) {
+        const nextChar = line.charAt(targetUpper.length);
+        if (!nextChar || /[\s\-\/_()（）]/.test(nextChar)) return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 function getInventorySnapshotAction(data, options) {
   const userContext = data ? (data.userContext || data.user) : null;
   if (!userContext || !userContext.role || userContext.role === "unknown" || userContext.role === "無") {
@@ -6274,14 +6303,11 @@ function getInventorySnapshotAction(data, options) {
         const values = sheet.getDataRange().getValues();
         for (let i = 1; i < values.length; i++) {
           const row = values[i];
-          const rawA = (row[0] || "").toString().trim();
-          const rawB = (row[1] || "").toString().trim();
-          const rawC = (row[2] || "").toString().trim();
-          const codeMatch = rawA === productCode || rawB === productCode || rawC === productCode || rawC.indexOf(productCode) === 0 || rawB.indexOf(productCode) === 0;
-          if (codeMatch) {
-            const stockQty = Math.max(0, parseInt(row[6] || 0, 10) || 0);
+          if (isProductCodeMatchInRow(row, productCode)) {
+            const stockQty = Math.max(0, parseInt(row[6] || row[9] || 0, 10) || 0);
             if (stockQty > 0) {
-              const bNo = (row[3] || row[1] || "").toString().trim().replace(/\(.*?\)/g, "").trim() || masterRecord.batchNumber;
+              const rawB = (row[1] || row[3] || row[4] || "").toString().trim();
+              const bNo = rawB ? rawB.replace(/\s+/g, " ") : masterRecord.batchNumber;
               warehouseBreakdown.push({
                 warehouseName: wh.warehouseName,
                 batchNumber: bNo,
