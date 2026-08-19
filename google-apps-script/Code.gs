@@ -33,6 +33,7 @@ function doGet(e) {
       const action = data.action;
       if (action === "setup") return jsonOutput(setupBackend(data));
       if (action === "login") return jsonOutput(loginUser(data));
+      if (action === "getInventorySnapshot") return jsonOutput(getInventorySnapshotAction(data));
       if (action === "testLineNotify") return jsonOutput(testLineNotifyAction(data));
       if (action === "test_b8_readiness") return jsonOutput(testB8ReadinessAction(data));
       if (action === "readLogs") {
@@ -109,6 +110,7 @@ function doPost(e) {
     if (action === "fulfillHold") return jsonOutput(fulfillHoldAction(data));
     if (action === "cancelReleaseHold") return jsonOutput(cancelReleaseHoldAction(data));
     if (action === "readbackAudit") return jsonOutput(readbackAuditAction(data));
+    if (action === "getInventorySnapshot") return jsonOutput(getInventorySnapshotAction(data));
     if (action === "upsertProject") return jsonOutput(upsertProjects([data.project]));
     if (action === "upsertSample") return jsonOutput(upsertSamples([data.sample]));
     if (action === "upsertComplaint") return jsonOutput(upsertComplaints([data.complaint]));
@@ -6173,5 +6175,224 @@ function evaluateLineNotificationPolicy_(request) {
     success: true,
     delivered: false,
     message: "Policy check passed, pending explicit execution approval"
+  };
+}
+
+function getInventorySnapshotAction(data, options) {
+  const userContext = data ? (data.userContext || data.user) : null;
+  if (!userContext || !userContext.role || userContext.role === "unknown" || userContext.role === "無") {
+    return { ok: false, errorCode: "INVALID_SESSION_USER", message: "登入狀態失效或缺少使用者權限脈絡" };
+  }
+
+  if (data && data._rawQueryString && String(data._rawQueryString).toLowerCase().indexOf("sessiontoken=") !== -1) {
+    return {
+      ok: false,
+      errorCode: "INSECURE_SESSION_TOKEN_IN_URL",
+      message: "Security Violation: sessionToken MUST NOT be transmitted via GET query string parameters"
+    };
+  }
+
+  const productCode = (data && (data.productCode || data.itemCode) || "").toString().trim();
+  if (!productCode) {
+    return { ok: false, errorCode: "INVALID_PRODUCT_CODE", message: "商品編號不可為空" };
+  }
+
+  const requestedQuantity = parseInt(data.requestedQuantity || 0, 10);
+  const customerApprovedMixedBatch = Boolean(data.customerApprovedMixedBatch);
+
+  const props = (typeof PropertiesService !== "undefined" && PropertiesService.getScriptProperties) ? PropertiesService.getScriptProperties() : null;
+  const configId = props ? (props.getProperty("JYAI_INVENTORY_PRODUCTION_SPREADSHEET_ID") || props.getProperty("JYAI_ALLOCATION_PRODUCTION_SPREADSHEET_ID")) : null;
+  const SPREADSHEET_ID = configId || "1C_R1DdTj5brxftl9fPabTKBGzcG-lxWWxWoyi-ItA48";
+  let ss = null;
+
+  if (options && options.mockSpreadsheet) {
+    ss = options.mockSpreadsheet;
+  } else if (typeof SpreadsheetApp !== "undefined" && typeof SpreadsheetApp.openById === "function") {
+    try {
+      ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    } catch (err) {
+      return { ok: false, errorCode: "SPREADSHEET_OPEN_FAILED", message: "無法讀取庫存試算表: " + err.message };
+    }
+  }
+
+  let masterRecord = null;
+  if (ss && typeof ss.getSheetByName === "function") {
+    const masterSheet = ss.getSheetByName("庫存查詢表");
+    if (masterSheet && typeof masterSheet.getDataRange === "function") {
+      const values = masterSheet.getDataRange().getValues();
+      for (let i = 1; i < values.length; i++) {
+        const row = values[i];
+        const rawC = (row[2] || "").toString().trim();
+        if (rawC) {
+          const parts = rawC.split(/\s+/);
+          const pCode = parts[0];
+          if (pCode === productCode) {
+            masterRecord = {
+              productCode: pCode,
+              productName: parts.slice(1).join(" "),
+              batchNumber: (row[6] || "").toString().trim(),
+              inventoryQuantity: Math.max(0, parseInt(row[10] || 0, 10) || 0),
+              availableQuantity: Math.max(0, parseInt(row[11] || 0, 10) || 0),
+              reservedQuantity: Math.max(0, parseInt(row[12] || 0, 10) || 0)
+            };
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  if (!masterRecord) {
+    return {
+      ok: true,
+      found: false,
+      readOnly: true,
+      productCode: productCode,
+      masterSummary: null,
+      warehouseBreakdown: [],
+      suggestions: [],
+      warnings: [
+        {
+          warningCode: "PRODUCT_NOT_FOUND",
+          severity: "WARNING",
+          message: "庫存查詢表中查無商品 " + productCode + " 之資料"
+        }
+      ]
+    };
+  }
+
+  const warehouseBreakdown = [];
+  const warehouseSheets = [
+    { name: "林口倉115盤", warehouseName: "林口倉" },
+    { name: "忠義倉115盤", warehouseName: "忠義倉" }
+  ];
+
+  if (ss && typeof ss.getSheetByName === "function") {
+    warehouseSheets.forEach(function(wh) {
+      const sheet = ss.getSheetByName(wh.name);
+      if (sheet && typeof sheet.getDataRange === "function") {
+        const values = sheet.getDataRange().getValues();
+        for (let i = 1; i < values.length; i++) {
+          const row = values[i];
+          const rawA = (row[0] || "").toString().trim();
+          const rawC = (row[2] || "").toString().trim();
+          const codeMatch = rawA === productCode || rawC.indexOf(productCode) === 0;
+          if (codeMatch) {
+            const stockQty = Math.max(0, parseInt(row[6] || 0, 10) || 0);
+            if (stockQty > 0) {
+              const bNo = (row[1] || "").toString().trim().replace(/\(.*?\)/g, "").trim() || masterRecord.batchNumber;
+              warehouseBreakdown.push({
+                warehouseName: wh.warehouseName,
+                batchNumber: bNo,
+                stockQuantity: stockQty,
+                availableQuantity: stockQty,
+                sourceSheet: wh.name,
+                rowIndex: i + 1
+              });
+            }
+          }
+        }
+      }
+    });
+  }
+
+  let warehouseSum = 0;
+  warehouseBreakdown.forEach(function(r) { warehouseSum += r.stockQuantity; });
+
+  const masterInventory = masterRecord.inventoryQuantity;
+  const masterAvailable = masterRecord.availableQuantity;
+
+  if (warehouseSum !== masterInventory) {
+    const drift = warehouseSum - masterInventory;
+    return {
+      ok: true,
+      found: true,
+      readOnly: true,
+      reconciled: false,
+      status: "ALLOCATION_REVIEW",
+      productCode: productCode,
+      productName: masterRecord.productName,
+      masterSummary: {
+        ...masterRecord,
+        warehouseSum: warehouseSum
+      },
+      warehouseBreakdown: warehouseBreakdown,
+      suggestions: [],
+      warnings: [
+        {
+          warningCode: "RECONCILIATION_DRIFT_DETECTED",
+          severity: "CRITICAL",
+          message: "庫存查詢表總庫存 (" + masterInventory + ") 與分倉合計 (" + warehouseSum + ") 不一致，差異: " + drift + " PCS。",
+          details: {
+            masterInventory: masterInventory,
+            warehouseSum: warehouseSum,
+            drift: drift
+          }
+        }
+      ]
+    };
+  }
+
+  let suggestions = [];
+  let status = "ALLOCATION_CONFIRMED";
+  const warnings = [];
+
+  if (requestedQuantity > 0) {
+    if (requestedQuantity > masterAvailable) {
+      status = "ALLOCATION_REVIEW";
+      warnings.push({
+        warningCode: "INSUFFICIENT_AVAILABLE_STOCK",
+        severity: "CRITICAL",
+        message: "需求數量 (" + requestedQuantity + ") 超過庫存查詢表可用庫存 (" + masterAvailable + ")。"
+      });
+    } else {
+      const singleBatch = warehouseBreakdown.find(function(r) { return r.stockQuantity >= requestedQuantity; });
+      if (singleBatch) {
+        suggestions.push({
+          productCode: masterRecord.productCode,
+          productName: masterRecord.productName,
+          warehouseName: singleBatch.warehouseName,
+          batchNumber: singleBatch.batchNumber,
+          allocatedQuantity: requestedQuantity
+        });
+      } else if (!customerApprovedMixedBatch) {
+        status = "ALLOCATION_REVIEW";
+        warnings.push({
+          warningCode: "BATCH_MIXING_REQUIRED",
+          severity: "WARNING",
+          message: "單批庫存不足需求數量，需要跨倉或跨批號混批配貨。"
+        });
+      } else {
+        let remaining = requestedQuantity;
+        warehouseBreakdown.forEach(function(b) {
+          if (remaining <= 0) return;
+          const alloc = Math.min(b.stockQuantity, remaining);
+          if (alloc > 0) {
+            suggestions.push({
+              productCode: masterRecord.productCode,
+              productName: masterRecord.productName,
+              warehouseName: b.warehouseName,
+              batchNumber: b.batchNumber,
+              allocatedQuantity: alloc
+            });
+            remaining -= alloc;
+          }
+        });
+      }
+    }
+  }
+
+  return {
+    ok: true,
+    found: true,
+    readOnly: true,
+    reconciled: true,
+    status: status,
+    productCode: masterRecord.productCode,
+    productName: masterRecord.productName,
+    masterSummary: masterRecord,
+    warehouseBreakdown: warehouseBreakdown,
+    suggestions: suggestions,
+    warnings: warnings
   };
 }

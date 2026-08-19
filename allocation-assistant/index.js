@@ -46,6 +46,11 @@ const { AuditLogger } = require('./audit/audit-logger');
 const { ReadOnlyInventoryAdapter } = require('./adapters/readonly-inventory-adapter');
 const { mapSheetRowsToInventorySnapshot } = require('./adapters/inventory-sheet-mapper');
 const { MockSheetInventoryAdapter } = require('./adapters/mock-sheet-inventory-adapter');
+const {
+  LiveSheetInventoryAdapter,
+  parseMasterInventoryRow,
+  evaluateTwoTableReconciliation
+} = require('./adapters/live-sheet-inventory-adapter');
 
 const { FormalReservationAdapter } = require('./adapters/formal-reservation-adapter');
 const { MockFormalReservationAdapter } = require('./adapters/mock-formal-reservation-adapter');
@@ -112,6 +117,9 @@ module.exports = {
   ReadOnlyInventoryAdapter,
   mapSheetRowsToInventorySnapshot,
   MockSheetInventoryAdapter,
+  LiveSheetInventoryAdapter,
+  parseMasterInventoryRow,
+  evaluateTwoTableReconciliation,
   FormalReservationAdapter,
   MockFormalReservationAdapter,
   FormalHoldWritebackAdapter,
