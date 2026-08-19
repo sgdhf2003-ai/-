@@ -6275,12 +6275,13 @@ function getInventorySnapshotAction(data, options) {
         for (let i = 1; i < values.length; i++) {
           const row = values[i];
           const rawA = (row[0] || "").toString().trim();
+          const rawB = (row[1] || "").toString().trim();
           const rawC = (row[2] || "").toString().trim();
-          const codeMatch = rawA === productCode || rawC.indexOf(productCode) === 0;
+          const codeMatch = rawA === productCode || rawB === productCode || rawC === productCode || rawC.indexOf(productCode) === 0 || rawB.indexOf(productCode) === 0;
           if (codeMatch) {
             const stockQty = Math.max(0, parseInt(row[6] || 0, 10) || 0);
             if (stockQty > 0) {
-              const bNo = (row[1] || "").toString().trim().replace(/\(.*?\)/g, "").trim() || masterRecord.batchNumber;
+              const bNo = (row[3] || row[1] || "").toString().trim().replace(/\(.*?\)/g, "").trim() || masterRecord.batchNumber;
               warehouseBreakdown.push({
                 warehouseName: wh.warehouseName,
                 batchNumber: bNo,
