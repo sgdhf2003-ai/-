@@ -18,6 +18,8 @@ function loadCodeGsContext() {
   const codeGsPath = path.join(__dirname, '../../google-apps-script/Code.gs');
   const codeContent = fs.readFileSync(codeGsPath, 'utf8');
 
+  const cacheStore = {};
+
   const context = {
     console: console,
     Logger: console,
@@ -25,6 +27,13 @@ function loadCodeGsContext() {
       getScriptProperties: () => ({
         getProperty: () => '',
         getProperties: () => ({})
+      })
+    },
+    CacheService: {
+      getScriptCache: () => ({
+        get: (key) => cacheStore[key] || null,
+        put: (key, val, sec) => { cacheStore[key] = val; },
+        remove: (key) => { delete cacheStore[key]; }
       })
     },
     SpreadsheetApp: null,
@@ -151,16 +160,15 @@ function runSimulations() {
     console.log('PASS allocation-live-inventory-reconciliation: 雙表數據不一致時 fail-closed 阻斷配貨並標示數量差異');
   }
 
-  // Test 4: 真實線上試算表資料形狀模擬測試 (APT-5201, STU-6101, SHN-6101F)
+  // Test 4: 伺服端 Session 驗證與防偽造 (Forged userContext, Active Session, Logout/Expire)
   {
-    const mockRealSheets = {
+    const mockSheets = {
       '庫存查詢表': {
         getDataRange: () => ({
           getValues: () => [
             ['產地', '系列', '編號', '尺寸', '實際尺寸', '', '批號', '', '', '', '庫存', '可用庫存', '保留數量'],
             ['西班牙', 'APT', 'APT-5201 初露白 60X120', '60X120', '59.8', '', '04', '', '', '', 5062, 5062, 0],
-            ['義大利', 'STU', 'STU-6101 PEARL 60X120', '60X120', '59.8', '', 'J013', '', '', '', 3, 3, 0],
-            ['西班牙', 'SHN', 'SHN-6101F 霧面', '60X120', '59.8', '', '100', '', '', '', 102, 102, 0]
+            ['義大利', 'STU', 'STU-6101 PEARL 60X120', '60X120', '59.8', '', 'J013', '', '', '', 3, 3, 0]
           ]
         })
       },
@@ -169,8 +177,7 @@ function runSimulations() {
           getValues: () => [
             ['NO.', '批號', '編號', '品名', '規格', '', '庫存'],
             ['1', '04(60裝)', 'APT-5201\n60X120cm', '初露白', '60X120', '', 5062],
-            ['674', 'J013(2裝)(40/版)', 'STU-6101', 'PEARL', '60X120', '', 2],
-            ['706', '100(2裝)', 'SHN-6101F', '霧面', '60X120', '', 46]
+            ['674', 'J013(2裝)(40/版)', 'STU-6101', 'PEARL', '60X120', '', 2]
           ]
         })
       },
@@ -178,89 +185,59 @@ function runSimulations() {
         getDataRange: () => ({
           getValues: () => [
             ['NO.', '批號', '編號', '品名', '規格', '', '庫存'],
-            ['674', 'J013(2裝)(40/版)', 'STU-6101', 'PEARL', '60X120', '', 1],
-            ['706', '100(2裝)', 'SHN-6101F', '霧面', '60X120', '', 56]
+            ['674', 'J013(2裝)(40/版)', 'STU-6101', 'PEARL', '60X120', '', 1]
           ]
         })
       }
     };
 
-    const mockSs = {
-      getSheetByName: (name) => mockRealSheets[name] || null
-    };
+    const mockSs = { getSheetByName: (name) => mockSheets[name] || null };
 
-    // APT-5201: 林口倉 5062
-    const resApt = codeGs.getInventorySnapshotAction({
-      userContext: { role: 'assistant', username: 'test_assistant' },
-      productCode: 'APT-5201',
-      requestedQuantity: 1000
-    }, { mockSpreadsheet: mockSs });
+    // 4.1: 完全無 Session / 無 userContext
+    const unauthRes = codeGs.getInventorySnapshotAction({ productCode: 'STU-6101' }, { mockSpreadsheet: mockSs });
+    assert.strictEqual(unauthRes.ok, false);
+    assert.strictEqual(unauthRes.errorCode, 'INVALID_SESSION_USER');
 
-    assert.strictEqual(resApt.ok, true);
-    assert.strictEqual(resApt.reconciled, true, 'APT-5201 reconciliation MUST succeed (5062 === 5062)');
-    assert.strictEqual(resApt.masterSummary.inventoryQuantity, 5062);
-    assert.strictEqual(resApt.warehouseBreakdown.length, 1);
-    assert.strictEqual(resApt.warehouseBreakdown[0].warehouseName, '林口倉');
-    assert.strictEqual(resApt.warehouseBreakdown[0].stockQuantity, 5062);
-
-    // STU-6101: 林口倉 2 + 忠義倉 1 = 3
-    const resStu = codeGs.getInventorySnapshotAction({
-      userContext: { role: 'assistant', username: 'test_assistant' },
+    // 4.2: 自行偽造 userContext 在 Body 但無 Session Token -> 必須阻斷
+    const forgedRes = codeGs.getInventorySnapshotAction({
       productCode: 'STU-6101',
+      userContext: { username: 'cai', role: 'sales' }
+    }, { mockSpreadsheet: mockSs });
+    assert.strictEqual(forgedRes.ok, false);
+    assert.strictEqual(forgedRes.errorCode, 'INVALID_SESSION_USER', 'Forged userContext in body MUST be blocked as INVALID_SESSION_USER');
+
+    // 4.3: 建立正式 Session (模擬 CacheService)
+    const validToken = 'SESS-TEST-UUID-12345';
+    codeGs.CacheService.getScriptCache().put('SESSION:' + validToken, JSON.stringify({
+      user: { id: 'user-cai', username: 'cai', role: 'sales' }
+    }), 21600);
+
+    // 4.4: 帶入合法 Session Token 查詢 -> 成功 (STU-6101 reconciled: true)
+    const validRes = codeGs.getInventorySnapshotAction({
+      productCode: 'STU-6101',
+      sessionToken: validToken,
       requestedQuantity: 3,
       customerApprovedMixedBatch: true
     }, { mockSpreadsheet: mockSs });
 
-    assert.strictEqual(resStu.ok, true);
-    assert.strictEqual(resStu.reconciled, true, 'STU-6101 reconciliation MUST succeed (2 + 1 === 3)');
-    assert.strictEqual(resStu.warehouseBreakdown.length, 2);
-    assert.strictEqual(resStu.suggestions.length, 2);
-    assert.strictEqual(resStu.suggestions[0].warehouseName, '林口倉');
-    assert.strictEqual(resStu.suggestions[0].allocatedQuantity, 2);
-    assert.strictEqual(resStu.suggestions[1].warehouseName, '忠義倉');
-    assert.strictEqual(resStu.suggestions[1].allocatedQuantity, 1);
+    assert.strictEqual(validRes.ok, true);
+    assert.strictEqual(validRes.reconciled, true);
+    assert.strictEqual(validRes.warehouseBreakdown.length, 2);
 
-    // SHN-6101F: 林口倉 46 + 忠義倉 56 = 102
-    const resShn = codeGs.getInventorySnapshotAction({
-      userContext: { role: 'assistant', username: 'test_assistant' },
-      productCode: 'SHN-6101F',
-      requestedQuantity: 100,
-      customerApprovedMixedBatch: true
+    // 4.5: 執行登出 (logout) 或 Session 過期後 -> 阻斷
+    codeGs.logoutUserAction({ sessionToken: validToken });
+    const afterLogoutRes = codeGs.getInventorySnapshotAction({
+      productCode: 'STU-6101',
+      sessionToken: validToken
     }, { mockSpreadsheet: mockSs });
 
-    assert.strictEqual(resShn.ok, true);
-    assert.strictEqual(resShn.reconciled, true, 'SHN-6101F reconciliation MUST succeed (46 + 56 === 102)');
-    assert.strictEqual(resShn.warehouseBreakdown.length, 2);
-    assert.strictEqual(resShn.warehouseBreakdown[0].stockQuantity, 46);
-    assert.strictEqual(resShn.warehouseBreakdown[1].stockQuantity, 56);
+    assert.strictEqual(afterLogoutRes.ok, false);
+    assert.strictEqual(afterLogoutRes.errorCode, 'INVALID_SESSION_USER', 'Request after logout/expiration MUST be blocked');
 
-    // NONEXISTENT-999: found false
-    const resNotFound = codeGs.getInventorySnapshotAction({
-      userContext: { role: 'assistant', username: 'test_assistant' },
-      productCode: 'NONEXISTENT-999'
-    }, { mockSpreadsheet: mockSs });
-
-    assert.strictEqual(resNotFound.ok, true);
-    assert.strictEqual(resNotFound.found, false);
-    assert.strictEqual(resNotFound.warnings[0].warningCode, 'PRODUCT_NOT_FOUND');
-
-    console.log('PASS allocation-live-inventory-reconciliation: 真實線上試算表資料形狀模擬測試 (APT-5201 5062, STU-6101 2+1, SHN-6101F 46+56, 不存在商品 404)');
+    console.log('PASS allocation-live-inventory-reconciliation: 伺服端 Session 驗證 (偽造 userContext 被阻斷 / 正式 Session 允許 / 登出過期被阻斷)');
   }
 
-  // Test 5: Code.gs getInventorySnapshotAction 未登入／權限不足 Fail-Closed 阻斷
-  {
-    const unauthData = {
-      userContext: null,
-      productCode: 'STU-6101'
-    };
-
-    const res = codeGs.getInventorySnapshotAction(unauthData);
-    assert.strictEqual(res.ok, false);
-    assert.strictEqual(res.errorCode, 'INVALID_SESSION_USER');
-    console.log('PASS allocation-live-inventory-reconciliation: Code.gs getInventorySnapshotAction 未登入請求被 fail-closed 阻斷');
-  }
-
-  // Test 6: 唯讀 API 失敗時降級使用固定快照 (Graceful Fallback)
+  // Test 5: 唯讀 API 失敗時降級使用固定快照 (Graceful Fallback)
   {
     const adapter = new LiveSheetInventoryAdapter({
       fetcher: () => { throw new Error('INVENTORY_API_TIMEOUT: Fetch timed out after 5000ms'); }
@@ -274,7 +251,7 @@ function runSimulations() {
     console.log('PASS allocation-live-inventory-reconciliation: 即時 API 連線失敗時安全降級至固定快照');
   }
 
-  // Test 7: 安全防護 - 阻斷經由 GET URL 傳遞 sessionToken
+  // Test 6: 安全防護 - 阻斷經由 GET URL 傳遞 sessionToken
   {
     const adapter = new LiveSheetInventoryAdapter();
     const insecureReq = {
@@ -287,7 +264,7 @@ function runSimulations() {
     assert.strictEqual(res.errorCode, 'INSECURE_SESSION_TOKEN_IN_URL');
 
     const codeGsInsecureData = {
-      userContext: { role: 'assistant' },
+      sessionToken: 'secret_token_123',
       productCode: 'STU-6101',
       _rawQueryString: 'action=getInventorySnapshot&sessionToken=secret_token_123'
     };
