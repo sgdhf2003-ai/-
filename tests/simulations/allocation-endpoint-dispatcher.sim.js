@@ -175,17 +175,17 @@ runSuite("allocation-endpoint-dispatcher", [
 
       const res = dispatcher.cancelReleaseHoldAction(
         {
-          userContext: { username: "admin01", role: "admin", lineUserId: validLineId },
+          userContext: { username: "admin01", role: "admin" },
           cancelPayload: {
             reservationNumber: "RES-20260820-SUCCESS",
             customerName: "美麗空間",
             item: "STU-6101",
-            quantity: 1,
-            lineUserId: validLineId
+            quantity: 1
           }
         },
         {
           notificationBypassed: false,
+          recipientLineUserId: validLineId,
           pilotWhitelist: [validLineId]
         }
       );
@@ -204,17 +204,17 @@ runSuite("allocation-endpoint-dispatcher", [
 
       const res = dispatcher.cancelReleaseHoldAction(
         {
-          userContext: { username: "admin01", role: "admin", lineUserId: unwhitelistedLineId },
+          userContext: { username: "admin01", role: "admin" },
           cancelPayload: {
             reservationNumber: "RES-20260820-UNBOUND",
             customerName: "美麗空間",
             item: "STU-6101",
-            quantity: 1,
-            lineUserId: unwhitelistedLineId
+            quantity: 1
           }
         },
         {
           notificationBypassed: false,
+          recipientLineUserId: unwhitelistedLineId,
           pilotWhitelist: ["U1111111111abcdef1111111111abcdef"]
         }
       );
@@ -233,17 +233,17 @@ runSuite("allocation-endpoint-dispatcher", [
 
       const res = dispatcher.cancelReleaseHoldAction(
         {
-          userContext: { username: "admin01", role: "admin", lineUserId: validLineId },
+          userContext: { username: "admin01", role: "admin" },
           cancelPayload: {
             reservationNumber: "RES-20260820-ERROR",
             customerName: "美麗空間",
             item: "STU-6101",
-            quantity: 1,
-            lineUserId: validLineId
+            quantity: 1
           }
         },
         {
           notificationBypassed: false,
+          recipientLineUserId: validLineId,
           pilotWhitelist: [validLineId],
           simulatedApiError: true
         }
@@ -253,6 +253,110 @@ runSuite("allocation-endpoint-dispatcher", [
       assert(res.status === "CANCELLED", "status MUST be CANCELLED");
       assert(res.notificationBypassed === true, "notificationBypassed MUST be true on notification error");
       assert(res.notificationSent === false, "notificationSent MUST be false on notification error");
+    }
+  },
+  {
+    name: "security: client POST body forgery of notificationBypassed:false is rejected and remains bypassed",
+    run() {
+      const dispatcher = new AllocationEndpointDispatcher();
+
+      const res = dispatcher.cancelReleaseHoldAction(
+        {
+          userContext: { username: "admin01", role: "admin" },
+          notificationBypassed: false, // Forged in body
+          cancelPayload: {
+            reservationNumber: "RES-20260820-FORGE1",
+            notificationBypassed: false // Forged in payload
+          }
+        },
+        {
+          // Server options do not grant unbypass
+        }
+      );
+
+      assert(res.ok === true, "cancellation MUST succeed");
+      assert(res.status === "CANCELLED", "status MUST be CANCELLED");
+      assert(res.notificationBypassed === true, "forged notificationBypassed MUST remain true");
+      assert(res.notificationSent === false, "notificationSent MUST remain false");
+    }
+  },
+  {
+    name: "security: client POST body forgery of recipientLineUserId is ignored and does not grant notification access",
+    run() {
+      const dispatcher = new AllocationEndpointDispatcher();
+
+      const res = dispatcher.cancelReleaseHoldAction(
+        {
+          userContext: { username: "admin01", role: "admin" },
+          recipientLineUserId: "U1234567890abcdef1234567890abcdef", // Forged in body
+          cancelPayload: {
+            reservationNumber: "RES-20260820-FORGE2",
+            lineUserId: "U1234567890abcdef1234567890abcdef" // Forged in payload
+          }
+        },
+        {
+          pilotWhitelist: ["U1234567890abcdef1234567890abcdef"]
+        }
+      );
+
+      assert(res.ok === true, "cancellation MUST succeed");
+      assert(res.status === "CANCELLED", "status MUST be CANCELLED");
+      assert(res.notificationBypassed === true, "forged recipientLineUserId MUST be ignored and notification bypassed");
+      assert(res.notificationSent === false, "forged recipientLineUserId MUST NOT trigger notificationSent");
+    }
+  },
+  {
+    name: "security: client POST body forgery of pilotWhitelist is ignored and fails closed",
+    run() {
+      const dispatcher = new AllocationEndpointDispatcher();
+      const clientLineId = "U9999999999abcdef9999999999abcdef";
+
+      const res = dispatcher.cancelReleaseHoldAction(
+        {
+          userContext: { username: "admin01", role: "admin", lineUserId: clientLineId },
+          pilotWhitelist: [clientLineId], // Forged in body
+          cancelPayload: {
+            reservationNumber: "RES-20260820-FORGE3",
+            pilotWhitelist: [clientLineId] // Forged in payload
+          }
+        },
+        {
+          serverPilotWhitelist: ["U1111111111abcdef1111111111abcdef"] // Actual server whitelist
+        }
+      );
+
+      assert(res.ok === true, "cancellation MUST succeed");
+      assert(res.status === "CANCELLED", "status MUST be CANCELLED");
+      assert(res.notificationBypassed === true, "forged pilotWhitelist MUST be ignored and notification bypassed");
+      assert(res.notificationSent === false, "notificationSent MUST be false");
+    }
+  },
+  {
+    name: "security: client POST body forgery of userContext.lineUserId and userOptInStatus is blocked",
+    run() {
+      const dispatcher = new AllocationEndpointDispatcher();
+
+      const res = dispatcher.cancelReleaseHoldAction(
+        {
+          userContext: {
+            username: "admin01",
+            role: "admin",
+            lineUserId: "U1234567890abcdef1234567890abcdef", // Forged in userContext body
+            userOptInStatus: "OPTED_IN"
+          },
+          cancelPayload: {
+            reservationNumber: "RES-20260820-FORGE4"
+          }
+        },
+        {
+          serverPilotWhitelist: ["U1234567890abcdef1234567890abcdef"]
+        }
+      );
+
+      assert(res.ok === true, "cancellation MUST succeed");
+      assert(res.status === "CANCELLED", "status MUST be CANCELLED");
+      assert(res.notificationBypassed === true, "unverified userContext lineUserId MUST NOT trigger live push");
+      assert(res.notificationSent === false, "notificationSent MUST be false");
     }
   },
   {

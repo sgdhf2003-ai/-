@@ -210,11 +210,15 @@ class AllocationEndpointDispatcher {
       `釋放數量：${quantity}\n` +
       `狀態：CANCELLED`;
 
-    const notificationBypassedReq = options.notificationBypassed !== undefined ? options.notificationBypassed : (cancelPayload.notificationBypassed !== undefined ? cancelPayload.notificationBypassed : true);
-    const recipientLineUserId = cancelPayload.recipientLineUserId || cancelPayload.lineUserId || (userContext && userContext.lineUserId) || null;
-    const userOptInStatus = cancelPayload.userOptInStatus || (userContext && userContext.userOptInStatus) || 'OPTED_IN';
-    const pilotWhitelist = options.pilotWhitelist || cancelPayload.pilotWhitelist || [];
-    const simulatedApiError = Boolean(options.simulatedApiError || cancelPayload.simulatedApiError);
+    // Security Guard: Ignore client POST body parameters for notification policy.
+    // Read ONLY from verified server options, sessionUser, or persisted hold record.
+    const notificationBypassedReq = options.notificationBypassed !== undefined ? options.notificationBypassed : true;
+    const sessionUser = options.sessionUser || null;
+    const existingHold = options.existingHold || null;
+    const recipientLineUserId = options.recipientLineUserId || (sessionUser && sessionUser.lineUserId) || (existingHold && existingHold.lineUserId) || null;
+    const userOptInStatus = options.userOptInStatus || (sessionUser && (sessionUser.userOptInStatus || sessionUser.optInStatus)) || (recipientLineUserId ? 'OPTED_IN' : 'OPTED_OUT');
+    const pilotWhitelist = options.serverPilotWhitelist || options.pilotWhitelist || [];
+    const simulatedApiError = Boolean(options.simulatedApiError);
 
     let policyFn = null;
     try {
@@ -253,7 +257,7 @@ class AllocationEndpointDispatcher {
       ledgerRow,
       notificationBypassed,
       notificationSent,
-      lineUserId: recipientLineUserId || null,
+      lineUserId: notificationSent ? recipientLineUserId : null,
       notificationMessage,
       notificationDetails: {
         reservationNumber,
