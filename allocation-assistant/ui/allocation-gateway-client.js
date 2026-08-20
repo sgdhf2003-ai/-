@@ -117,6 +117,75 @@ class AllocationGatewayClient {
     return sanitizeReadbackAuditRecord(record, role);
   }
 
+  async fetchLiveInventorySnapshot({ productCode, requestedQuantity, customerApprovedMixedBatch, sessionToken, fetcher }) {
+    if (!productCode || !String(productCode).trim()) {
+      return { ok: false, errorCode: 'INVALID_PRODUCT_CODE', message: '商品編號不可為空' };
+    }
+    if (!sessionToken || !String(sessionToken).trim()) {
+      return { ok: false, errorCode: 'INVALID_SESSION_USER', message: '登入狀態失效或缺少使用者權限脈絡' };
+    }
+
+    const targetUrl = 'https://script.google.com/macros/s/AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw/exec';
+    const payload = {
+      action: 'getInventorySnapshot',
+      productCode: String(productCode).trim(),
+      requestedQuantity: parseInt(requestedQuantity || 0, 10),
+      customerApprovedMixedBatch: Boolean(customerApprovedMixedBatch),
+      sessionToken: String(sessionToken).trim()
+    };
+
+    const httpFetch = fetcher || (typeof fetch === 'function' ? fetch : null);
+    if (!httpFetch) {
+      return { ok: false, errorCode: 'FETCH_UNAVAILABLE', message: '目前環境不支援 HTTP fetch 呼叫' };
+    }
+
+    try {
+      const response = await httpFetch(targetUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response || typeof response.json !== 'function') {
+        return { ok: false, errorCode: 'HTTP_RESPONSE_INVALID', message: '伺服器回應格式無效' };
+      }
+
+      const resData = await response.json();
+      if (!resData || typeof resData !== 'object') {
+        return { ok: false, errorCode: 'INVALID_JSON_RESPONSE', message: '伺服器傳回非 JSON 資料' };
+      }
+
+      if (!resData.ok) {
+        return {
+          ok: false,
+          errorCode: resData.errorCode || 'API_RESPONSE_FAILED',
+          message: resData.message || '庫存 API 回傳失敗',
+          warnings: resData.warnings || []
+        };
+      }
+
+      return {
+        ok: true,
+        found: resData.found !== undefined ? Boolean(resData.found) : true,
+        readOnly: true,
+        reconciled: Boolean(resData.reconciled),
+        status: resData.status || (resData.reconciled ? 'ALLOCATION_CONFIRMED' : 'ALLOCATION_REVIEW'),
+        productCode: resData.productCode || productCode,
+        productName: resData.productName || '',
+        masterSummary: resData.masterSummary || null,
+        warehouseBreakdown: resData.warehouseBreakdown || [],
+        suggestions: resData.suggestions || [],
+        warnings: resData.warnings || []
+      };
+    } catch (err) {
+      return {
+        ok: false,
+        errorCode: 'NETWORK_TIMEOUT_OR_ERROR',
+        message: err.message || '網路連線失敗或請求逾時'
+      };
+    }
+  }
+
   submitRawText(rawText) {
     try {
       this.uiState.lastError = null;

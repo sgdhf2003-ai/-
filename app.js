@@ -392,6 +392,10 @@ document.querySelector("#loginForm")?.addEventListener("submit", async (event) =
     }
 
     state.currentUser = result.user;
+    if (result.sessionToken) {
+      state.currentUser.sessionToken = result.sessionToken;
+      localStorage.setItem("jy_session_token", result.sessionToken);
+    }
     state.currentPermissions = result.permissions;
     
     // Clear lineUserId from localStorage on successful login
@@ -436,6 +440,8 @@ document.querySelector("#logoutButton")?.addEventListener("click", () => {
   state.currentUser = null;
   state.currentPermissions = null;
   state.activeSalesOwner = "all";
+  localStorage.removeItem("jy_session_token");
+  localStorage.removeItem("sessionToken");
   stopAutoSync();
   saveState();
   if (window.OneSignal) {
@@ -6499,12 +6505,105 @@ function renderAllocationSandbox() {
     });
   }
 
-  function runSandboxEvaluation(text, options = {}) {
+  async function runSandboxEvaluation(text, options = {}) {
     if (!resultMount) return;
-    const res = evaluateAllocationSandbox(text, options);
-    if (!res.ok) {
-      resultMount.innerHTML = `<div style="padding: 12px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 8px; color: #fca5a5;">${res.message}</div>`;
-      return;
+
+    let sessionToken = options.sessionToken || null;
+    if (!sessionToken && typeof localStorage !== "undefined") {
+      sessionToken = localStorage.getItem("jy_session_token") || localStorage.getItem("sessionToken");
+    }
+    if (!sessionToken && typeof state !== "undefined" && state && state.currentUser) {
+      sessionToken = state.currentUser.sessionToken || null;
+    }
+
+    let res = null;
+    let dataSourceLabel = sessionToken ? "「正式庫存唯讀 API」" : "「固定資料快照（未登入）」";
+    let isLiveApiUsed = false;
+
+    // Extract productCode and requestedQty for API call
+    const inputMatch = String(text || "").trim().match(/^(?:([^\s]+)\s+)?([A-Za-z0-9-]+)\s*(?:\*|\?{2}|x|X)\s*(\d+)/);
+    const parsedCustomerName = inputMatch && inputMatch[1] ? inputMatch[1].trim() : "客戶";
+    const parsedProductCode = inputMatch ? inputMatch[2].trim() : String(text || "").trim();
+    const parsedRequestedQty = inputMatch ? (parseInt(inputMatch[3], 10) || 1) : 1;
+    const hasLowConfidence = String(text || "").includes("??");
+
+    if (sessionToken && parsedProductCode && !hasLowConfidence && typeof AllocationGatewayClient !== "undefined") {
+      try {
+        const client = new AllocationGatewayClient({ gateway: {}, uiState: {} });
+        const liveRes = await client.fetchLiveInventorySnapshot({
+          productCode: parsedProductCode,
+          requestedQuantity: parsedRequestedQty,
+          customerApprovedMixedBatch: Boolean(options.customerApprovedMixedBatch),
+          sessionToken: sessionToken
+        });
+
+        if (liveRes.ok) {
+          isLiveApiUsed = true;
+          dataSourceLabel = "「正式庫存唯讀 API」";
+
+          if (liveRes.reconciled) {
+            res = {
+              ok: true,
+              status: liveRes.status || "ALLOCATION_CONFIRMED",
+              customerName: parsedCustomerName,
+              productCode: liveRes.productCode || parsedProductCode,
+              productName: liveRes.productName || parsedProductCode,
+              requestedQty: parsedRequestedQty,
+              rawOrderText: text,
+              suggestions: (liveRes.suggestions || []).map((s) => ({ ...s, customerName: parsedCustomerName })),
+              warnings: liveRes.warnings || [],
+              rationale: `[正式庫存唯讀 API] 雙表對帳一致 (庫存: ${liveRes.masterSummary ? liveRes.masterSummary.inventoryQuantity : "-"}), 已為 [${parsedCustomerName}] 產生即時配貨試算明細。`
+            };
+          } else {
+            res = {
+              ok: true,
+              status: liveRes.status || "ALLOCATION_REVIEW",
+              customerName: parsedCustomerName,
+              productCode: liveRes.productCode || parsedProductCode,
+              productName: liveRes.productName || parsedProductCode,
+              requestedQty: parsedRequestedQty,
+              rawOrderText: text,
+              suggestions: [],
+              warnings: liveRes.warnings || [],
+              rationale: `[正式庫存唯讀 API] 數據不一致或需檢視，依 fail-closed 安全規範作廢明細 (suggestions: [])。`
+            };
+          }
+        } else if (liveRes.errorCode === "INVALID_SESSION_USER") {
+          res = {
+            ok: true,
+            status: "ALLOCATION_REVIEW",
+            customerName: parsedCustomerName,
+            productCode: parsedProductCode,
+            productName: parsedProductCode,
+            requestedQty: parsedRequestedQty,
+            rawOrderText: text,
+            suggestions: [],
+            warnings: [{ warningCode: "INVALID_SESSION_USER", severity: "CRITICAL", message: "登入狀態已失效，請重新登入以查詢正式即時庫存。" }],
+            rationale: "登入狀態已失效，阻斷即時庫存查詢。"
+          };
+          dataSourceLabel = "「正式庫存唯讀 API（登入已失效）」";
+        } else {
+          dataSourceLabel = "「固定資料快照（API 失敗降級）」";
+        }
+      } catch (err) {
+        dataSourceLabel = "「固定資料快照（API 失敗降級）」";
+      }
+    }
+
+    if (!res) {
+      res = evaluateAllocationSandbox(text, options);
+      if (!res.ok) {
+        resultMount.innerHTML = `<div style="padding: 12px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 8px; color: #fca5a5;">${res.message}</div>`;
+        return;
+      }
+      if (dataSourceLabel.includes("API 失敗降級")) {
+        res.warnings = res.warnings || [];
+        res.warnings.unshift({
+          warningCode: "LIVE_API_FALLBACK",
+          severity: "WARNING",
+          message: "⚠️ 即時 API 連線失敗，已安全降級至固定資料快照。"
+        });
+      }
     }
 
     let statusBadge = `<span style="display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4);">${res.status}</span>`;
@@ -6562,7 +6661,7 @@ function renderAllocationSandbox() {
         <div style="margin-top: 10px; margin-bottom: 10px;">${suggestionsHtml}</div>
         <p style="margin: 8px 0 0 0; font-size: 12px; color: #9ca3af;">💡 說明: ${res.rationale}</p>
         <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; font-size: 11px; color: #6b7280;">
-          <span>資料來源：115年庫存試算表快照</span>
+          <span>資料來源：${dataSourceLabel}</span>
           <span>[唯讀沙盒模式] 0 Google Sheet 寫入 / 0 LINE 通知</span>
         </div>
       </div>

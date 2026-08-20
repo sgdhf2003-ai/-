@@ -140,6 +140,171 @@ runTest('cancelReleaseHold generates CANCEL_RELEASE ledger row with zero remaini
   assert.strictEqual(res.ledgerRow[5], 'CANCELLED');
 });
 
+// 9. fetchLiveInventorySnapshot: Valid sessionToken STU-6101
+runTest('fetchLiveInventorySnapshot parses STU-6101 live response with POST body sessionToken', async () => {
+  const { client } = createSetup();
+  let capturedUrl = '';
+  let capturedOptions = {};
+
+  const mockFetcher = async (url, opts) => {
+    capturedUrl = url;
+    capturedOptions = opts;
+    return {
+      json: async () => ({
+        ok: true,
+        readOnly: true,
+        reconciled: true,
+        status: 'ALLOCATION_CONFIRMED',
+        productCode: 'STU-6101',
+        productName: '白',
+        masterSummary: { productCode: 'STU-6101', inventoryQuantity: 3 },
+        warehouseBreakdown: [
+          { warehouseName: '林口倉', stockQuantity: 2 },
+          { warehouseName: '忠義倉', stockQuantity: 1 }
+        ],
+        suggestions: [
+          { warehouseName: '林口倉', allocatedQuantity: 2 },
+          { warehouseName: '忠義倉', allocatedQuantity: 1 }
+        ],
+        warnings: []
+      })
+    };
+  };
+
+  const res = await client.fetchLiveInventorySnapshot({
+    productCode: 'STU-6101',
+    requestedQuantity: 3,
+    customerApprovedMixedBatch: true,
+    sessionToken: 'SESS-TEST-VALID-TOKEN',
+    fetcher: mockFetcher
+  });
+
+  assert.strictEqual(res.ok, true);
+  assert.strictEqual(res.readOnly, true);
+  assert.strictEqual(res.reconciled, true);
+  assert.strictEqual(res.suggestions.length, 2);
+  assert.strictEqual(capturedOptions.method, 'POST');
+
+  const payload = JSON.parse(capturedOptions.body);
+  assert.strictEqual(payload.sessionToken, 'SESS-TEST-VALID-TOKEN');
+  assert.strictEqual(payload.userContext, undefined, 'userContext MUST NOT be sent or trusted');
+  assert.strictEqual(capturedUrl.includes('sessionToken='), false, 'sessionToken MUST NOT be in URL query string');
+});
+
+// 10. fetchLiveInventorySnapshot: Valid sessionToken APT-5201
+runTest('fetchLiveInventorySnapshot parses APT-5201 live response', async () => {
+  const { client } = createSetup();
+
+  const mockFetcher = async () => ({
+    json: async () => ({
+      ok: true,
+      readOnly: true,
+      reconciled: true,
+      status: 'ALLOCATION_CONFIRMED',
+      productCode: 'APT-5201',
+      productName: '初露白',
+      masterSummary: { productCode: 'APT-5201', inventoryQuantity: 5062 },
+      warehouseBreakdown: [{ warehouseName: '林口倉', stockQuantity: 5062 }],
+      suggestions: [{ warehouseName: '林口倉', allocatedQuantity: 10 }],
+      warnings: []
+    })
+  });
+
+  const res = await client.fetchLiveInventorySnapshot({
+    productCode: 'APT-5201',
+    requestedQuantity: 10,
+    sessionToken: 'SESS-TEST-VALID-TOKEN',
+    fetcher: mockFetcher
+  });
+
+  assert.strictEqual(res.ok, true);
+  assert.strictEqual(res.reconciled, true);
+  assert.strictEqual(res.suggestions[0].allocatedQuantity, 10);
+});
+
+// 11. fetchLiveInventorySnapshot: PRODUCT_NOT_FOUND
+runTest('fetchLiveInventorySnapshot handles PRODUCT_NOT_FOUND warning', async () => {
+  const { client } = createSetup();
+
+  const mockFetcher = async () => ({
+    json: async () => ({
+      ok: true,
+      found: false,
+      readOnly: true,
+      productCode: 'NONEXISTENT-ITEM-999',
+      masterSummary: null,
+      warehouseBreakdown: [],
+      suggestions: [],
+      warnings: [{ warningCode: 'PRODUCT_NOT_FOUND', severity: 'WARNING', message: '查無商品' }]
+    })
+  });
+
+  const res = await client.fetchLiveInventorySnapshot({
+    productCode: 'NONEXISTENT-ITEM-999',
+    sessionToken: 'SESS-TEST-VALID-TOKEN',
+    fetcher: mockFetcher
+  });
+
+  assert.strictEqual(res.ok, true);
+  assert.strictEqual(res.found, false);
+  assert.strictEqual(res.suggestions.length, 0);
+  assert.strictEqual(res.warnings[0].warningCode, 'PRODUCT_NOT_FOUND');
+});
+
+// 12. fetchLiveInventorySnapshot: RECONCILIATION_DRIFT_DETECTED
+runTest('fetchLiveInventorySnapshot handles RECONCILIATION_DRIFT_DETECTED and blocks suggestions', async () => {
+  const { client } = createSetup();
+
+  const mockFetcher = async () => ({
+    json: async () => ({
+      ok: false,
+      errorCode: 'RECONCILIATION_DRIFT_DETECTED',
+      message: '雙表對帳數據不一致',
+      warnings: [{ warningCode: 'RECONCILIATION_DRIFT_DETECTED', severity: 'CRITICAL', message: '庫存對帳不一致' }]
+    })
+  });
+
+  const res = await client.fetchLiveInventorySnapshot({
+    productCode: 'STU-6101',
+    sessionToken: 'SESS-TEST-VALID-TOKEN',
+    fetcher: mockFetcher
+  });
+
+  assert.strictEqual(res.ok, false);
+  assert.strictEqual(res.errorCode, 'RECONCILIATION_DRIFT_DETECTED');
+});
+
+// 13. fetchLiveInventorySnapshot: Timeout / Network Error
+runTest('fetchLiveInventorySnapshot returns NETWORK_TIMEOUT_OR_ERROR on network failure', async () => {
+  const { client } = createSetup();
+
+  const mockFetcher = async () => {
+    throw new Error('Network Timeout');
+  };
+
+  const res = await client.fetchLiveInventorySnapshot({
+    productCode: 'STU-6101',
+    sessionToken: 'SESS-TEST-VALID-TOKEN',
+    fetcher: mockFetcher
+  });
+
+  assert.strictEqual(res.ok, false);
+  assert.strictEqual(res.errorCode, 'NETWORK_TIMEOUT_OR_ERROR');
+});
+
+// 14. fetchLiveInventorySnapshot: Missing sessionToken
+runTest('fetchLiveInventorySnapshot returns INVALID_SESSION_USER when sessionToken is missing', async () => {
+  const { client } = createSetup();
+
+  const res = await client.fetchLiveInventorySnapshot({
+    productCode: 'STU-6101',
+    sessionToken: ''
+  });
+
+  assert.strictEqual(res.ok, false);
+  assert.strictEqual(res.errorCode, 'INVALID_SESSION_USER');
+});
+
 // 8. Operation Handler: queryReadbackAudit Redaction Enforcer
 runTest('queryReadbackAudit applies sanitizeReadbackAuditRecord for role-based redaction', () => {
   const { client } = createSetup();
