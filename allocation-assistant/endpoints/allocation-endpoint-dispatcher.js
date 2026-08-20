@@ -210,6 +210,40 @@ class AllocationEndpointDispatcher {
       `釋放數量：${quantity}\n` +
       `狀態：CANCELLED`;
 
+    const notificationBypassedReq = options.notificationBypassed !== undefined ? options.notificationBypassed : (cancelPayload.notificationBypassed !== undefined ? cancelPayload.notificationBypassed : true);
+    const recipientLineUserId = cancelPayload.recipientLineUserId || cancelPayload.lineUserId || (userContext && userContext.lineUserId) || null;
+    const userOptInStatus = cancelPayload.userOptInStatus || (userContext && userContext.userOptInStatus) || 'OPTED_IN';
+    const pilotWhitelist = options.pilotWhitelist || cancelPayload.pilotWhitelist || [];
+    const simulatedApiError = Boolean(options.simulatedApiError || cancelPayload.simulatedApiError);
+
+    let policyFn = null;
+    try {
+      policyFn = require("../rules/allocation-rules.js").evaluateLineNotificationPolicy;
+    } catch (e) {
+      if (typeof global !== 'undefined' && typeof global.evaluateLineNotificationPolicy === 'function') {
+        policyFn = global.evaluateLineNotificationPolicy;
+      }
+    }
+
+    let policyResult = { success: true, bypassed: true, failureCode: 'NOTIFICATION_BYPASSED' };
+    if (typeof policyFn === 'function') {
+      policyResult = policyFn({
+        notificationBypassed: notificationBypassedReq,
+        operatorRole: userContext ? userContext.role : '',
+        recipientLineUserId,
+        userOptInStatus,
+        tokenConfigured: options.tokenConfigured !== undefined ? options.tokenConfigured : true,
+        adapterInjected: options.adapterInjected !== undefined ? options.adapterInjected : true,
+        simulatedApiError,
+        pilotWhitelist,
+        reservationNumber,
+        intent: 'CANCEL_RELEASE'
+      });
+    }
+
+    const notificationSent = policyResult.success === true && policyResult.delivered === true;
+    const notificationBypassed = !notificationSent;
+
     return {
       ok: true,
       reservationNumber,
@@ -217,7 +251,9 @@ class AllocationEndpointDispatcher {
       releasedQuantity: quantity,
       status: "CANCELLED",
       ledgerRow,
-      notificationBypassed: options.notificationBypassed !== undefined ? options.notificationBypassed : true,
+      notificationBypassed,
+      notificationSent,
+      lineUserId: recipientLineUserId || null,
       notificationMessage,
       notificationDetails: {
         reservationNumber,
@@ -226,6 +262,7 @@ class AllocationEndpointDispatcher {
         releasedQuantity: quantity,
         status: "CANCELLED"
       },
+      policyResult,
       message: "劃扣保留取消與庫存釋放成功"
     };
   }

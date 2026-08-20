@@ -709,6 +709,25 @@ function cancelReleaseHoldAction(data, adapter) {
     `釋放數量：${releasedQty}\n` +
     `狀態：CANCELLED`;
 
+  const notificationBypassedReq = data.notificationBypassed !== undefined ? data.notificationBypassed : (cancelPayload.notificationBypassed !== undefined ? cancelPayload.notificationBypassed : true);
+  const recipientLineUserId = data.recipientLineUserId || (cancelPayload && cancelPayload.lineUserId) || (userContext && userContext.lineUserId) || (existingHold ? existingHold.lineUserId : null) || null;
+  const userOptInStatus = data.userOptInStatus || (userContext && userContext.userOptInStatus) || "OPTED_IN";
+  const pilotWhitelist = data.pilotWhitelist || [];
+
+  let policyResult = evaluateLineNotificationPolicy_({
+    notificationBypassed: notificationBypassedReq,
+    operatorRole: role,
+    recipientLineUserId: recipientLineUserId,
+    userOptInStatus: userOptInStatus,
+    pilotWhitelist: pilotWhitelist
+  });
+
+  const notificationSent = policyResult.success === true && policyResult.delivered === true;
+  const notificationBypassed = !notificationSent;
+
+  result.notificationBypassed = notificationBypassed;
+  result.notificationSent = notificationSent;
+  result.lineUserId = recipientLineUserId;
   result.notificationMessage = notificationMessage;
   result.notificationDetails = {
     reservationNumber: resNo,
@@ -717,6 +736,7 @@ function cancelReleaseHoldAction(data, adapter) {
     releasedQuantity: releasedQty,
     status: "CANCELLED"
   };
+  result.policyResult = policyResult;
 
   return result;
 }

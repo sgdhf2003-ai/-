@@ -161,6 +161,98 @@ runSuite("allocation-endpoint-dispatcher", [
       assert(cancelRes.notificationDetails.item === "STU-6101", "item matches");
       assert(cancelRes.notificationDetails.releasedQuantity === 1, "releasedQuantity matches");
       assert(cancelRes.notificationDetails.status === "CANCELLED", "status matches");
+
+      assert(cancelRes.notificationBypassed === true, "notificationBypassed default is true");
+      assert(cancelRes.notificationSent === false, "notificationSent default is false when bypassed");
+      assert(cancelRes.lineUserId === null, "lineUserId default is null when unbound");
+    }
+  },
+  {
+    name: "cancelReleaseHoldAction handles successful notification push for bound and whitelisted user",
+    run() {
+      const dispatcher = new AllocationEndpointDispatcher();
+      const validLineId = "U1234567890abcdef1234567890abcdef";
+
+      const res = dispatcher.cancelReleaseHoldAction(
+        {
+          userContext: { username: "admin01", role: "admin", lineUserId: validLineId },
+          cancelPayload: {
+            reservationNumber: "RES-20260820-SUCCESS",
+            customerName: "美麗空間",
+            item: "STU-6101",
+            quantity: 1,
+            lineUserId: validLineId
+          }
+        },
+        {
+          notificationBypassed: false,
+          pilotWhitelist: [validLineId]
+        }
+      );
+
+      assert(res.ok === true, "cancellation MUST succeed");
+      assert(res.status === "CANCELLED", "status MUST be CANCELLED");
+      assert(res.notificationBypassed === false, "notificationBypassed MUST be false on successful push");
+      assert(res.notificationSent === true, "notificationSent MUST be true on successful push");
+    }
+  },
+  {
+    name: "cancelReleaseHoldAction falls back to bypassed state when user is unbound or not in whitelist but cancellation succeeds",
+    run() {
+      const dispatcher = new AllocationEndpointDispatcher();
+      const unwhitelistedLineId = "U9999999999abcdef9999999999abcdef";
+
+      const res = dispatcher.cancelReleaseHoldAction(
+        {
+          userContext: { username: "admin01", role: "admin", lineUserId: unwhitelistedLineId },
+          cancelPayload: {
+            reservationNumber: "RES-20260820-UNBOUND",
+            customerName: "美麗空間",
+            item: "STU-6101",
+            quantity: 1,
+            lineUserId: unwhitelistedLineId
+          }
+        },
+        {
+          notificationBypassed: false,
+          pilotWhitelist: ["U1111111111abcdef1111111111abcdef"]
+        }
+      );
+
+      assert(res.ok === true, "cancellation MUST succeed even if user is not in whitelist");
+      assert(res.status === "CANCELLED", "status MUST be CANCELLED");
+      assert(res.notificationBypassed === true, "notificationBypassed MUST fall back to true");
+      assert(res.notificationSent === false, "notificationSent MUST fall back to false");
+    }
+  },
+  {
+    name: "cancelReleaseHoldAction falls back gracefully on notification API error without corrupting cancellation state",
+    run() {
+      const dispatcher = new AllocationEndpointDispatcher();
+      const validLineId = "U1234567890abcdef1234567890abcdef";
+
+      const res = dispatcher.cancelReleaseHoldAction(
+        {
+          userContext: { username: "admin01", role: "admin", lineUserId: validLineId },
+          cancelPayload: {
+            reservationNumber: "RES-20260820-ERROR",
+            customerName: "美麗空間",
+            item: "STU-6101",
+            quantity: 1,
+            lineUserId: validLineId
+          }
+        },
+        {
+          notificationBypassed: false,
+          pilotWhitelist: [validLineId],
+          simulatedApiError: true
+        }
+      );
+
+      assert(res.ok === true, "cancellation MUST succeed even if notification API fails");
+      assert(res.status === "CANCELLED", "status MUST be CANCELLED");
+      assert(res.notificationBypassed === true, "notificationBypassed MUST be true on notification error");
+      assert(res.notificationSent === false, "notificationSent MUST be false on notification error");
     }
   },
   {
