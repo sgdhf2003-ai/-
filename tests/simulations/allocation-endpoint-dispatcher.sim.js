@@ -132,6 +132,38 @@ runSuite("allocation-endpoint-dispatcher", [
     }
   },
   {
+    name: "cancelReleaseHoldAction generates LINE notification payload with reservationNumber, customerName, item, releasedQuantity, and CANCELLED status without breaking cancellation on notification error",
+    run() {
+      const dispatcher = new AllocationEndpointDispatcher();
+
+      const cancelRes = dispatcher.cancelReleaseHoldAction({
+        userContext: { username: "admin01", role: "admin" },
+        cancelPayload: {
+          reservationNumber: "RES-20260820-STU6101",
+          customerName: "美麗空間",
+          item: "STU-6101",
+          quantity: 1
+        }
+      });
+
+      assert(cancelRes.ok === true, "cancellation MUST succeed even if notification is bypassed or fails");
+      assert(cancelRes.status === "CANCELLED", "status MUST be CANCELLED");
+      assert(Boolean(cancelRes.notificationMessage), "notificationMessage MUST be present");
+      assert(cancelRes.notificationMessage.includes("RES-20260820-STU6101"), "notificationMessage MUST include reservationNumber");
+      assert(cancelRes.notificationMessage.includes("美麗空間"), "notificationMessage MUST include customerName/storeName");
+      assert(cancelRes.notificationMessage.includes("STU-6101"), "notificationMessage MUST include item/productCode");
+      assert(cancelRes.notificationMessage.includes("1"), "notificationMessage MUST include releasedQuantity");
+      assert(cancelRes.notificationMessage.includes("CANCELLED"), "notificationMessage MUST include CANCELLED status");
+
+      assert(Boolean(cancelRes.notificationDetails), "notificationDetails MUST be present");
+      assert(cancelRes.notificationDetails.reservationNumber === "RES-20260820-STU6101", "reservationNumber matches");
+      assert(cancelRes.notificationDetails.customerName === "美麗空間", "customerName matches");
+      assert(cancelRes.notificationDetails.item === "STU-6101", "item matches");
+      assert(cancelRes.notificationDetails.releasedQuantity === 1, "releasedQuantity matches");
+      assert(cancelRes.notificationDetails.status === "CANCELLED", "status matches");
+    }
+  },
+  {
     name: "readbackAuditAction requires authenticated session and returns redacted output",
     run() {
       const dispatcher = new AllocationEndpointDispatcher();

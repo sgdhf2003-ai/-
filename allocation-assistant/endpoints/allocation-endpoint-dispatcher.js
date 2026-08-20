@@ -202,13 +202,30 @@ class AllocationEndpointDispatcher {
       }
     }
 
+    const customerName = cancelPayload.customerName || cancelPayload.storeName || "未知客戶";
+    const notificationMessage = `🚫【劃扣保留取消通知】\n` +
+      `保留單號：${reservationNumber}\n` +
+      `店家：${customerName}\n` +
+      `品項：${item}\n` +
+      `釋放數量：${quantity}\n` +
+      `狀態：CANCELLED`;
+
     return {
       ok: true,
       reservationNumber,
       remainingQuantity: 0,
+      releasedQuantity: quantity,
       status: "CANCELLED",
       ledgerRow,
-      notificationBypassed: true,
+      notificationBypassed: options.notificationBypassed !== undefined ? options.notificationBypassed : true,
+      notificationMessage,
+      notificationDetails: {
+        reservationNumber,
+        customerName,
+        item,
+        releasedQuantity: quantity,
+        status: "CANCELLED"
+      },
       message: "劃扣保留取消與庫存釋放成功"
     };
   }

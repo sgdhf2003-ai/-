@@ -684,20 +684,41 @@ function cancelReleaseHoldAction(data, adapter) {
     new Date().toISOString()
   ];
 
+  let result = null;
   if (adapter && typeof adapter.cancelReleaseHold === "function") {
-    return adapter.cancelReleaseHold(resNo, releasedQty, 0, "CANCELLED", ledgerRow);
+    result = adapter.cancelReleaseHold(resNo, releasedQty, 0, "CANCELLED", ledgerRow);
+  } else {
+    result = {
+      ok: true,
+      reservationNumber: resNo,
+      remainingQuantity: 0,
+      releasedQuantity: releasedQty,
+      status: "CANCELLED",
+      ledgerRow: ledgerRow,
+      notificationBypassed: true,
+      message: "劃扣保留取消與庫存釋放成功"
+    };
   }
 
-  return {
-    ok: true,
+  const customerName = cancelPayload.customerName || cancelPayload.storeName || (existingHold ? (existingHold.customerName || existingHold.storeName) : "未知客戶");
+  const item = cancelPayload.item || (existingHold ? (existingHold.item || existingHold.productCode) : "品項");
+  const notificationMessage = `🚫【劃扣保留取消通知】\n` +
+    `保留單號：${resNo}\n` +
+    `店家：${customerName}\n` +
+    `品項：${item}\n` +
+    `釋放數量：${releasedQty}\n` +
+    `狀態：CANCELLED`;
+
+  result.notificationMessage = notificationMessage;
+  result.notificationDetails = {
     reservationNumber: resNo,
-    remainingQuantity: 0,
+    customerName: customerName,
+    item: item,
     releasedQuantity: releasedQty,
-    status: "CANCELLED",
-    ledgerRow: ledgerRow,
-    notificationBypassed: true,
-    message: "劃扣保留取消與庫存釋放成功"
+    status: "CANCELLED"
   };
+
+  return result;
 }
 
 function readbackAuditAction(data, adapter) {

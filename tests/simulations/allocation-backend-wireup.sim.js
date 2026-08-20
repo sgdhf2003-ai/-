@@ -117,6 +117,13 @@ runSuite("allocation-backend-wireup", [
       assert(row[1] === "CANCEL_RELEASE", "action matches CANCEL_RELEASE");
       assert(row[4] === 0, "remainingQuantity is 0");
       assert(row[5] === "CANCELLED", "status is CANCELLED");
+
+      assert(Boolean(validRes.notificationMessage), "notificationMessage returned");
+      assert(validRes.notificationMessage.includes("RES-20260805-001"), "includes reservationNumber");
+      assert(validRes.notificationMessage.includes("CANCELLED"), "includes CANCELLED");
+      assert(Boolean(validRes.notificationDetails), "notificationDetails returned");
+      assert(validRes.notificationDetails.reservationNumber === "RES-20260805-001", "notificationDetails.reservationNumber matches");
+      assert(validRes.notificationDetails.status === "CANCELLED", "notificationDetails.status matches");
     }
   },
   {
