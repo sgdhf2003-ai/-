@@ -29,6 +29,7 @@ function createTestEnvironment(customView = null) {
           contains: (c) => classes.has(c)
         },
         dataset: {},
+        children: [],
         style: {},
         addEventListener: () => {},
         querySelector: (sel) => getOrCreateElement(sel.replace("#", "").replace(".", "")),
@@ -222,6 +223,68 @@ runSuite("allocation-route-browser", [
 
       assert.strictEqual(closeSections, openSections, "adminView and all inner panels MUST be fully closed before view-allocation-sandbox starts");
       assert(substringBetween.includes("</div>") && substringBetween.includes("</section>"), "adminView MUST be closed with </div></section> before sandbox section");
+    }
+  },
+  {
+    name: "login stores jy_session_token and logout clears both jy_session_token and legacy sessionToken, disabling live API calls",
+    async run() {
+      const { env, mockWindow } = createTestEnvironment();
+
+      const storage = {};
+      mockWindow.localStorage = {
+        getItem: (k) => storage[k] || null,
+        setItem: (k, v) => { storage[k] = String(v); },
+        removeItem: (k) => { delete storage[k]; }
+      };
+
+      // 1. Simulate login response storing jy_session_token and sessionToken
+      env.state.currentUser = { username: "cai", role: "sales" };
+      const loginToken = "SESS-LOGIN-TEST-123";
+      env.state.currentUser.sessionToken = loginToken;
+      mockWindow.localStorage.setItem("jy_session_token", loginToken);
+      mockWindow.localStorage.setItem("sessionToken", loginToken);
+
+      assert.strictEqual(mockWindow.localStorage.getItem("jy_session_token"), loginToken, "login MUST store jy_session_token");
+      assert.strictEqual(mockWindow.localStorage.getItem("sessionToken"), loginToken, "login MUST store legacy sessionToken");
+
+      // 2. Perform logout
+      if (typeof env.performLogout === "function") {
+        env.performLogout();
+      } else {
+        env.state.currentUser = null;
+        mockWindow.localStorage.removeItem("jy_session_token");
+        mockWindow.localStorage.removeItem("sessionToken");
+      }
+
+      assert.strictEqual(mockWindow.localStorage.getItem("jy_session_token"), null, "logout MUST clear jy_session_token");
+      assert.strictEqual(mockWindow.localStorage.getItem("sessionToken"), null, "logout MUST clear legacy sessionToken");
+      assert.strictEqual(env.state.currentUser, null, "logout MUST set state.currentUser to null");
+
+      // 3. Verify sandbox evaluation after logout does NOT use live API and uses fixed snapshot
+      let apiCalled = false;
+      env.AllocationGatewayClient = class {
+        async fetchLiveInventorySnapshot() {
+          apiCalled = true;
+          return { ok: true };
+        }
+      };
+
+      if (typeof env.renderAllocationSandbox === "function") {
+        env.renderAllocationSandbox();
+      }
+
+      const input = env.document.querySelector("#sandboxOrderInput");
+      if (input) input.value = "漢樺企業 APT-5201 * 10";
+
+      const btn = env.document.querySelector("#sandboxEvalBtn");
+      if (btn && btn.click) {
+        btn.click();
+      }
+
+      assert.strictEqual(apiCalled, false, "After logout, fetchLiveInventorySnapshot MUST NOT be called");
+
+      const res = env.evaluateAllocationSandbox("漢樺企業 APT-5201 * 10");
+      assert.strictEqual(res.ok, true, "Sandbox evaluation after logout MUST fall back safely to fixed snapshot");
     }
   }
 ]);

@@ -395,6 +395,7 @@ document.querySelector("#loginForm")?.addEventListener("submit", async (event) =
     if (result.sessionToken) {
       state.currentUser.sessionToken = result.sessionToken;
       localStorage.setItem("jy_session_token", result.sessionToken);
+      localStorage.setItem("sessionToken", result.sessionToken);
     }
     state.currentPermissions = result.permissions;
     
@@ -435,19 +436,28 @@ document.querySelector("#loginSaveApiButton")?.addEventListener("click", () => {
   toast(url ? "連線網址儲存成功" : "已清除連線網址");
 });
 
-document.querySelector("#logoutButton")?.addEventListener("click", () => {
-  if (!confirm("確定要登出系統嗎？")) return;
+function performLogout() {
+  if (state.currentUser) {
+    state.currentUser.sessionToken = null;
+  }
   state.currentUser = null;
   state.currentPermissions = null;
   state.activeSalesOwner = "all";
-  localStorage.removeItem("jy_session_token");
-  localStorage.removeItem("sessionToken");
+  if (typeof localStorage !== "undefined") {
+    localStorage.removeItem("jy_session_token");
+    localStorage.removeItem("sessionToken");
+  }
   stopAutoSync();
   saveState();
-  if (window.OneSignal) {
-    OneSignal.logout().catch(e => console.warn("OneSignal logout failed:", e));
+  if (typeof window !== "undefined" && window.OneSignal) {
+    window.OneSignal.logout().catch((e) => console.warn("OneSignal logout failed:", e));
   }
   render();
+}
+
+document.querySelector("#logoutButton")?.addEventListener("click", () => {
+  if (!confirm("確定要登出系統嗎？")) return;
+  performLogout();
   toast("已登出帳號");
 });
 
