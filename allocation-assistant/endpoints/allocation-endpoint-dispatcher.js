@@ -210,13 +210,28 @@ class AllocationEndpointDispatcher {
       `釋放數量：${quantity}\n` +
       `狀態：CANCELLED`;
 
-    // Security Guard: Ignore client POST body parameters for notification policy.
-    // Read ONLY from verified server options, sessionUser, or persisted hold record.
+    // Security Guard: Ignore client POST body parameters (cancelPayload.salesOwner, lineUserId, etc.)
+    // Read salesOwner ONLY from verified persisted hold record (existingHold.salesOwner / existingHold.owner).
     const notificationBypassedReq = options.notificationBypassed !== undefined ? options.notificationBypassed : true;
     const sessionUser = options.sessionUser || null;
     const existingHold = options.existingHold || null;
-    const recipientLineUserId = options.recipientLineUserId || (sessionUser && sessionUser.lineUserId) || (existingHold && existingHold.lineUserId) || null;
-    const userOptInStatus = options.userOptInStatus || (sessionUser && (sessionUser.userOptInStatus || sessionUser.optInStatus)) || (recipientLineUserId ? 'OPTED_IN' : 'OPTED_OUT');
+    const usersTable = options.usersTable || [];
+
+    const salesOwner = existingHold ? (existingHold.salesOwner || existingHold.owner || null) : null;
+
+    let targetUserFromTable = null;
+    if (salesOwner && Array.isArray(usersTable) && usersTable.length > 0) {
+      targetUserFromTable = usersTable.find(u => u.salesOwner === salesOwner || u.displayName === salesOwner);
+    }
+
+    const recipientLineUserId = options.recipientLineUserId ||
+      (targetUserFromTable && targetUserFromTable.lineUserId) || null;
+
+    const userOptInStatus = options.userOptInStatus ||
+      (targetUserFromTable && (targetUserFromTable.userOptInStatus || targetUserFromTable.optInStatus)) ||
+      (sessionUser && (sessionUser.userOptInStatus || sessionUser.optInStatus)) ||
+      (recipientLineUserId ? 'OPTED_IN' : 'OPTED_OUT');
+
     const pilotWhitelist = options.serverPilotWhitelist || options.pilotWhitelist || [];
     const simulatedApiError = Boolean(options.simulatedApiError);
 

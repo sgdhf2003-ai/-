@@ -360,6 +360,114 @@ runSuite("allocation-endpoint-dispatcher", [
     }
   },
   {
+    name: "cancelReleaseHoldAction resolves recipient lineUserId from server-side salesOwner -> Users mapping matching creation flow",
+    run() {
+      const dispatcher = new AllocationEndpointDispatcher();
+      const validLineId = "U1234567890abcdef1234567890abcdef";
+
+      const res = dispatcher.cancelReleaseHoldAction(
+        {
+          userContext: { username: "admin01", role: "admin" },
+          cancelPayload: {
+            reservationNumber: "RES-20260820-SALESOWNER",
+            customerName: "美麗空間",
+            item: "STU-6101",
+            quantity: 1
+          }
+        },
+        {
+          notificationBypassed: false,
+          existingHold: {
+            reservationNumber: "RES-20260820-SALESOWNER",
+            salesOwner: "豪"
+          },
+          usersTable: [
+            { salesOwner: "豪", lineUserId: validLineId, optInStatus: "OPTED_IN" }
+          ],
+          pilotWhitelist: [validLineId]
+        }
+      );
+
+      assert(res.ok === true, "cancellation MUST succeed");
+      assert(res.status === "CANCELLED", "status MUST be CANCELLED");
+      assert(res.notificationBypassed === false, "notificationBypassed MUST be false when salesOwner maps to bound user");
+      assert(res.notificationSent === true, "notificationSent MUST be true when salesOwner maps to bound user");
+    }
+  },
+  {
+    name: "security: client POST body forgery of cancelPayload.salesOwner is ignored when existingHold has no salesOwner",
+    run() {
+      const dispatcher = new AllocationEndpointDispatcher();
+      const validLineId = "U1234567890abcdef1234567890abcdef";
+
+      const res = dispatcher.cancelReleaseHoldAction(
+        {
+          userContext: { username: "admin01", role: "admin" },
+          cancelPayload: {
+            reservationNumber: "RES-20260821-NOOWNER",
+            customerName: "美麗空間",
+            item: "STU-6101",
+            quantity: 1,
+            salesOwner: "豪" // Forged in POST body
+          }
+        },
+        {
+          notificationBypassed: false,
+          existingHold: {
+            reservationNumber: "RES-20260821-NOOWNER"
+            // No salesOwner or owner property
+          },
+          usersTable: [
+            { salesOwner: "豪", lineUserId: validLineId, optInStatus: "OPTED_IN" }
+          ],
+          pilotWhitelist: [validLineId]
+        }
+      );
+
+      assert(res.ok === true, "cancellation MUST succeed");
+      assert(res.status === "CANCELLED", "status MUST be CANCELLED");
+      assert(res.notificationBypassed === true, "forged cancelPayload.salesOwner MUST be ignored and notification bypassed");
+      assert(res.notificationSent === false, "notificationSent MUST be false when hold has no salesOwner");
+      assert(res.lineUserId === null, "lineUserId MUST be null when hold has no salesOwner");
+    }
+  },
+  {
+    name: "notificationSent is true ONLY when LINE push actually succeeds, and false on push failure without breaking cancellation",
+    run() {
+      const dispatcher = new AllocationEndpointDispatcher();
+      const validLineId = "U1234567890abcdef1234567890abcdef";
+
+      const resFailed = dispatcher.cancelReleaseHoldAction(
+        {
+          userContext: { username: "admin01", role: "admin" },
+          cancelPayload: {
+            reservationNumber: "RES-20260821-PUSHFAIL",
+            customerName: "美麗空間",
+            item: "STU-6101",
+            quantity: 1
+          }
+        },
+        {
+          notificationBypassed: false,
+          existingHold: {
+            reservationNumber: "RES-20260821-PUSHFAIL",
+            salesOwner: "豪"
+          },
+          usersTable: [
+            { salesOwner: "豪", lineUserId: validLineId, optInStatus: "OPTED_IN" }
+          ],
+          pilotWhitelist: [validLineId],
+          simulatedApiError: true // Push fails
+        }
+      );
+
+      assert(resFailed.ok === true, "cancellation MUST succeed even if LINE push fails");
+      assert(resFailed.status === "CANCELLED", "status MUST be CANCELLED");
+      assert(resFailed.notificationBypassed === true, "notificationBypassed MUST be true on push failure");
+      assert(resFailed.notificationSent === false, "notificationSent MUST be false on push failure");
+    }
+  },
+  {
     name: "readbackAuditAction requires authenticated session and returns redacted output",
     run() {
       const dispatcher = new AllocationEndpointDispatcher();

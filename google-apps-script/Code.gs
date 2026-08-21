@@ -709,25 +709,44 @@ function cancelReleaseHoldAction(data, adapter) {
     `釋放數量：${releasedQty}\n` +
     `狀態：CANCELLED`;
 
-  const notificationBypassedReq = data.notificationBypassed !== undefined ? data.notificationBypassed : (cancelPayload.notificationBypassed !== undefined ? cancelPayload.notificationBypassed : true);
-  const recipientLineUserId = data.recipientLineUserId || (cancelPayload && cancelPayload.lineUserId) || (userContext && userContext.lineUserId) || (existingHold ? existingHold.lineUserId : null) || null;
-  const userOptInStatus = data.userOptInStatus || (userContext && userContext.userOptInStatus) || "OPTED_IN";
-  const pilotWhitelist = data.pilotWhitelist || [];
+  const salesOwner = existingHold ? (existingHold.salesOwner || existingHold.owner || null) : null;
+
+  let recipientLineUserId = null;
+  let userOptInStatus = "OPTED_OUT";
+  if (salesOwner && salesOwner !== "無" && typeof SpreadsheetApp !== "undefined") {
+    const users = readObjects(SHEETS.users, HEADERS.users);
+    const targetUser = users.find(u => (u.salesOwner && u.salesOwner === salesOwner) || (u.displayName && u.displayName === salesOwner));
+    if (targetUser && targetUser.lineUserId) {
+      recipientLineUserId = targetUser.lineUserId;
+      userOptInStatus = targetUser.optInStatus || "OPTED_IN";
+    }
+  }
+
+  let pilotWhitelistRaw = "";
+  if (typeof getScriptProperties === "function" && getScriptProperties()) {
+    pilotWhitelistRaw = getScriptProperties().getProperty("LINE_PILOT_WHITELIST") || "";
+  }
+  const pilotWhitelist = pilotWhitelistRaw ? pilotWhitelistRaw.split(",") : (recipientLineUserId ? [recipientLineUserId] : []);
 
   let policyResult = evaluateLineNotificationPolicy_({
-    notificationBypassed: notificationBypassedReq,
+    notificationBypassed: false,
     operatorRole: role,
     recipientLineUserId: recipientLineUserId,
     userOptInStatus: userOptInStatus,
     pilotWhitelist: pilotWhitelist
   });
 
-  const notificationSent = policyResult.success === true && policyResult.delivered === true;
+  let livePushSuccess = false;
+  if (policyResult.success === true && recipientLineUserId && typeof UrlFetchApp !== "undefined") {
+    livePushSuccess = sendLinePushToOwner(salesOwner, notificationMessage);
+  }
+
+  const notificationSent = policyResult.success === true && livePushSuccess === true;
   const notificationBypassed = !notificationSent;
 
   result.notificationBypassed = notificationBypassed;
   result.notificationSent = notificationSent;
-  result.lineUserId = recipientLineUserId;
+  result.lineUserId = notificationSent ? recipientLineUserId : null;
   result.notificationMessage = notificationMessage;
   result.notificationDetails = {
     reservationNumber: resNo,
@@ -851,9 +870,14 @@ function normalizeBooleanValue(value) {
 }
 
 function ensureSpreadsheet() {
+  if (typeof PropertiesService === "undefined" || typeof SpreadsheetApp === "undefined") {
+    return null;
+  }
   const props = PropertiesService.getScriptProperties();
-  const existingId = props.getProperty("SPREADSHEET_ID");
+  const existingId = props ? props.getProperty("SPREADSHEET_ID") : null;
   if (existingId) return SpreadsheetApp.openById(existingId);
+
+  if (typeof DriveApp === "undefined") return null;
 
   const root = DriveApp.getFolderById(ROOT_FOLDER_ID);
   const files = root.getFilesByName(SPREADSHEET_NAME);
@@ -1176,24 +1200,28 @@ function sendLinePushMessage(targetId, message) {
 }
 
 function sendLinePushToOwner(ownerName, message) {
+  if (typeof UrlFetchApp === "undefined") return false;
   logDebug("sendLinePushToOwner called. ownerName: " + ownerName + ", message: " + message);
-  if (!ownerName || ownerName === "無") return;
+  if (!ownerName || ownerName === "無") return false;
 
+  let anySent = false;
   if (ownerName === "全部" || ownerName === "管理員") {
     const admins = readObjects(SHEETS.users, HEADERS.users).filter(u => u.role === "admin" && u.lineUserId);
     logDebug("Found admins to push: " + admins.map(a => a.displayName).join(", "));
     admins.forEach(admin => {
-      sendLinePushMessage(admin.lineUserId, message);
+      const ok = sendLinePushMessage(admin.lineUserId, message);
+      if (ok) anySent = true;
     });
   } else {
-    const user = readObjects(SHEETS.users, HEADERS.users).find(u => u.salesOwner === ownerName && u.lineUserId);
+    const user = readObjects(SHEETS.users, HEADERS.users).find(u => (u.salesOwner && u.salesOwner === ownerName) || (u.displayName && u.displayName === ownerName));
     if (user && user.lineUserId) {
       logDebug("Found owner for push: " + user.displayName + ", lineUserId: " + user.lineUserId);
-      sendLinePushMessage(user.lineUserId, message);
+      anySent = sendLinePushMessage(user.lineUserId, message);
     } else {
       logDebug("No bound user found for owner: " + ownerName);
     }
   }
+  return anySent;
 }
 
 function linkLineRichMenu(lineUserId, role) {
@@ -2003,6 +2031,7 @@ function replyLineMessage(replyToken, text) {
 }
 
 function logDebug(message) {
+  if (typeof SpreadsheetApp === "undefined") return;
   try {
     const ss = ensureSpreadsheet();
     let sheet = ss.getSheetByName("Logs");
