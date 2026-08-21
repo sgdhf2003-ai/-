@@ -1605,17 +1605,18 @@ function handleLineWebhook(payload) {
       const userId = event.source.userId;
       const replyToken = event.replyToken;
 
-      // 雙模式 Intent Router：內部明確指令在其它流程與 fallback 前處理
-      if (typeof LineIntent_tryHandleTextEvent === "function") {
-        const routed = LineIntent_tryHandleTextEvent(event);
-        if (routed && routed.handled) {
+      // 1. 保留單草稿解析處理器 (Priority #1: Reservation Draft Parser)
+      if (typeof LineReservationDraft_tryHandleTextEvent === "function") {
+        const draftTextRouted = LineReservationDraft_tryHandleTextEvent(event);
+        if (draftTextRouted && draftTextRouted.handled) {
           return;
         }
       }
 
-      if (typeof LineReservationDraft_tryHandleTextEvent === "function") {
-        const draftTextRouted = LineReservationDraft_tryHandleTextEvent(event);
-        if (draftTextRouted && draftTextRouted.handled) {
+      // 2. 雙模式 Intent Router：內部明確指令在其它流程與 fallback 前處理
+      if (typeof LineIntent_tryHandleTextEvent === "function") {
+        const routed = LineIntent_tryHandleTextEvent(event);
+        if (routed && routed.handled) {
           return;
         }
       }
