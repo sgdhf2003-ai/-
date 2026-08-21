@@ -1460,6 +1460,11 @@ function handleLineWebhook(payload) {
       const userId = event.source.userId;
       const replyToken = event.replyToken;
 
+      if (typeof LineReservationDraft_tryHandlePostback === "function") {
+        const draftRouted = LineReservationDraft_tryHandlePostback(event);
+        if (draftRouted && draftRouted.handled) return;
+      }
+
       if (params.action === "taskDone") {
         updateTaskStatus({ id: params.id, status: "done" });
         replyLineMessage(replyToken, "✅ 任務已標記為【已完成】！");
@@ -1604,6 +1609,13 @@ function handleLineWebhook(payload) {
       if (typeof LineIntent_tryHandleTextEvent === "function") {
         const routed = LineIntent_tryHandleTextEvent(event);
         if (routed && routed.handled) {
+          return;
+        }
+      }
+
+      if (typeof LineReservationDraft_tryHandleTextEvent === "function") {
+        const draftTextRouted = LineReservationDraft_tryHandleTextEvent(event);
+        if (draftTextRouted && draftTextRouted.handled) {
           return;
         }
       }
@@ -6596,4 +6608,72 @@ function getInventorySnapshotAction(data, options) {
     suggestions: suggestions,
     warnings: warnings
   };
+}
+
+function LineReservationDraft_tryHandleTextEvent(event) {
+  if (!event || event.type !== "message" || !event.message || event.message.type !== "text") {
+    return { handled: false };
+  }
+  const text = String(event.message.text).trim();
+  const userId = event.source ? event.source.userId : "";
+  const replyToken = event.replyToken;
+
+  if (!userId) return { handled: false };
+
+  const usersTable = typeof SpreadsheetApp !== "undefined" ? readObjects(SHEETS.users, HEADERS.users) : [];
+  const props = typeof PropertiesService !== "undefined" ? PropertiesService.getScriptProperties() : null;
+
+  if (typeof handleLineReservationTextEvent !== "function") return { handled: false };
+
+  const res = handleLineReservationTextEvent({
+    text,
+    userId,
+    usersTable,
+    inventoryCatalog: null,
+    propertiesStorage: props
+  });
+
+  if (res.handled && res.previewMessage) {
+    if (typeof replyLineCustomMessage === "function") {
+      replyLineCustomMessage(replyToken, [res.previewMessage]);
+    }
+    return { handled: true };
+  }
+
+  return { handled: false };
+}
+
+function LineReservationDraft_tryHandlePostback(event) {
+  if (!event || event.type !== "postback" || !event.postback || !event.postback.data) {
+    return { handled: false };
+  }
+  const dataStr = event.postback.data || "";
+  if (dataStr.indexOf("confirmHoldDraft") === -1 && dataStr.indexOf("cancelHoldDraft") === -1) {
+    return { handled: false };
+  }
+
+  const userId = event.source ? event.source.userId : "";
+  const replyToken = event.replyToken;
+  const usersTable = typeof SpreadsheetApp !== "undefined" ? readObjects(SHEETS.users, HEADERS.users) : [];
+  const props = typeof PropertiesService !== "undefined" ? PropertiesService.getScriptProperties() : null;
+
+  if (typeof handleLineReservationPostback !== "function") return { handled: false };
+
+  const res = handleLineReservationPostback({
+    postbackData: dataStr,
+    userId,
+    usersTable,
+    inventoryCatalog: null,
+    propertiesStorage: props,
+    upsertHoldActionFn: function(payload) { return upsertHoldAction(payload); }
+  });
+
+  if (res.handled && res.message) {
+    if (typeof replyLineMessage === "function") {
+      replyLineMessage(replyToken, res.message);
+    }
+    return { handled: true };
+  }
+
+  return { handled: false };
 }
