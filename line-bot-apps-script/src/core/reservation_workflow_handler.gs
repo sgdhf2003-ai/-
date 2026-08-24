@@ -1,5 +1,5 @@
 /**
- * LINE Reservation Draft Preview & Confirm/Cancel State Machine Handler
+ * LINE Reservation Workflow Handler (Apps Script Version)
  * 
  * Safety Rules:
  * - Pure logic and state machine handling.
@@ -7,46 +7,45 @@
  * - Operator & salesOwner resolved strictly from server-side bound user (DO NOT trust parsed draft fields for authorization).
  */
 
-const { ReservationParser } = require("../parsers/reservation-parser");
-
-function parsePostbackParams(dataStr) {
-  const params = {};
+function parsePostbackParams_(dataStr) {
+  var params = {};
   if (!dataStr) return params;
-  const pairs = dataStr.split("&");
-  pairs.forEach((pair) => {
-    const idx = pair.indexOf("=");
+  var pairs = dataStr.split("&");
+  pairs.forEach(function(pair) {
+    var idx = pair.indexOf("=");
     if (idx !== -1) {
-      const k = pair.slice(0, idx);
-      const v = pair.slice(idx + 1);
+      var k = pair.slice(0, idx);
+      var v = pair.slice(idx + 1);
       params[k] = decodeURIComponent(v);
     }
   });
   return params;
 }
 
-function handleLineReservationTextEvent(optionsOrEvent = {}, extraOptions = {}) {
-  let text = "";
-  let userId = "";
-  let usersTable = extraOptions.usersTable;
-  let inventoryCatalog = extraOptions.inventoryCatalog;
-  let propertiesStorage = extraOptions.propertiesStorage;
+function handleLineReservationTextEvent(optionsOrEvent, extraOptions) {
+  optionsOrEvent = optionsOrEvent || {};
+  extraOptions = extraOptions || {};
+
+  var text = "";
+  var userId = "";
+  var inventoryCatalog = extraOptions.inventoryCatalog;
+  var propertiesStorage = extraOptions.propertiesStorage;
 
   if (optionsOrEvent && optionsOrEvent.type === "message" && optionsOrEvent.message && optionsOrEvent.message.type === "text") {
     text = String(optionsOrEvent.message.text || "").trim();
     userId = optionsOrEvent.source ? optionsOrEvent.source.userId : "";
-    if (optionsOrEvent.usersTable) usersTable = optionsOrEvent.usersTable;
     if (optionsOrEvent.inventoryCatalog) inventoryCatalog = optionsOrEvent.inventoryCatalog;
     if (optionsOrEvent.propertiesStorage) propertiesStorage = optionsOrEvent.propertiesStorage;
   } else if (optionsOrEvent && typeof optionsOrEvent === "object") {
     text = optionsOrEvent.text || "";
     userId = optionsOrEvent.userId || "";
-    if (optionsOrEvent.usersTable) usersTable = optionsOrEvent.usersTable;
     if (optionsOrEvent.inventoryCatalog) inventoryCatalog = optionsOrEvent.inventoryCatalog;
     if (optionsOrEvent.propertiesStorage) propertiesStorage = optionsOrEvent.propertiesStorage;
   }
 
-  const parser = new ReservationParser({ inventoryCatalog });
-  const parseRes = parser.parseReservationText(text);
+  var parseRes = typeof parseReservationText === "function" 
+    ? parseReservationText(text, inventoryCatalog) 
+    : { ok: false, errorCode: "PARSER_UNAVAILABLE", errorMessage: "Parser module unavailable" };
 
   if (!parseRes.ok) {
     return {
@@ -56,33 +55,33 @@ function handleLineReservationTextEvent(optionsOrEvent = {}, extraOptions = {}) 
     };
   }
 
-  const draftId = "DRAFT-" + Date.now() + "-" + Math.floor(Math.random() * 1000);
-  const expiresAt = new Date(Date.now() + 600000).toISOString(); // 10 mins TTL
+  var draftId = "DRAFT-" + Date.now() + "-" + Math.floor(Math.random() * 1000);
+  var expiresAt = new Date(Date.now() + 600000).toISOString(); // 10 mins TTL
 
-  const draft = {
-    draftId,
+  var draft = {
+    draftId: draftId,
     customerName: parseRes.customerName,
     productCode: parseRes.productCode,
     quantity: parseRes.quantity,
     salesOwnerName: parseRes.salesOwnerName, // display only
     confidence: parseRes.confidence,
     createdAt: new Date().toISOString(),
-    expiresAt
+    expiresAt: expiresAt
   };
 
   if (propertiesStorage && typeof propertiesStorage.setProperty === "function") {
     propertiesStorage.setProperty("pendingDraftHold:" + userId, JSON.stringify(draft));
   }
 
-  const previewMessage = {
+  var previewMessage = {
     type: "text",
-    text: `📋【劃扣保留單草稿預覽】\n` +
-          `🏪 店家：${parseRes.customerName}\n` +
-          `📦 品項：${parseRes.productCode}\n` +
-          `🔢 數量：${parseRes.quantity}\n` +
-          `👤 負責業務：${parseRes.salesOwnerName || "無"}\n` +
-          `✅ 庫存檢查：現貨正常，可辦理劃扣\n\n` +
-          `請確認是否正式寫入庫存劃扣：`,
+    text: "📋【劃扣保留單草稿預覽】\n" +
+          "🏪 店家：" + parseRes.customerName + "\n" +
+          "📦 品項：" + parseRes.productCode + "\n" +
+          "🔢 數量：" + parseRes.quantity + "\n" +
+          "👤 負責業務：" + (parseRes.salesOwnerName || "無") + "\n" +
+          "✅ 庫存檢查：現貨正常，可辦理劃扣\n\n" +
+          "請確認是否正式寫入庫存劃扣：",
     quickReply: {
       items: [
         {
@@ -90,7 +89,7 @@ function handleLineReservationTextEvent(optionsOrEvent = {}, extraOptions = {}) 
           action: {
             type: "postback",
             label: "✅ 確認建立劃扣",
-            data: `action=confirmHoldDraft&draftId=${draftId}`,
+            data: "action=confirmHoldDraft&draftId=" + draftId,
             displayText: "確認建立劃扣"
           }
         },
@@ -99,7 +98,7 @@ function handleLineReservationTextEvent(optionsOrEvent = {}, extraOptions = {}) 
           action: {
             type: "postback",
             label: "❌ 取消",
-            data: `action=cancelHoldDraft&draftId=${draftId}`,
+            data: "action=cancelHoldDraft&draftId=" + draftId,
             displayText: "取消劃扣草稿"
           }
         }
@@ -110,17 +109,23 @@ function handleLineReservationTextEvent(optionsOrEvent = {}, extraOptions = {}) 
   return {
     handled: true,
     draftCreated: true,
-    draftId,
-    draft,
-    previewMessage
+    draftId: draftId,
+    draft: draft,
+    previewMessage: previewMessage
   };
 }
 
-function handleLineReservationPostback(options = {}) {
-  const { postbackData, userId, usersTable, inventoryCatalog, propertiesStorage, upsertHoldActionFn } = options;
+function handleLineReservationPostback(options) {
+  options = options || {};
+  var postbackData = options.postbackData;
+  var userId = options.userId;
+  var usersTable = options.usersTable;
+  var inventoryCatalog = options.inventoryCatalog;
+  var propertiesStorage = options.propertiesStorage;
+  var upsertHoldActionFn = options.upsertHoldActionFn;
 
-  const params = parsePostbackParams(postbackData);
-  const action = params.action;
+  var params = parsePostbackParams_(postbackData);
+  var action = params.action;
 
   if (action === "cancelHoldDraft") {
     if (propertiesStorage && typeof propertiesStorage.deleteProperty === "function") {
@@ -135,7 +140,7 @@ function handleLineReservationPostback(options = {}) {
   }
 
   if (action === "confirmHoldDraft") {
-    const draftIdReq = params.draftId;
+    var draftIdReq = params.draftId;
     if (!propertiesStorage || typeof propertiesStorage.getProperty !== "function") {
       return {
         handled: true,
@@ -146,7 +151,7 @@ function handleLineReservationPostback(options = {}) {
       };
     }
 
-    const draftRaw = propertiesStorage.getProperty("pendingDraftHold:" + userId);
+    var draftRaw = propertiesStorage.getProperty("pendingDraftHold:" + userId);
     if (!draftRaw) {
       return {
         handled: true,
@@ -157,7 +162,7 @@ function handleLineReservationPostback(options = {}) {
       };
     }
 
-    let draft = null;
+    var draft = null;
     try {
       draft = JSON.parse(draftRaw);
     } catch (e) {
@@ -192,7 +197,7 @@ function handleLineReservationPostback(options = {}) {
     }
 
     // Server-Side Operator & SalesOwner Re-Verification
-    const boundUser = Array.isArray(usersTable) ? usersTable.find(u => u.lineUserId === userId) : null;
+    var boundUser = Array.isArray(usersTable) ? usersTable.find(function(u) { return u.lineUserId === userId; }) : null;
     if (!boundUser) {
       return {
         handled: true,
@@ -205,14 +210,14 @@ function handleLineReservationPostback(options = {}) {
 
     // Re-check Inventory Catalog
     if (Array.isArray(inventoryCatalog)) {
-      const product = inventoryCatalog.find(p => p.item === draft.productCode || p.productCode === draft.productCode);
+      var product = inventoryCatalog.find(function(p) { return p.item === draft.productCode || p.productCode === draft.productCode; });
       if (!product) {
         return {
           handled: true,
           action: "confirmHoldDraft",
           success: false,
           errorCode: "PRODUCT_NOT_FOUND",
-          message: `⚠️ 庫存目錄中查無此商品型號 (${draft.productCode})。`
+          message: "⚠️ 庫存目錄中查無此商品型號 (" + draft.productCode + ")。"
         };
       }
       if (typeof product.availableQuantity === "number" && draft.quantity > product.availableQuantity) {
@@ -221,17 +226,17 @@ function handleLineReservationPostback(options = {}) {
           action: "confirmHoldDraft",
           success: false,
           errorCode: "INSUFFICIENT_STOCK",
-          message: `⚠️ 可用庫存不足 (需求: ${draft.quantity}, 可用庫存: ${product.availableQuantity})。`
+          message: "⚠️ 可用庫存不足 (需求: " + draft.quantity + ", 可用庫存: " + product.availableQuantity + ")。"
         };
       }
     }
 
     // Execute Hold Creation
-    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-    const randStr = Date.now().toString().slice(-6);
-    const resNo = `RES-${dateStr}-${randStr}`;
+    var dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+    var randStr = Date.now().toString().slice(-6);
+    var resNo = "RES-" + dateStr + "-" + randStr;
 
-    const holdPayload = {
+    var holdPayload = {
       userContext: {
         username: boundUser.username || "line_bot",
         role: boundUser.role || "assistant"
@@ -249,7 +254,7 @@ function handleLineReservationPostback(options = {}) {
       }
     };
 
-    let actionRes = { ok: true };
+    var actionRes = { ok: true };
     if (typeof upsertHoldActionFn === "function") {
       actionRes = upsertHoldActionFn(holdPayload) || { ok: true };
     }
@@ -261,14 +266,9 @@ function handleLineReservationPostback(options = {}) {
       action: "confirmHoldDraft",
       success: actionRes.ok !== false,
       reservationNumber: resNo,
-      message: `✅ 劃扣保留單【${resNo}】已成功建立並扣減庫存！`
+      message: "✅ 劃扣保留單【" + resNo + "】已成功建立並扣減庫存！"
     };
   }
 
   return { handled: false };
 }
-
-module.exports = {
-  handleLineReservationTextEvent,
-  handleLineReservationPostback
-};

@@ -94,6 +94,15 @@ class ReservationParser {
     }
 
     // 4. Server-Side Catalog & Available Stock Validation
+    if (this.inventoryCatalog === null || typeof this.inventoryCatalog === "undefined") {
+      return {
+        ok: false,
+        errorCode: "INVENTORY_CATALOG_UNAVAILABLE",
+        errorMessage: "目前無法取得正式庫存資料，暫停建立保留草稿",
+        warnings: []
+      };
+    }
+
     if (Array.isArray(this.inventoryCatalog)) {
       const matchedProduct = this.inventoryCatalog.find(
         p => p.item === productCode || p.productCode === productCode
@@ -113,6 +122,26 @@ class ReservationParser {
           ok: false,
           errorCode: "INSUFFICIENT_STOCK",
           errorMessage: `可用庫存不足 (需求: ${quantity}, 可用庫存: ${matchedProduct.availableQuantity})`,
+          warnings: []
+        };
+      }
+    } else if (this.inventoryCatalog && typeof this.inventoryCatalog === "object") {
+      const itemKey = productCode.toUpperCase();
+      const catVal = this.inventoryCatalog[itemKey] !== undefined ? this.inventoryCatalog[itemKey] : this.inventoryCatalog[productCode];
+      if (catVal === undefined) {
+        return {
+          ok: false,
+          errorCode: "PRODUCT_NOT_FOUND",
+          errorMessage: `庫存目錄中查無此商品型號 (${productCode})`,
+          warnings: []
+        };
+      }
+      const availQty = typeof catVal === "number" ? catVal : (typeof catVal === "object" && typeof catVal.availableQuantity === "number" ? catVal.availableQuantity : null);
+      if (availQty !== null && quantity > availQty) {
+        return {
+          ok: false,
+          errorCode: "INSUFFICIENT_STOCK",
+          errorMessage: `可用庫存不足 (需求: ${quantity}, 可用庫存: ${availQty})`,
           warnings: []
         };
       }

@@ -10,6 +10,11 @@ var JINGYANG_ASSISTANT_SPREADSHEET_ID_REQUIRED = "JINGYANG_MANAGER_SPREADSHEET_I
 function JingyangAssistant_tryHandleLineEvent(event) {
   if (!event || event.type !== "message" || !event.message || event.message.type !== "text") return false;
 
+  if (typeof JingyangWorkflow_tryHandleTextEvent === "function") {
+    var workflowRouted = JingyangWorkflow_tryHandleTextEvent(event);
+    if (workflowRouted && workflowRouted.handled) return true;
+  }
+
   var text = String(event.message.text || "").trim();
   var command = JingyangAssistant_parseCommand_(text);
   if (!command) return false;
@@ -638,4 +643,91 @@ function JingyangAssistant_mergeAndMigrateUsersSheet_(targetSsId, options) {
     oldUserSheetExists: !!oldUserSheet,
     touchedTabs: []
   };
+}
+
+function JingyangWorkflow_getInventoryCatalog_() {
+  try {
+    var ssId = (typeof PropertiesService !== "undefined" && PropertiesService.getScriptProperties())
+      ? PropertiesService.getScriptProperties().getProperty("JINGYANG_MANAGER_SPREADSHEET_ID")
+      : null;
+    if (!ssId) ssId = "1C_R1DdTj5brxftl9fPabTKBGzcG-lxWWxWoyi-ItA48";
+    if (typeof SpreadsheetApp !== "undefined" && typeof getLiveStockMap === "function") {
+      var ss = SpreadsheetApp.openById(ssId);
+      return getLiveStockMap(ss);
+    }
+  } catch (e) {}
+  return null;
+}
+
+function JingyangWorkflow_tryHandleTextEvent(event) {
+  if (!event || event.type !== "message" || !event.message || event.message.type !== "text") {
+    return { handled: false };
+  }
+  var text = String(event.message.text || "").trim();
+  var userId = event.source ? event.source.userId : "";
+  var replyToken = event.replyToken;
+
+  if (!userId) return { handled: false };
+
+  if (typeof handleLineReservationTextEvent === "function") {
+    var usersTable = typeof readObjects === "function" && typeof SHEETS !== "undefined" && SHEETS.users ? readObjects(SHEETS.users, HEADERS.users) : [];
+    var props = typeof PropertiesService !== "undefined" ? PropertiesService.getScriptProperties() : null;
+    var catalog = JingyangWorkflow_getInventoryCatalog_();
+
+    var res = handleLineReservationTextEvent({
+      text: text,
+      userId: userId,
+      usersTable: usersTable,
+      inventoryCatalog: catalog,
+      propertiesStorage: props
+    });
+
+    if (res && res.handled && res.previewMessage) {
+      if (typeof replyToLine === "function") {
+        replyToLine(replyToken, res.previewMessage, true);
+      }
+      return { handled: true };
+    }
+  }
+
+  return { handled: false };
+}
+
+function JingyangWorkflow_tryHandlePostback(event) {
+  if (!event || event.type !== "postback" || !event.postback || !event.postback.data) {
+    return { handled: false };
+  }
+  var dataStr = event.postback.data || "";
+  if (dataStr.indexOf("confirmHoldDraft") === -1 && dataStr.indexOf("cancelHoldDraft") === -1) {
+    return { handled: false };
+  }
+
+  var userId = event.source ? event.source.userId : "";
+  var replyToken = event.replyToken;
+
+  if (typeof handleLineReservationPostback === "function") {
+    var usersTable = typeof readObjects === "function" && typeof SHEETS !== "undefined" && SHEETS.users ? readObjects(SHEETS.users, HEADERS.users) : [];
+    var props = typeof PropertiesService !== "undefined" ? PropertiesService.getScriptProperties() : null;
+    var catalog = JingyangWorkflow_getInventoryCatalog_();
+
+    var res = handleLineReservationPostback({
+      postbackData: dataStr,
+      userId: userId,
+      usersTable: usersTable,
+      inventoryCatalog: catalog,
+      propertiesStorage: props,
+      upsertHoldActionFn: function(payload) {
+        return typeof upsertHoldAction === "function" ? upsertHoldAction(payload) : { ok: false };
+      }
+    });
+
+    if (res && res.handled && res.message) {
+      if (typeof replyToLine === "function") {
+        replyToLine(replyToken, res.message, true);
+      }
+      return { handled: true };
+    }
+  }
+
+  return { handled: false };
 }

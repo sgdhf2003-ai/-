@@ -83,6 +83,10 @@ function doPost(e) {
       var event = events[i];
       if (event.type === 'postback') {
         try {
+          if (typeof JingyangWorkflow_tryHandlePostback === "function") {
+            var workflowPbRouted = JingyangWorkflow_tryHandlePostback(event);
+            if (workflowPbRouted && workflowPbRouted.handled) continue;
+          }
           var postbackHandled = handleAssistantPostback_(event);
           if (postbackHandled) continue;
         } catch (postbackErr) {
