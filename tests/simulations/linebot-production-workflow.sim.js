@@ -16,6 +16,7 @@
  * 10. Bridge MUST fail closed (ok: false, BRIDGE_SECRET_MISSING) when LINE_BOT_BRIDGE_SECRET is missing.
  * 11. Model code normalization matching for STU-6101 vs STU6101 in Hash Map inventory catalog.
  * 12. confirmHoldDraft missing draft diagnostic MUST mask LINE user IDs to last 4 digits and NEVER expose full user ID.
+ * 13. confirmHoldDraft draftId mismatch diagnostic MUST mask draftId to last 4 digits and NEVER expose full draftId.
  */
 
 const assert = require("assert");
@@ -329,6 +330,50 @@ const tests = [
       // ABSOLUTE SECURITY CHECK: full LINE User IDs MUST NOT appear in the response message!
       assert(!res.message.includes(fullPostbackUserId), "Full postback LINE User ID MUST NOT be exposed");
       assert(!res.message.includes(fullDraftUserId), "Full draft key LINE User ID MUST NOT be exposed");
+    }
+  },
+  {
+    name: "13. confirmHoldDraft draftId mismatch diagnostic MUST mask draftId to last 4 digits and NEVER expose full draftId",
+    run() {
+      const testUserId = "U98765432101234567890123456789012";
+      const fullReqDraftId = "DRAFT-1724680000000-8888";
+      const fullSavedDraftId = "DRAFT-1724680000000-9999";
+
+      const mockStore = {
+        ["pendingDraftHold:" + testUserId]: JSON.stringify({
+          draftId: fullSavedDraftId,
+          customerName: "美麗空間",
+          productCode: "STU-6101",
+          quantity: 2,
+          expiresAt: new Date(Date.now() + 600000).toISOString()
+        })
+      };
+
+      const mockPropertiesStorage = {
+        getProperty(key) { return mockStore[key] || null; },
+        setProperty(key, val) { mockStore[key] = val; },
+        deleteProperty(key) { delete mockStore[key]; }
+      };
+
+      const res = handleLineReservationPostback({
+        postbackData: "action=confirmHoldDraft&draftId=" + fullReqDraftId,
+        userId: testUserId,
+        usersTable: [],
+        inventoryCatalog: {},
+        propertiesStorage: mockPropertiesStorage,
+        upsertHoldActionFn: function() { return { ok: true }; }
+      });
+
+      assert.strictEqual(res.handled, true);
+      assert.strictEqual(res.success, false);
+      assert.strictEqual(res.errorCode, "INVALID_DRAFT_ID");
+      assert(res.message.includes("⚠️ 草稿編號不一致。"), "MUST preserve original error message prefix");
+      assert(res.message.includes("...8888"), "MUST include masked request draftId last 4 digits (...8888)");
+      assert(res.message.includes("...9999"), "MUST include masked saved draftId last 4 digits (...9999)");
+
+      // ABSOLUTE SECURITY CHECK: full draft IDs MUST NOT appear in the response message!
+      assert(!res.message.includes(fullReqDraftId), "Full request draftId MUST NOT be exposed");
+      assert(!res.message.includes(fullSavedDraftId), "Full saved draftId MUST NOT be exposed");
     }
   }
 ];

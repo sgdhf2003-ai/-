@@ -197,12 +197,16 @@ function handleLineReservationPostback(options) {
     }
 
     if (draft.draftId !== draftIdReq) {
+      var reqMasked = draftIdReq && draftIdReq.length > 4 ? "..." + draftIdReq.slice(-4) : (draftIdReq || "N/A");
+      var savedMasked = draft.draftId && draft.draftId.length > 4 ? "..." + draft.draftId.slice(-4) : (draft.draftId || "N/A");
+      var diagStr = "\n🔍【系統診斷】請求草稿: " + reqMasked + "，即時草稿: " + savedMasked;
+
       return {
         handled: true,
         action: "confirmHoldDraft",
         success: false,
         errorCode: "INVALID_DRAFT_ID",
-        message: "⚠️ 草稿編號不一致。"
+        message: "⚠️ 草稿編號不一致。" + diagStr
       };
     }
 
