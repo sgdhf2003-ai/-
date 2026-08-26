@@ -10,11 +10,6 @@ var JINGYANG_ASSISTANT_SPREADSHEET_ID_REQUIRED = "JINGYANG_MANAGER_SPREADSHEET_I
 function JingyangAssistant_tryHandleLineEvent(event) {
   if (!event || event.type !== "message" || !event.message || event.message.type !== "text") return false;
 
-  if (typeof JingyangWorkflow_tryHandleTextEvent === "function") {
-    var workflowRouted = JingyangWorkflow_tryHandleTextEvent(event);
-    if (workflowRouted && workflowRouted.handled) return true;
-  }
-
   var text = String(event.message.text || "").trim();
   var command = JingyangAssistant_parseCommand_(text);
   if (!command) return false;

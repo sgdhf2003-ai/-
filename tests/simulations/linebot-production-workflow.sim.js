@@ -17,6 +17,7 @@
  * 11. Model code normalization matching for STU-6101 vs STU6101 in Hash Map inventory catalog.
  * 12. confirmHoldDraft missing draft diagnostic MUST mask LINE user IDs to last 4 digits and NEVER expose full user ID.
  * 13. confirmHoldDraft draftId mismatch diagnostic MUST mask draftId to last 4 digits and NEVER expose full draftId.
+ * 14. JingyangAssistant_tryHandleLineEvent MUST NOT call JingyangWorkflow_tryHandleTextEvent to prevent duplicate draft creation.
  */
 
 const assert = require("assert");
@@ -374,6 +375,19 @@ const tests = [
       // ABSOLUTE SECURITY CHECK: full draft IDs MUST NOT appear in the response message!
       assert(!res.message.includes(fullReqDraftId), "Full request draftId MUST NOT be exposed");
       assert(!res.message.includes(fullSavedDraftId), "Full saved draftId MUST NOT be exposed");
+    }
+  },
+  {
+    name: "14. JingyangAssistant_tryHandleLineEvent MUST NOT call JingyangWorkflow_tryHandleTextEvent to prevent duplicate draft creation",
+    run() {
+      const idxFn = assistantContent.indexOf("function JingyangAssistant_tryHandleLineEvent");
+      assert(idxFn !== -1, "JingyangAssistant_tryHandleLineEvent MUST exist in JingyangAssistant.js");
+      const fnBody = assistantContent.slice(idxFn, idxFn + 1000);
+
+      assert(
+        !fnBody.includes("JingyangWorkflow_tryHandleTextEvent"),
+        "JingyangAssistant_tryHandleLineEvent MUST NOT call JingyangWorkflow_tryHandleTextEvent"
+      );
     }
   }
 ];

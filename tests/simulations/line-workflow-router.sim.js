@@ -79,7 +79,7 @@ const tests = [
     }
   },
   {
-    name: "5. JingyangAssistant_tryHandleLineEvent calls JingyangWorkflow_tryHandleTextEvent before legacy JingyangAssistant_parseCommand_",
+    name: "5. JingyangAssistant_tryHandleLineEvent MUST NOT call JingyangWorkflow_tryHandleTextEvent to prevent duplicate execution",
     run() {
       const idxTryHandle = assistantContent.indexOf("function JingyangAssistant_tryHandleLineEvent");
       assert(idxTryHandle !== -1, "JingyangAssistant_tryHandleLineEvent MUST exist");
@@ -87,14 +87,7 @@ const tests = [
       const fnBody = assistantContent.slice(idxTryHandle, idxTryHandle + 500);
 
       const idxWorkflow = fnBody.indexOf("JingyangWorkflow_tryHandleTextEvent");
-      const idxParseCmd = fnBody.indexOf("JingyangAssistant_parseCommand_");
-
-      assert(idxWorkflow !== -1, "Workflow router call MUST exist in JingyangAssistant_tryHandleLineEvent");
-      assert(idxParseCmd !== -1, "Legacy command parser call MUST exist in JingyangAssistant_tryHandleLineEvent");
-      assert(
-        idxWorkflow < idxParseCmd,
-        "JingyangWorkflow_tryHandleTextEvent MUST be called before JingyangAssistant_parseCommand_"
-      );
+      assert(idxWorkflow === -1, "JingyangAssistant_tryHandleLineEvent MUST NOT call JingyangWorkflow_tryHandleTextEvent");
     }
   },
   {
