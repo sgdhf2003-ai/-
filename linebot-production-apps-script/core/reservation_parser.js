@@ -7,6 +7,11 @@
  * - Ignore forged lineUserId, salesOwner ID, or role/permission fields in input text.
  */
 
+function normalizeSearchKey_(str) {
+  if (str == null) return "";
+  return str.toString().toUpperCase().replace(/[\s\-_]/g, "");
+}
+
 function parseReservationText(text, inventoryCatalog) {
   if (!text || typeof text !== "string") {
     return {
@@ -42,12 +47,12 @@ function parseReservationText(text, inventoryCatalog) {
 
     tokens.forEach(function(token) {
       var qtyTokenMatch = token.match(/^(\d+)(?:個|pcs|張|箱|包)?$/i);
-      var codeTokenMatch = token.match(/^[A-Z0-9]{2,10}-[A-Z0-9]{2,10}$/i);
+      var codeTokenMatch = !qtyTokenMatch && token.match(/^[A-Z0-9]{2,10}(?:-[A-Z0-9]{2,10})?$/i) && /[A-Z]/i.test(token) && /\d/.test(token);
 
       if (qtyTokenMatch && quantity === null) {
         quantity = parseInt(qtyTokenMatch[1], 10);
       } else if (codeTokenMatch && !productCode) {
-        productCode = codeTokenMatch[0].toUpperCase();
+        productCode = token.toUpperCase();
       } else if (!customerName) {
         customerName = token;
       } else if (!salesOwnerName) {
@@ -94,9 +99,13 @@ function parseReservationText(text, inventoryCatalog) {
     };
   }
 
+  var normProductCode = normalizeSearchKey_(productCode);
+
   if (Array.isArray(inventoryCatalog)) {
     var matchedProduct = inventoryCatalog.find(function(p) {
-      return p.item === productCode || p.productCode === productCode;
+      if (!p) return false;
+      var itemStr = p.item || p.productCode || "";
+      return itemStr === productCode || normalizeSearchKey_(itemStr) === normProductCode;
     });
 
     if (!matchedProduct) {
@@ -117,8 +126,23 @@ function parseReservationText(text, inventoryCatalog) {
       };
     }
   } else if (inventoryCatalog && typeof inventoryCatalog === "object") {
-    var itemKey = productCode.toUpperCase();
-    var catVal = inventoryCatalog[itemKey] !== undefined ? inventoryCatalog[itemKey] : inventoryCatalog[productCode];
+    var catVal = undefined;
+    if (inventoryCatalog[productCode] !== undefined) {
+      catVal = inventoryCatalog[productCode];
+    } else if (inventoryCatalog[productCode.toUpperCase()] !== undefined) {
+      catVal = inventoryCatalog[productCode.toUpperCase()];
+    } else if (inventoryCatalog[normProductCode] !== undefined) {
+      catVal = inventoryCatalog[normProductCode];
+    } else {
+      var keys = Object.keys(inventoryCatalog);
+      for (var k = 0; k < keys.length; k++) {
+        if (normalizeSearchKey_(keys[k]) === normProductCode) {
+          catVal = inventoryCatalog[keys[k]];
+          break;
+        }
+      }
+    }
+
     if (catVal === undefined) {
       return {
         ok: false,

@@ -209,8 +209,18 @@ function handleLineReservationPostback(options) {
     }
 
     // Re-check Inventory Catalog
+    function normalizeSearchKey_(str) {
+      if (str == null) return "";
+      return str.toString().toUpperCase().replace(/[\s\-_]/g, "");
+    }
+    var normDraftProductCode = normalizeSearchKey_(draft.productCode);
+
     if (Array.isArray(inventoryCatalog)) {
-      var product = inventoryCatalog.find(function(p) { return p.item === draft.productCode || p.productCode === draft.productCode; });
+      var product = inventoryCatalog.find(function(p) {
+        if (!p) return false;
+        var itemStr = p.item || p.productCode || "";
+        return itemStr === draft.productCode || normalizeSearchKey_(itemStr) === normDraftProductCode;
+      });
       if (!product) {
         return {
           handled: true,
@@ -227,6 +237,43 @@ function handleLineReservationPostback(options) {
           success: false,
           errorCode: "INSUFFICIENT_STOCK",
           message: "⚠️ 可用庫存不足 (需求: " + draft.quantity + ", 可用庫存: " + product.availableQuantity + ")。"
+        };
+      }
+    } else if (inventoryCatalog && typeof inventoryCatalog === "object") {
+      var catVal = undefined;
+      if (inventoryCatalog[draft.productCode] !== undefined) {
+        catVal = inventoryCatalog[draft.productCode];
+      } else if (inventoryCatalog[draft.productCode.toUpperCase()] !== undefined) {
+        catVal = inventoryCatalog[draft.productCode.toUpperCase()];
+      } else if (inventoryCatalog[normDraftProductCode] !== undefined) {
+        catVal = inventoryCatalog[normDraftProductCode];
+      } else {
+        var keys = Object.keys(inventoryCatalog);
+        for (var k = 0; k < keys.length; k++) {
+          if (normalizeSearchKey_(keys[k]) === normDraftProductCode) {
+            catVal = inventoryCatalog[keys[k]];
+            break;
+          }
+        }
+      }
+
+      if (catVal === undefined) {
+        return {
+          handled: true,
+          action: "confirmHoldDraft",
+          success: false,
+          errorCode: "PRODUCT_NOT_FOUND",
+          message: "⚠️ 庫存目錄中查無此商品型號 (" + draft.productCode + ")。"
+        };
+      }
+      var availQty = typeof catVal === "number" ? catVal : (typeof catVal === "object" && typeof catVal.availableQuantity === "number" ? catVal.availableQuantity : null);
+      if (availQty !== null && draft.quantity > availQty) {
+        return {
+          handled: true,
+          action: "confirmHoldDraft",
+          success: false,
+          errorCode: "INSUFFICIENT_STOCK",
+          message: "⚠️ 可用庫存不足 (需求: " + draft.quantity + ", 可用庫存: " + availQty + ")。"
         };
       }
     }

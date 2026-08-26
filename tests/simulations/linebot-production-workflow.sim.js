@@ -14,6 +14,7 @@
  * 8. Bridge request body MUST contain action="lineCreateHold", bridgeSecret, lineUserId, and hold.
  * 9. Bridge request body MUST NOT contain userContext, sessionToken, or role.
  * 10. Bridge MUST fail closed (ok: false, BRIDGE_SECRET_MISSING) when LINE_BOT_BRIDGE_SECRET is missing.
+ * 11. Model code normalization matching for STU-6101 vs STU6101 in Hash Map inventory catalog.
  */
 
 const assert = require("assert");
@@ -27,15 +28,27 @@ const prodDir = path.join(
 
 const lineMainPath = path.join(prodDir, "line程式碼.js");
 const assistantPath = path.join(prodDir, "JingyangAssistant.js");
+const parserJsPath = path.join(prodDir, "core/reservation_parser.js");
 const handlerJsPath = path.join(prodDir, "core/reservation_workflow_handler.js");
 
 const lineMainContent = fs.readFileSync(lineMainPath, "utf8");
 const assistantContent = fs.readFileSync(assistantPath, "utf8");
+const parserJsContent = fs.readFileSync(parserJsPath, "utf8");
 const handlerJsContent = fs.readFileSync(handlerJsPath, "utf8");
+
+const parseReservationText = new Function(
+  "text",
+  "inventoryCatalog",
+  `
+    ${parserJsContent}
+    return parseReservationText(text, inventoryCatalog);
+  `
+);
 
 const handleLineReservationPostback = new Function(
   "options",
   `
+    ${parserJsContent}
     ${handlerJsContent}
     return handleLineReservationPostback(options);
   `
@@ -81,7 +94,6 @@ const tests = [
   {
     name: "3. Core reservation modules MUST exist in linebot-production-apps-script/core/",
     run() {
-      const parserJsPath = path.join(prodDir, "core/reservation_parser.js");
       const parserGsPath = path.join(prodDir, "core/reservation_parser.gs");
       const handlerGsPath = path.join(prodDir, "core/reservation_workflow_handler.gs");
 
@@ -231,6 +243,51 @@ const tests = [
 
       assert.strictEqual(res.ok, false, "Missing bridge secret MUST fail closed");
       assert.strictEqual(res.errorCode, "BRIDGE_SECRET_MISSING");
+    }
+  },
+  {
+    name: "11. Model code normalization matching for STU-6101 vs STU6101 in Hash Map inventory catalog",
+    run() {
+      // Test Hash Map inventory catalog with normalized key 'STU6101' against input text 'STU-6101'
+      const catalogHashMapNormalized = { "STU6101": 50 };
+      const parseRes1 = parseReservationText("美麗空間 STU-6101 1個 豪", catalogHashMapNormalized);
+      assert.strictEqual(parseRes1.ok, true, "STU-6101 input MUST match Hash Map catalog key STU6101");
+      assert.strictEqual(parseRes1.productCode, "STU-6101");
+
+      // Test Hash Map inventory catalog with hyphenated key 'STU-6101' against input text 'STU6101'
+      const catalogHashMapHyphenated = { "STU-6101": 50 };
+      const parseRes2 = parseReservationText("美麗空間 STU6101 1個 豪", catalogHashMapHyphenated);
+      assert.strictEqual(parseRes2.ok, true, "STU6101 input MUST match Hash Map catalog key STU-6101");
+
+      // Test confirmHoldDraft re-check with Hash Map inventory catalog 'STU6101'
+      const testUserId = "U98765432101234567890123456789012";
+      const draftId = "DRAFT-TEST-NORM";
+      const mockStore = {
+        "pendingDraftHold:U98765432101234567890123456789012": JSON.stringify({
+          draftId: draftId,
+          customerName: "美麗空間",
+          productCode: "STU-6101",
+          quantity: 2,
+          expiresAt: new Date(Date.now() + 600000).toISOString()
+        })
+      };
+      const mockPropertiesStorage = {
+        getProperty(key) { return mockStore[key] || null; },
+        setProperty(key, val) { mockStore[key] = val; },
+        deleteProperty(key) { delete mockStore[key]; }
+      };
+      const mockUsersTable = [{ displayName: "王小明", username: "ming", lineUserId: testUserId, role: "assistant", salesOwner: "王小明" }];
+
+      const postbackRes = handleLineReservationPostback({
+        postbackData: "action=confirmHoldDraft&draftId=" + draftId,
+        userId: testUserId,
+        usersTable: mockUsersTable,
+        inventoryCatalog: { "STU6101": 50 },
+        propertiesStorage: mockPropertiesStorage,
+        upsertHoldActionFn: function() { return { ok: true }; }
+      });
+      assert.strictEqual(postbackRes.handled, true);
+      assert.strictEqual(postbackRes.success, true, "confirmHoldDraft re-check MUST match normalized model code STU6101");
     }
   }
 ];
