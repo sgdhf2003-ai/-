@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>勁揚建材庫存查詢系統</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    /* 🎨 莫蘭迪柔和視覺重塑 */
+    body { background-color: #f7f9fa; font-family: "Microsoft JhengHei", sans-serif; padding: 15px 8px; margin: 0; color: #444; }
+    .main-container { max-width: 1400px; margin: 0 auto; }
+    
+    /* === 🚀 登入大廳專屬設計 === */
+    #login-screen { 
+      display: flex; flex-direction: column; align-items: center; justify-content: center; 
+      min-height: 85vh; padding: 20px; 
+    }
+    .login-card {
+      background: white; padding: 40px 30px; border-radius: 20px; 
+      box-shadow: 0 8px 25px rgba(0,0,0,0.06); border-top: 6px solid #C1121F;
+      text-align: center; max-width: 400px; width: 100%;
+    }
+    
+    /* 💥 標題與 Logo 完美對齊設計 */
+    .title-wrapper { display: flex; align-items: center; justify-content: center; margin-bottom: 30px; }
+    .title-wrapper img { height: 42px; margin-right: 12px; object-fit: contain; }
+    .login-title { 
+      font-weight: 900; font-size: 2rem; margin: 0; 
+      color: #C1121F; 
+      filter: drop-shadow(0px 2px 2px rgba(0,0,0,0.08)); 
+    }
+    
+    .btn-login-customer { background: #5B8A72; color: white; border: none; font-weight: bold; border-radius: 50px; padding: 12px 25px; width: 100%; margin-bottom: 15px; font-size: 1.1rem; transition: 0.3s; }
+    .btn-login-customer:hover { background: #4A725D; color: white; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(91,138,114,0.3); }
+    .btn-login-manager { background: white; color: #C1121F; border: 2px solid #C1121F; font-weight: bold; border-radius: 50px; padding: 12px 25px; width: 100%; font-size: 1.1rem; transition: 0.3s; }
+    .btn-login-manager:hover { background: #FCFAEF; color: #A6101A; border-color: #A6101A; transform: translateY(-2px); }
+    #password-section { margin-top: 15px; display: none; animation: fadeIn 0.3s ease; }
+    /* ============================ */
+
+    .system-header { display: flex; align-items: center; justify-content: center; margin-bottom: 18px; padding: 5px; }
+    .system-header img { height: 38px; margin-right: 12px; object-fit: contain; }
+    .system-title { 
+      font-weight: 900; font-size: 1.85rem; margin: 0; letter-spacing: 1px;
+      color: #C1121F; 
+      filter: drop-shadow(0px 2px 2px rgba(0,0,0,0.08));
+    }
+    
+    /* 搜尋框與語音按鈕優化 */
+    .search-group { background: white; border-radius: 50px; overflow: hidden; box-shadow: 0 3px 10px rgba(0,0,0,0.05); border: 1px solid #eaeaea; }
+    .search-input { border: none; box-shadow: none; font-size: 0.95rem; }
+    .search-input:focus { box-shadow: none; outline: none; }
+    .btn-mic { background: white; color: #5B8A72; border: none; font-size: 1.2rem; transition: 0.2s; padding: 0 12px; }
+    .btn-mic:hover { color: #4A725D; }
+    .btn-search { background-color: #5B8A72; color: white; border: none; font-weight: bold; border-radius: 0 50px 50px 0; padding: 10px 20px; }
+    .btn-search:hover { background-color: #4A725D; color: white; }
+    
+    .recording-pulse { animation: micPulse 1s infinite; color: #D97373 !important; }
+    @keyframes micPulse { 
+      0% { transform: scale(1); opacity: 1; } 
+      50% { transform: scale(1.2); opacity: 0.7; } 
+      100% { transform: scale(1); opacity: 1; } 
+    }
+    
+    .nav-btn, .nav-btn-danger, .nav-btn-batch, .nav-btn-arriving, .nav-btn-linelog, .toggle-collapse-btn { font-size: 0.9rem; padding: 6px 14px; margin: 4px; }
+    
+    .nav-btn { border: 2px solid #C8A962; color: #9A8045; background: white; font-weight: bold; border-radius: 50px; transition: all 0.3s; }
+    .nav-btn:hover, .nav-btn.active { background: linear-gradient(135deg, #C8A962, #E6D39A); color: #fff; border-color: #C8A962; box-shadow: 0 3px 8px rgba(0,0,0,0.1); }
+    
+    .nav-btn-danger { border: 2px solid #D97373; color: #D97373; background: white; font-weight: bold; border-radius: 50px; transition: all 0.3s; }
+    .nav-btn-danger:hover, .nav-btn-danger.active { background: linear-gradient(135deg, #D97373, #E89A9A); color: white; border-color: #D97373; box-shadow: 0 3px 8px rgba(217,115,115,0.25); }
+
+    .nav-btn-batch { border: 2px solid #A38C7A; color: #A38C7A; background: white; font-weight: bold; border-radius: 50px; transition: all 0.3s; }
+    .nav-btn-batch:hover, .nav-btn-batch.active { background: linear-gradient(135deg, #A38C7A, #C2B0A1); color: white; border-color: #A38C7A; box-shadow: 0 3px 8px rgba(163,140,122,0.25); }
+
+    .nav-btn-arriving { border: 2px solid #6B9ECA; color: #6B9ECA; background: white; font-weight: bold; border-radius: 50px; transition: all 0.3s; }
+    .nav-btn-arriving:hover, .nav-btn-arriving.active { background: linear-gradient(135deg, #6B9ECA, #A3C6E4); color: white; border-color: #6B9ECA; box-shadow: 0 3px 8px rgba(107,158,202,0.25); }
+
+    .nav-btn-linelog { border: 2px solid #5B8A72; color: #5B8A72; background: white; font-weight: bold; border-radius: 50px; transition: all 0.3s; }
+    .nav-btn-linelog:hover, .nav-btn-linelog.active { background: linear-gradient(135deg, #5B8A72, #7AA68E); color: white; border-color: #5B8A72; box-shadow: 0 3px 8px rgba(91,138,114,0.25); }
+
+    .sort-btn { font-size: 0.85rem; padding: 4px 12px; margin: 2px; border: 1px solid #D97373; color: #D97373; background: white; font-weight: bold; border-radius: 6px; transition: all 0.2s; }
+    .sort-btn:hover, .sort-btn.active { background-color: #D97373; color: white; }
+
+    .toggle-collapse-btn { border: 2px dashed #B8B8B8; color: #777; background: white; font-weight: bold; border-radius: 12px; transition: all 0.2s; }
+    .toggle-collapse-btn:hover { background: #f0f0f0; color: #444; border-color: #888; }
+    
+    .filter-btn { border-color: #5B8A72; color: #5B8A72; background: white; font-weight: bold; transition: all 0.2s; margin: 3px; font-size: 0.8rem;}
+    .filter-btn:hover, .filter-btn:active { background: #5B8A72; color: white; }
+
+    .collapse-area { display: none; background: #fff; padding: 12px; border-radius: 12px; border: 1px solid #eaeaea; margin-bottom: 12px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.02); animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
+    .item-block { background: white; border-radius: 16px; padding: 14px 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); border-top: 5px solid #C8A962; transition: all 0.3s; height: 100%; display: flex; flex-direction: column; }
+    .item-block:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.08); }
+    
+    .card-header-click { cursor: pointer; user-select: none; }
+    .expand-icon { font-size: 0.85rem; color: #999; margin-left: 6px; transition: transform 0.3s ease; }
+    
+    .model-bubble { 
+      font-size: 1rem; font-weight: 800; color: #333; 
+      background: linear-gradient(to right, #ffffff, #fbfbfb);
+      border: 1.5px solid #E6D39A; border-radius: 12px; 
+      padding: 4px 10px 4px 6px; display: inline-flex; align-items: center;
+      letter-spacing: 0.5px; line-height: 1.2;
+    }
+    
+    .series-bubble { 
+      font-size: 0.8rem; font-weight: 800; color: #5B8A72; 
+      background: #F2F7F4; border: 1px solid #D2E3D8; 
+      border-radius: 10px; padding: 3px 8px; 
+      display: inline-flex; align-items: center;
+      letter-spacing: 0.5px;
+    }
+
+    .origin-text { font-size: 0.8rem; color: #888; font-weight: bold; }
+    .flag-inline { font-size: 1.15rem; margin-right: 4px; line-height: 1; vertical-align: middle; display: inline-block; }
+    
+    .data-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 0.85rem; border-bottom: 1px dashed #f0f0f0; align-items: center;}
+    .data-label { color: #888; font-weight: 600; }
+    .data-value { color: #444; font-weight: 800; text-align: right;}
+    
+    .stock-badge { font-weight: bold; padding: 3px 10px; border-radius: 6px; font-size: 0.9rem; }
+    .stock-in { background-color: #F2F7F4; color: #4A725D; border: 1px solid #D2E3D8;}
+    .stock-out { background-color: #FDF3F3; color: #D97373; border: 1px solid #F6D6D6;}
+    
+    .ping-text { color: #6B9ECA; font-size: 1rem; font-weight: 900; }
+    
+    .right-top-alert { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+    .status-alert-badge { font-size: 0.75rem; font-weight: bold; padding: 3px 8px; border-radius: 6px; display: inline-block; white-space: nowrap; }
+    .badge-contract { background-color: #333; color: #F2DA88; border: 1px solid #C8A962; } 
+    .badge-nopromo { background-color: #FCF7E6; color: #A68B4D; border: 1px solid #EAE0C5; }
+    .badge-onsale { background-color: #FDF3F3; color: #C96666; border: 1px solid #F6D6D6; animation: pulse 1.5s infinite; }
+    .badge-smallbatch { background-color: #F7F5F2; color: #A38C7A; border: 1px solid #E6DED8; } 
+    
+    .red-light-alert { display: inline-block; animation: pulse 1s infinite; font-size: 0.85rem; margin-left: 6px; }
+    
+    /* 💥 到港貨物專屬排版樣式 */
+    .arriving-block { background: white; border-radius: 16px; padding: 14px 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-top: 5px solid #6B9ECA; margin-bottom: 12px; }
+    .arr-row { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 0.9rem; }
+    .arr-box { background: #F4F8FB; border: 1px solid #DDE8F2; border-radius: 8px; padding: 8px; text-align: center; flex: 1; margin: 0 4px; }
+    .arr-box:first-child { margin-left: 0; }
+    .arr-box:last-child { margin-right: 0; }
+    .arr-box-title { display: block; font-size: 0.75rem; color: #888; font-weight: bold; margin-bottom: 4px; }
+    .arr-box-value { display: block; font-size: 1rem; color: #2A5A82; font-weight: 900; }
+    
+    /* 💥 專屬警告標語區塊設計 */
+    .warning-box { background-color: #FCFAEF; border: 1px solid #E6D39A; border-radius: 12px; padding: 12px 15px; font-size: 0.85rem; line-height: 1.5; box-shadow: 0 3px 8px rgba(0,0,0,0.03); animation: slideIn 0.3s ease-out; }
+    .warning-icon { font-size: 1.4rem; margin-right: 10px; }
+    @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="login-card">
+    
+    <div class="title-wrapper">
+      <img src="https://drive.google.com/thumbnail?id=1hi9Q-EQPqtAC_M1leDEIQ0VIJj_9G8QW&sz=w800" onerror="this.onerror=null; this.src='https://lh3.googleusercontent.com/d/1hi9Q-EQPqtAC_M1leDEIQ0VIJj_9G8QW';" alt="Logo">
+      <h1 class="login-title">勁揚建材系統</h1>
+    </div>
+
+    <div id="login-loader" class="mb-4">
+      <div class="spinner-border text-warning" role="status"></div>
+      <div class="mt-2 text-muted fw-bold">連線載入中...</div>
+    </div>
+    <div id="login-buttons" class="d-none">
+      <button class="btn-login-customer" onclick="enterSystem(false)">👤 一般客戶查詢</button>
+      <button class="btn-login-manager" onclick="showPasswordField()">👑 管理員登入</button>
+    </div>
+    <div id="password-section">
+      <div class="input-group mt-2">
+        <input type="password" id="mgr-pwd" class="form-control" placeholder="請輸入管理密碼" onkeyup="if(event.keyCode===13) verifyManager()">
+        <button class="btn btn-outline-warning text-dark fw-bold" onclick="verifyManager()">進入</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="main-container d-none" id="app-screen">
+  
+  <div class="system-header">
+    <img src="https://drive.google.com/thumbnail?id=1hi9Q-EQPqtAC_M1leDEIQ0VIJj_9G8QW&sz=w800" onerror="this.onerror=null; this.src='https://lh3.googleusercontent.com/d/1hi9Q-EQPqtAC_M1leDEIQ0VIJj_9G8QW';" alt="Logo">
+    <h1 class="system-title">勁揚建材庫存查詢系統</h1>
+  </div>
+  
+  <div class="row justify-content-center mb-1">
+    <div class="col-md-10 text-center">
+      <button class="nav-btn active" id="btn-all" onclick="filterByCategory('all')">全部商品</button>
+      <button class="nav-btn" id="btn-pool" onclick="filterByCategory('pool')">🏊 泳池系列</button>
+      <button class="nav-btn" id="btn-filler" onclick="filterByCategory('filler')">🎨 填縫劑</button>
+      <button class="nav-btn-danger" id="btn-lowstock" onclick="filterByCategory('lowstock')">🔴 低庫存</button>
+      <button class="nav-btn-batch" id="btn-smallbatch" onclick="filterByCategory('smallbatch')">📦 舊批號剩餘</button>
+      <button class="nav-btn-arriving" id="btn-arriving" onclick="filterByCategory('arriving')">🚢 補貨到港</button>
+      <button class="nav-btn-linelog" id="btn-linelog" onclick="filterByCategory('linelog')" style="display: none;">💬 LINE查詢紀錄</button>
+      <button class="nav-btn-batch" id="btn-refresh-ranking" onclick="refreshQuantityRanking()" style="display: none;">🔄 更新排行</button>
+    </div>
+  </div>
+
+  <div class="row justify-content-center mb-3 d-none" id="lowStockSortArea">
+    <div class="col-md-10 text-center">
+      <button class="sort-btn active" id="sort-asc" onclick="changeLowStockOrder('asc')">📉 坪數：少 → 多</button>
+      <button class="sort-btn" id="sort-desc" onclick="changeLowStockOrder('desc')">📈 坪數：多 → 少</button>
+    </div>
+  </div>
+  
+  <div class="row justify-content-center mb-3">
+    <div class="col-md-8 col-lg-6">
+      <div class="input-group search-group">
+        <input type="text" id="keyword" class="form-control search-input" placeholder="輸入編號、系列、尺寸搜尋..." onkeyup="startSearch()">
+        <button class="btn btn-mic" id="btn-mic" type="button" onclick="startVoiceSearch()" title="語音輸入">🎤</button>
+        <button class="btn btn-search" type="button" onclick="startSearch()">🔍</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="row justify-content-center mb-3 d-none" id="arrivingWarningArea">
+    <div class="col-md-10 col-lg-8">
+      <div class="warning-box d-flex align-items-center">
+        <div class="warning-icon">⚠️</div>
+        <div>
+          <span style="color: #A6101A; font-weight: 900; font-size: 0.95rem;">溫馨提醒：</span><br>
+          【到港日期】為貨櫃抵達港口之預估時間，<span style="color: #D97373; font-weight: bold;">並非「實際可出貨日」</span>。清關與入庫作業仍需數天，實際交期請洽業務確認，感謝您的體諒！
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="row justify-content-center mb-3" id="standardFilterArea">
+    <div class="col-md-10 text-center">
+      <button class="toggle-collapse-btn" id="toggleSizeBtn" onclick="toggleArea('size')">📏 展開尺寸 ▾</button>
+      <button class="toggle-collapse-btn" id="toggleAlphaBtn" onclick="toggleArea('alpha')">🔤 展開字首 ▾</button>
+      
+      <div id="sizeCollapseArea" class="collapse-area mt-2">
+        <div id="sizeButtonsContainer"></div>
+      </div>
+      
+      <div id="alphaCollapseArea" class="collapse-area mt-2">
+        <div id="alphaButtonsContainer"></div>
+      </div>
+    </div>
+  </div>
+  
+  <div id="loader" class="text-center my-4">
+    <div class="spinner-border text-warning" style="width: 2.5rem; height: 2.5rem;" role="status"></div>
+    <div class="mt-2 text-muted fw-bold fs-6">🚀 系統同步中，請稍候...</div>
+  </div>
+  
+  <div class="row g-2" id="blockContainer"></div>
+</div>
+
+<script>
+  let globalData = []; 
+  let arrivingData = []; 
+  let lineLogData = []; 
+  let currentCategory = 'all';
+  let currentAlpha = ''; 
+  let lowStockOrder = 'asc'; 
+  let isManager = false; 
+
+  window.onload = function() {
+    google.script.run.withSuccessHandler(initSystem).withFailureHandler(renderError).getInventoryData();
+  };
+
+  function initSystem(response) {
+    document.getElementById("loader").classList.add("d-none");
+    if (!response.success) {
+      document.getElementById("login-screen").innerHTML = `<div class="alert alert-danger text-center fw-bold m-4">${response.message}</div>`;
+      return;
+    }
+    
+    globalData = response.data;
+    arrivingData = response.arrivingData || []; 
+    lineLogData = response.lineLogData || []; 
+
+    document.getElementById("login-loader").classList.add("d-none");
+    document.getElementById("login-buttons").classList.remove("d-none");
+
+    let sizeSet = new Set();
+    globalData.forEach(item => {
+      if (item.size && item.size.trim() !== "" && item.size !== "-") {
+        sizeSet.add(item.size.trim()); 
+      }
+    });
+    let sizes = Array.from(sizeSet).sort(function(a, b) {
+       return a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'});
+    });
+    let sizeBtnHtml = `<button class="btn filter-btn btn-sm rounded-pill px-3" onclick="filterBySize('')">全部尺寸</button>`;
+    sizes.forEach(size => {
+      sizeBtnHtml += `<button class="btn filter-btn btn-sm rounded-pill px-3" onclick="filterBySize('${size}')">${size}</button>`;
+    });
+    document.getElementById("sizeButtonsContainer").innerHTML = sizeBtnHtml;
+
+    let alphaSet = new Set();
+    globalData.forEach(item => {
+      if (item.model && item.model.trim() !== "") {
+        let firstChar = item.model.trim().charAt(0).toUpperCase();
+        if (/^[A-Z]$/.test(firstChar)) {
+          alphaSet.add(firstChar);
+        }
+      }
+    });
+    let alphas = Array.from(alphaSet).sort();
+    let alphaBtnHtml = `<button class="btn filter-btn btn-sm rounded-pill px-3" onclick="filterByAlpha('')">全部字首</button>`;
+    alphas.forEach(alpha => {
+      alphaBtnHtml += `<button class="btn filter-btn btn-sm rounded-pill px-3" onclick="filterByAlpha('${alpha}')">${alpha}</button>`;
+    });
+    document.getElementById("alphaButtonsContainer").innerHTML = alphaBtnHtml;
+  }
+
+  function startVoiceSearch() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    
+    if (!SpeechRecognition) {
+      alert("⚠️ 您的瀏覽器或設備目前不支援網頁語音辨識功能！\n\n🍎 蘋果 iPhone 用戶：\n請直接點擊輸入框，並使用小鍵盤右下角的「麥克風」按鈕來語音輸入。\n\n🤖 安卓用戶：\n請使用 Google Chrome 瀏覽器開啟此網頁。");
+      return;
+    }
+    
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'cmn-Hant-TW'; 
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    let micBtn = document.getElementById('btn-mic');
+    let searchInput = document.getElementById('keyword');
+    let originalPlaceholder = searchInput.placeholder;
+
+    micBtn.innerText = '⏳';
+    searchInput.placeholder = "等待麥克風權限...";
+
+    recognition.onstart = function() {
+      micBtn.innerText = '🔴'; 
+      micBtn.classList.add('recording-pulse');
+      searchInput.placeholder = "🎙️ 聆聽中，請說出關鍵字...";
+    };
+
+    recognition.onresult = function(event) {
+      let speechResult = event.results[0][0].transcript;
+      speechResult = speechResult.replace(/[。，、？！]/g, '');
+      searchInput.value = speechResult;
+      startSearch();
+    };
+
+    recognition.onerror = function(event) {
+      console.error("語音辨識錯誤:", event.error);
+      micBtn.innerText = '🎤';
+      micBtn.classList.remove('recording-pulse');
+      searchInput.placeholder = originalPlaceholder;
+      
+      if (event.error === 'not-allowed') {
+        alert("🛑 麥克風被阻擋！\n\n請允許瀏覽器使用麥克風權限。如果是 iPhone 用戶，建議直接點擊輸入框，使用鍵盤上的語音按鈕最穩定！");
+      } else if (event.error === 'no-speech') {
+        alert("🤫 沒有偵測到聲音，請再按一次重試！");
+      }
+    };
+
+    recognition.onend = function() {
+      micBtn.innerText = '🎤';
+      micBtn.classList.remove('recording-pulse');
+      searchInput.placeholder = originalPlaceholder;
+    };
+
+    try {
+      recognition.start();
+    } catch(e) {
+      console.log(e);
+      micBtn.innerText = '🎤';
+      searchInput.placeholder = originalPlaceholder;
+    }
+  }
+
+  function showPasswordField() {
+    document.getElementById("password-section").style.display = "block";
+    document.getElementById("mgr-pwd").focus();
+  }
+
+  function verifyManager() {
+    let pwd = document.getElementById("mgr-pwd").value;
+    if (pwd === "7813") {
+      enterSystem(true);
+    } else {
+      alert("❌ 密碼錯誤，請重新輸入！");
+    }
+  }
+
+  function enterSystem(managerFlag) {
+    isManager = managerFlag;
+    
+    document.getElementById("login-screen").classList.add("d-none");
+    document.getElementById("app-screen").classList.remove("d-none");
+    
+    if (!isManager) {
+      document.getElementById("btn-pool").style.display = "none";
+      document.getElementById("btn-linelog").style.display = "none";
+      document.getElementById("btn-refresh-ranking").style.display = "none";
+    } else {
+      document.getElementById("btn-pool").style.display = "inline-block";
+      document.getElementById("btn-linelog").style.display = "inline-block";
+      document.getElementById("btn-refresh-ranking").style.display = "inline-block";
+    }
+
+    startSearch(); 
+  }
+
+  function toggleArea(type) {
+    let area = document.getElementById(type + "CollapseArea");
+    let btn = document.getElementById("toggle" + (type.charAt(0).toUpperCase() + type.slice(1)) + "Btn");
+    let iconLabel = type === 'size' ? '📏 尺寸' : '🔤 字首';
+    
+    if (area.style.display === "none" || area.style.display === "") {
+      area.style.display = "block"; 
+      btn.innerHTML = iconLabel + " ▴";
+    } else {
+      area.style.display = "none"; 
+      btn.innerHTML = "展開" + iconLabel.split(' ')[1] + " ▾";
+    }
+  }
+
+  function toggleCard(id) {
+    let el = document.getElementById(id);
+    let icon = document.getElementById('icon-' + id);
+    if (el.style.display === 'none' || el.style.display === '') {
+      el.style.display = 'block';
+      if(icon) icon.innerText = '▲';
+    } else {
+      el.style.display = 'none';
+      if(icon) icon.innerText = '▼';
+    }
+  }
+
+  function filterByCategory(type) {
+    currentCategory = type;
+    document.querySelectorAll('.nav-btn, .nav-btn-danger, .nav-btn-batch, .nav-btn-arriving, .nav-btn-linelog').forEach(btn => btn.classList.remove('active'));
+    
+    if(type === 'all') document.getElementById('btn-all').classList.add('active');
+    if(type === 'pool') document.getElementById('btn-pool').classList.add('active');
+    if(type === 'filler') document.getElementById('btn-filler').classList.add('active');
+    if(type === 'lowstock') document.getElementById('btn-lowstock').classList.add('active'); 
+    if(type === 'smallbatch') document.getElementById('btn-smallbatch').classList.add('active'); 
+    if(type === 'arriving') document.getElementById('btn-arriving').classList.add('active'); 
+    if(type === 'linelog') document.getElementById('btn-linelog').classList.add('active'); 
+    
+    if (type === 'lowstock') {
+      document.getElementById('lowStockSortArea').classList.remove('d-none');
+    } else {
+      document.getElementById('lowStockSortArea').classList.add('d-none');
+    }
+
+    if (type === 'arriving' || type === 'linelog') {
+      document.getElementById('standardFilterArea').classList.add('d-none');
+    } else {
+      document.getElementById('standardFilterArea').classList.remove('d-none');
+    }
+
+    if (type === 'arriving') {
+      document.getElementById('arrivingWarningArea').classList.remove('d-none');
+    } else {
+      document.getElementById('arrivingWarningArea').classList.add('d-none');
+    }
+
+    startSearch();
+  }
+
+  function changeLowStockOrder(order) {
+    lowStockOrder = order;
+    document.querySelectorAll('.sort-btn').forEach(btn => btn.classList.remove('active'));
+    if (order === 'asc') {
+      document.getElementById('sort-asc').classList.add('active');
+    } else {
+      document.getElementById('sort-desc').classList.add('active');
+    }
+    startSearch();
+  }
+
+  function refreshQuantityRanking() {
+    const btn = document.getElementById("btn-refresh-ranking");
+    const oldText = btn.innerText;
+    btn.innerText = "⏳ 更新中";
+    btn.disabled = true;
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        btn.innerText = oldText;
+        btn.disabled = false;
+        if (result && result.success) {
+          alert(result.message + " 目前共整理 " + result.rows + " 筆。");
+        } else {
+          alert((result && result.message) ? result.message : "更新失敗。");
+        }
+      })
+      .withFailureHandler(function(err) {
+        btn.innerText = oldText;
+        btn.disabled = false;
+        alert("更新排行失敗：" + err.message);
+      })
+      .refreshQuantityRanking();
+  }
+
+  function filterBySize(sizeStr) {
+    document.getElementById("keyword").value = sizeStr; 
+    startSearch(); 
+  }
+  
+  function filterByAlpha(letter) {
+    currentAlpha = letter;
+    startSearch(); 
+  }
+
+  function startSearch() {
+    let kwStr = document.getElementById("keyword").value.toLowerCase().trim();
+    let keywords = kwStr.split(/\s+/); 
+
+    if (currentCategory === 'arriving') {
+      let filteredArr = arrivingData.filter(item => {
+        let text = `${item.colA} ${item.colB} ${item.colC} ${item.colD} ${item.colE}`.toLowerCase();
+        return keywords.every(k => text.includes(k));
+      });
+      renderArrivingBlocks(filteredArr);
+      return;
+    }
+
+    if (currentCategory === 'linelog') {
+      let filteredLog = lineLogData.filter(item => {
+        let text = `${item.time} ${item.userMsg} ${item.reply} ${item.status}`.toLowerCase();
+        return keywords.every(k => text.includes(k));
+      });
+      renderLineLogBlocks(filteredLog);
+      return;
+    }
+
+    let filteredData = globalData.filter(item => {
+      let sName = item.series ? item.series.trim() : "";
+      let nStr = item.note ? item.note.toLowerCase() : "";
+      let isSmallBatch = nStr.includes("小批");
+      
+      if (!isManager) {
+        if (sName === "泳池磁磚" || sName === "泳池AGA池畔" || sName === "泳池APP馬賽克" || sName.startsWith("泳池")) {
+          return false; 
+        }
+      }
+
+      if (currentCategory === 'smallbatch') {
+        if (!isSmallBatch) return false; 
+      } else {
+        if (isSmallBatch) return false; 
+      }
+
+      let matchCat = true;
+      if (currentCategory === 'pool') {
+        matchCat = (sName === "泳池磁磚" || sName === "泳池AGA池畔" || sName === "泳池APP馬賽克" || sName.startsWith("泳池"));
+      } else if (currentCategory === 'filler') {
+        matchCat = (sName === "填縫劑");
+      } else if (currentCategory === 'lowstock') {
+        let pNum = parseFloat(item.ping);
+        matchCat = (!isNaN(pNum) && pNum < 10);
+      }
+      
+      let matchAlpha = true;
+      if (currentAlpha !== "") {
+        let firstChar = item.model ? item.model.trim().charAt(0).toUpperCase() : "";
+        matchAlpha = (firstChar === currentAlpha);
+      }
+      
+      let searchableText = `${item.model} ${item.series} ${item.origin} ${item.batch} ${item.size}`.toLowerCase();
+      let matchKw = keywords.every(k => searchableText.includes(k));
+      
+      return matchCat && matchAlpha && matchKw;
+    });
+
+    if (currentCategory === 'lowstock' || currentCategory === 'smallbatch') {
+      filteredData.sort((a, b) => {
+        let charA = a.model ? a.model.trim().charAt(0).toUpperCase() : "";
+        let charB = b.model ? b.model.trim().charAt(0).toUpperCase() : "";
+        
+        if (charA < charB) return -1;
+        if (charA > charB) return 1;
+        
+        let pA = parseFloat(a.ping);
+        let pB = parseFloat(b.ping);
+        if (isNaN(pA)) pA = 999;
+        if (isNaN(pB)) pB = 999;
+        
+        if (lowStockOrder === 'asc' || currentCategory === 'smallbatch') {
+          return pA - pB; 
+        } else {
+          return pB - pA; 
+        }
+      });
+    }
+
+    renderBlocks(filteredData);
+  }
+
+  function getUnit(seriesName) {
+    if (!seriesName) return "片";
+    let name = seriesName.trim();
+    if (name === "填縫劑" || name === "泳池填縫劑" || name.includes("填縫劑")) {
+      return "包";
+    }
+    return "片";
+  }
+
+  function getFlagEmoji(originText) {
+    if (!originText) return "🌍"; 
+    let upperText = originText.toString().toUpperCase().replace(/\s+/g, '');
+    if (upperText.includes("ES") || upperText.includes("西班牙")) return "🇪🇸";
+    if (upperText.includes("IT") || upperText.includes("義大利")) return "🇮🇹";
+    if (upperText.includes("TW") || upperText.includes("台灣") || upperText.includes("國產")) return "🇹🇼";
+    if (upperText.includes("IN") || upperText.includes("印度")) return "🇮🇳";
+    if (upperText.includes("VN") || upperText.includes("越南")) return "🇻🇳";
+    if (upperText.includes("ID") || upperText.includes("印尼")) return "🇮🇩";
+    if (upperText.includes("MY") || upperText.includes("馬來西亞")) return "🇲🇾";
+    if (upperText.includes("CN") || upperText.includes("中國") || upperText.includes("大陸")) return "🇨🇳";
+    return "🌍"; 
+  }
+  
+  function getOriginName(originText) {
+    if (!originText) return "未標示";
+    let upperText = originText.toString().toUpperCase().replace(/\s+/g, '');
+    if (upperText.includes("ES") || upperText.includes("西班牙")) return "西班牙";
+    if (upperText.includes("IT") || upperText.includes("義大利")) return "義大利";
+    if (upperText.includes("TW") || upperText.includes("台灣") || upperText.includes("國產")) return "台灣";
+    if (upperText.includes("IN") || upperText.includes("印度")) return "印度";
+    if (upperText.includes("VN") || upperText.includes("越南")) return "越南";
+    if (upperText.includes("ID") || upperText.includes("印尼")) return "印尼";
+    if (upperText.includes("MY") || upperText.includes("馬來西亞")) return "馬來西亞";
+    if (upperText.includes("CN") || upperText.includes("中國") || upperText.includes("大陸")) return "中國";
+    return originText;
+  }
+
+  function renderArrivingBlocks(items) {
+    var container = document.getElementById("blockContainer");
+    container.innerHTML = "";
+
+    if (items.length === 0) {
+      container.innerHTML = `<div class="col-12"><div class="card bg-white p-5 text-center text-muted shadow-sm fw-bold fs-5" style="border-radius:16px;">❌ 找不到即將到港的貨物</div></div>`;
+      return;
+    }
+
+    for (var i = 0; i < items.length; i++) {
+      var item = items[i];
+      var colDiv = document.createElement("div");
+      colDiv.className = "col-12 col-md-6 col-xl-4"; 
+
+      colDiv.innerHTML = `
+        <div class="arriving-block">
+          <div class="d-flex align-items-center mb-2">
+            <div class="series-bubble me-2" style="background:#fff; border:1px solid #C8A962; color:#A68B4D;">
+              🏷️ ${item.colA || "未標示系列"}
+            </div>
+            <div style="font-size: 1.1rem; font-weight: 900; color: #333; letter-spacing: 0.5px;">
+              ${item.colB || "未標示型號"}
+            </div>
+          </div>
+          
+          <div class="arr-row">
+            <div class="arr-box">
+              <span class="arr-box-title">📦 板數</span>
+              <span class="arr-box-value">${item.colC || "-"}</span>
+            </div>
+            <div class="arr-box">
+              <span class="arr-box-title">🔢 總片數</span>
+              <span class="arr-box-value">${item.colD || "-"}</span>
+            </div>
+            <div class="arr-box" style="background: #FDF3F3; border-color: #F6D6D6;">
+              <span class="arr-box-title" style="color: #C96666;">🚢 到港日期</span>
+              <span class="arr-box-value" style="color: #D97373;">${item.colE || "未定"}</span>
+            </div>
+          </div>
+        </div>
+      `;
+      container.appendChild(colDiv);
+    }
+  }
+
+  function renderLineLogBlocks(items) {
+    var container = document.getElementById("blockContainer");
+    container.innerHTML = "";
+
+    if (items.length === 0) {
+      container.innerHTML = `<div class="col-12"><div class="card bg-white p-5 text-center text-muted shadow-sm fw-bold fs-5" style="border-radius:16px;">❌ 找不到符合條件的查詢紀錄</div></div>`;
+      return;
+    }
+
+    for (var i = 0; i < items.length; i++) {
+      var item = items[i];
+      var colDiv = document.createElement("div");
+      colDiv.className = "col-12 col-md-6 col-xl-4";
+      
+      var statusClass = "badge-smallbatch";
+      if (item.status.indexOf("成功") !== -1) {
+        statusClass = "stock-in";
+      } else if (item.status.indexOf("失敗") !== -1 || item.status.indexOf("錯誤") !== -1) {
+        statusClass = "stock-out";
+      }
+      
+      var collapseId = 'collapse-log-' + i;
+      
+      var safeReply = item.reply
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+
+      colDiv.innerHTML = `
+        <div class="item-block h-100 flex-column" style="border-top-color: #5B8A72;">
+          <div class="card-header-click" onclick="toggleCard('${collapseId}')">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span style="font-size: 0.8rem; font-weight: bold; color: #888;">🕒 ${item.time}</span>
+              <span class="stock-badge ${statusClass}" style="font-size: 0.75rem; padding: 2px 8px;">
+                ${item.status}
+              </span>
+            </div>
+            
+            <div class="d-flex justify-content-between align-items-center mt-2">
+              <div style="font-weight: 800; font-size: 1.05rem; color: #333; word-break: break-all;">
+                👤 搜尋：「${item.userMsg || "(空)"}」
+              </div>
+              <div>
+                <span id="icon-${collapseId}" class="expand-icon">▼</span>
+              </div>
+            </div>
+          </div>
+          
+          <div id="${collapseId}" style="display: none; padding-top: 10px; margin-top: 10px; border-top: 1px dashed #f0f0f0;">
+            <div class="text-muted fw-bold mb-1" style="font-size: 0.8rem;">🤖 回覆內容：</div>
+            <pre style="white-space: pre-wrap; font-family: inherit; font-size: 0.85rem; background: #fafafa; padding: 10px; border-radius: 8px; border: 1px solid #eee; margin: 0; color: #555;">${safeReply}</pre>
+          </div>
+        </div>
+      `;
+      container.appendChild(colDiv);
+    }
+  }
+
+  function renderBlocks(items) {
+    var container = document.getElementById("blockContainer");
+    container.innerHTML = "";
+
+    if (items.length === 0) {
+      container.innerHTML = `<div class="col-12"><div class="card bg-white p-5 text-center text-muted shadow-sm fw-bold fs-5" style="border-radius:16px;">❌ 找不到符合條件的建材</div></div>`;
+      return;
+    }
+
+    for (var i = 0; i < items.length; i++) {
+      var item = items[i];
+      var isZero = item.stock <= 0;
+      var colDiv = document.createElement("div");
+      colDiv.className = "col-12 col-md-6 col-xl-3"; 
+
+      var currentUnit = getUnit(item.series);
+
+      var pNum = parseFloat(item.ping);
+      var isLowPing = (!isNaN(pNum) && pNum < 10);
+      var redLightHtml = isLowPing ? `<span class="red-light-alert text-danger fw-bold">🔴 低庫存</span>` : "";
+
+      var alertHtml = "";
+      if (item.isContract) {
+        alertHtml += `<div class="status-alert-badge badge-contract">🤝 簽約限定</div>`;
+      }
+      
+      var noteStr = item.note || "";
+      var noteUpper = noteStr.toLowerCase();
+      
+      if (noteUpper.includes("小批")) {
+        alertHtml += `<div class="status-alert-badge badge-smallbatch">📦 舊批號</div>`;
+      }
+      if (noteUpper.includes("停產")) {
+        alertHtml += `<div class="status-alert-badge badge-nopromo">🚫 停產</div>`;
+      } else if (noteUpper.includes("不續辦")) {
+        alertHtml += `<div class="status-alert-badge badge-nopromo">🚫 不續辦</div>`;
+      }
+      if (noteUpper.includes("促銷")) {
+        alertHtml += `<div class="status-alert-badge badge-onsale">🔥 促銷</div>`;
+      } 
+
+      var blockBorder = isZero ? "border-top-color: #D97373;" : "border-top-color: #C8A962;";
+      var pingDisplayHtml = `<span class="fw-bold" style="font-size:1.05rem; color:#6B9ECA;">${item.ping} 坪</span>`;
+
+      let collapseId = 'collapse-card-' + i;
+
+      colDiv.innerHTML = `
+        <div class="item-block h-100 flex-column" style="${blockBorder}">
+          
+          <div class="card-header-click" onclick="toggleCard('${collapseId}')">
+            
+            <div class="d-flex justify-content-between align-items-start">
+              <div class="model-bubble">
+                <span class="flag-inline" title="${item.origin}">${getFlagEmoji(item.origin)}</span>${item.model}
+              </div>
+              <div class="right-top-alert">
+                ${alertHtml}
+              </div>
+            </div>
+            
+            <div class="d-flex justify-content-between align-items-end mt-2">
+              <div class="series-bubble">🏷️ ${item.series ? item.series : "未分類"}</div>
+              <div class="text-end">
+                <span class="stock-badge ${isZero ? 'stock-out' : 'stock-in'}">
+                  📦 ${isZero ? '售完 (0)' : item.stock + ' ' + currentUnit}
+                </span>
+                <span id="icon-${collapseId}" class="expand-icon">▼</span>
+              </div>
+            </div>
+          </div>
+          
+          <div id="${collapseId}" style="display: none; padding-top: 12px; margin-top: 10px; border-top: 1px dashed #f0f0f0;">
+            
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="origin-text" style="margin-top:0;">📍 產地：${getOriginName(item.origin)}</span>
+              <div>${redLightHtml}</div>
+            </div>
+
+            <div class="data-row">
+              <span class="data-label">📏 規格尺寸</span>
+              <span class="data-value" style="color:#666;">${item.size ? item.size : "-"}</span>
+            </div>
+            <div class="data-row">
+              <span class="data-label">🔢 批號</span>
+              <span class="data-value">${item.batch}</span>
+            </div>
+            <div class="data-row">
+              <span class="data-label">⚖️ 重量</span>
+              <span class="data-value" style="color:#666;">${item.weight}</span>
+            </div>
+            <div class="data-row">
+              <span class="data-label">🏢 在倉庫存</span>
+              <span class="data-value">${item.stockWarehouse} ${currentUnit}</span>
+            </div>
+            <div class="data-row">
+              <span class="data-label">🔒 保留數</span>
+              <span class="data-value fw-bold" style="font-size:1.05rem; color:#D97373;">${item.reserved} ${currentUnit}</span>
+            </div>
+            
+            <div class="data-row" style="background-color: #fcfcfc; border-radius: 6px; padding-left: 6px; padding-right: 6px;">
+              <span class="data-label" style="color: #777;">🔢 一坪用量</span>
+              <span class="data-value" style="color: #666;">${item.rawJ}</span>
+            </div>
+            
+            <div class="data-row" style="border-bottom:none; margin-bottom:0;">
+              <span class="data-label">📐 剩餘坪數</span>
+              <span class="data-value ping-text">${pingDisplayHtml}</span>
+            </div>
+            
+          </div>
+
+        </div>
+      `;
+      container.appendChild(colDiv);
+    }
+  }
+
+  function renderError(err) {
+    document.getElementById("loader").classList.add("d-none");
+    document.getElementById("login-screen").innerHTML = `<div class="alert alert-danger text-center fw-bold m-4">連線發生錯誤：${err.message}</div></div>`;
+  }
+</script>
+</body>
+</html>

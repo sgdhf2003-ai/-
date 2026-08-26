@@ -108,6 +108,7 @@ function doPost(e) {
       return jsonOutput({ ok: true, logs: values });
     }
     if (action === "upsertHold") return jsonOutput(upsertHoldAction(data));
+    if (action === "lineCreateHold") return jsonOutput(lineCreateHoldAction(data));
     if (action === "fulfillHold") return jsonOutput(fulfillHoldAction(data));
     if (action === "cancelReleaseHold") return jsonOutput(cancelReleaseHoldAction(data));
     if (action === "readbackAudit") return jsonOutput(readbackAuditAction(data));
@@ -528,6 +529,80 @@ function upsertHolds(holds, isSnapshot, userContext) {
     upsertObjects(SHEETS.holds, HEADERS.holds, rows);
   }
   return { ok: true, message: "保留物品已同步" };
+}
+
+function lineCreateHoldAction(data, adapter) {
+  const bridgeSecret = data ? data.bridgeSecret : null;
+  const configuredSecret = (typeof PropertiesService !== "undefined" && PropertiesService.getScriptProperties)
+    ? PropertiesService.getScriptProperties().getProperty("LINE_BOT_BRIDGE_SECRET")
+    : null;
+
+  if (!bridgeSecret || !configuredSecret || bridgeSecret !== configuredSecret) {
+    return {
+      ok: false,
+      errorCode: "INVALID_LINE_BRIDGE",
+      message: "LINE 橋接金鑰無效"
+    };
+  }
+
+  const lineUserId = data ? data.lineUserId : null;
+  if (!lineUserId) {
+    return {
+      ok: false,
+      errorCode: "LINE_USER_MISSING",
+      message: "缺少 LINE 使用者識別碼"
+    };
+  }
+
+  let users = [];
+  if (typeof SpreadsheetApp !== "undefined" && typeof readObjects === "function" && typeof SHEETS !== "undefined" && SHEETS.users) {
+    users = readObjects(SHEETS.users, HEADERS.users);
+  } else if (data && data.usersTable && Array.isArray(data.usersTable)) {
+    users = data.usersTable;
+  }
+
+  const targetUser = users.find(u => u && u.lineUserId === lineUserId);
+  if (!targetUser) {
+    return {
+      ok: false,
+      errorCode: "INTERNAL_USER_UNBOUND",
+      message: "該 LINE 帳號尚未綁定內部人員"
+    };
+  }
+
+  if (String(targetUser.status || "").trim() !== "啟用") {
+    return {
+      ok: false,
+      errorCode: "ACCOUNT_INACTIVE",
+      message: "內部人員帳號處於停用狀態"
+    };
+  }
+
+  const role = String(targetUser.role || "").trim().toLowerCase();
+  if (role === "sales" || role === "retailsales" || role === "showroomsales" || role === "retail") {
+    return {
+      ok: false,
+      errorCode: "UNAUTHORIZED_OPERATOR",
+      message: "您目前的權限角色無法執行劃扣與出貨操作"
+    };
+  }
+
+  const serverUserContext = {
+    username: targetUser.username || targetUser.displayName || "",
+    displayName: targetUser.displayName || targetUser.username || "",
+    role: targetUser.role || "",
+    salesOwner: targetUser.salesOwner || targetUser.displayName || ""
+  };
+
+  const incomingHold = data ? (data.hold || data) : {};
+  const holdPayload = {
+    ...incomingHold,
+    userContext: serverUserContext,
+    salesOwner: serverUserContext.salesOwner
+  };
+
+  const effectiveAdapter = adapter || (data ? data.adapter : null);
+  return upsertHoldAction(holdPayload, effectiveAdapter);
 }
 
 function upsertHoldAction(data, adapter) {
