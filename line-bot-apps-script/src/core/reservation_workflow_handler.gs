@@ -223,7 +223,9 @@ function handleLineReservationPostback(options) {
 
     // Server-Side Operator & SalesOwner Re-Verification
     var boundUser = Array.isArray(usersTable) ? usersTable.find(function(u) { return u.lineUserId === userId; }) : null;
-    if (!boundUser) {
+    var hasBridgeCallback = typeof upsertHoldActionFn === "function";
+
+    if (!boundUser && !hasBridgeCallback) {
       return {
         handled: true,
         action: "confirmHoldDraft",
@@ -303,15 +305,16 @@ function handleLineReservationPostback(options) {
       }
     }
 
-    // Execute Hold Creation
+    // Execute Hold Creation via bridge callback
     var dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
     var randStr = Date.now().toString().slice(-6);
     var resNo = "RES-" + dateStr + "-" + randStr;
 
     var holdPayload = {
+      lineUserId: userId,
       userContext: {
-        username: boundUser.username || "line_bot",
-        role: boundUser.role || "assistant"
+        username: boundUser ? (boundUser.username || "line_bot") : "line_bot",
+        role: boundUser ? (boundUser.role || "assistant") : "assistant"
       },
       sessionToken: "bot_session",
       hold: {

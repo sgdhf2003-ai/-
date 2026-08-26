@@ -18,6 +18,7 @@
  * 12. confirmHoldDraft missing draft diagnostic MUST mask LINE user IDs to last 4 digits and NEVER expose full user ID.
  * 13. confirmHoldDraft draftId mismatch diagnostic MUST mask draftId to last 4 digits and NEVER expose full draftId.
  * 14. JingyangAssistant_tryHandleLineEvent MUST NOT call JingyangWorkflow_tryHandleTextEvent to prevent duplicate draft creation.
+ * 15. confirmHoldDraft MUST allow bridge callback when usersTable is empty, and MUST fail-closed when bridge callback is missing.
  */
 
 const assert = require("assert");
@@ -387,6 +388,80 @@ const tests = [
       assert(
         !fnBody.includes("JingyangWorkflow_tryHandleTextEvent"),
         "JingyangAssistant_tryHandleLineEvent MUST NOT call JingyangWorkflow_tryHandleTextEvent"
+      );
+    }
+  },
+  {
+    name: "15. confirmHoldDraft MUST allow bridge callback when usersTable is empty, and MUST fail-closed when bridge callback is missing",
+    run() {
+      const testUserId = "U88888888777777776666666655554444";
+      const draftId = "DRAFT-TEST-EMPTY-USERS";
+      let capturedPayload = null;
+
+      const mockStore = {
+        ["pendingDraftHold:" + testUserId]: JSON.stringify({
+          draftId: draftId,
+          customerName: "美麗空間",
+          productCode: "STU-6101",
+          quantity: 1,
+          expiresAt: new Date(Date.now() + 600000).toISOString()
+        })
+      };
+
+      const mockPropertiesStorage = {
+        getProperty(key) { return mockStore[key] || null; },
+        setProperty(key, val) { mockStore[key] = val; },
+        deleteProperty(key) { delete mockStore[key]; }
+      };
+
+      // Case A: usersTable is empty [] BUT bridge callback exists -> MUST call bridge
+      const resWithBridge = handleLineReservationPostback({
+        postbackData: "action=confirmHoldDraft&draftId=" + draftId,
+        userId: testUserId,
+        usersTable: [],
+        inventoryCatalog: { "STU-6101": 50 },
+        propertiesStorage: mockPropertiesStorage,
+        upsertHoldActionFn: function(payload) {
+          capturedPayload = payload;
+          return { ok: true, reservationNumber: "RES-EMPTY-001" };
+        }
+      });
+
+      assert.strictEqual(resWithBridge.handled, true);
+      assert.strictEqual(resWithBridge.success, true, "Empty usersTable with bridge callback MUST succeed");
+      assert(capturedPayload, "Bridge callback MUST be called");
+      assert.strictEqual(capturedPayload.lineUserId, testUserId, "Payload MUST contain lineUserId");
+
+      // Case B: usersTable is empty [] AND bridge callback is missing -> MUST fail closed with UNBOUND_USER
+      const mockStoreNoBridge = {
+        ["pendingDraftHold:" + testUserId]: JSON.stringify({
+          draftId: draftId,
+          customerName: "美麗空間",
+          productCode: "STU-6101",
+          quantity: 1,
+          expiresAt: new Date(Date.now() + 600000).toISOString()
+        })
+      };
+      const mockPropertiesStorageNoBridge = {
+        getProperty(key) { return mockStoreNoBridge[key] || null; },
+        setProperty(key, val) { mockStoreNoBridge[key] = val; },
+        deleteProperty(key) { delete mockStoreNoBridge[key]; }
+      };
+
+      const resNoBridge = handleLineReservationPostback({
+        postbackData: "action=confirmHoldDraft&draftId=" + draftId,
+        userId: testUserId,
+        usersTable: [],
+        inventoryCatalog: { "STU-6101": 50 },
+        propertiesStorage: mockPropertiesStorageNoBridge,
+        upsertHoldActionFn: null
+      });
+
+      assert.strictEqual(resNoBridge.handled, true);
+      assert.strictEqual(resNoBridge.success, false, "Empty usersTable WITHOUT bridge callback MUST fail-closed");
+      assert(
+        resNoBridge.errorCode === "BRIDGE_CALLBACK_NOT_CONFIGURED" || resNoBridge.errorCode === "UNBOUND_USER",
+        "Missing bridge callback MUST return fail-closed error code"
       );
     }
   }

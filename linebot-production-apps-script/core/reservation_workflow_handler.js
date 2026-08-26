@@ -233,7 +233,9 @@ function handleLineReservationPostback(options) {
 
     // Server-Side Operator & SalesOwner Re-Verification
     var boundUser = Array.isArray(usersTable) ? usersTable.find(function(u) { return u.lineUserId === userId; }) : null;
-    if (!boundUser) {
+    var hasBridgeCallback = typeof upsertHoldActionFn === "function";
+
+    if (!boundUser && !hasBridgeCallback) {
       return {
         handled: true,
         action: "confirmHoldDraft",
@@ -321,8 +323,8 @@ function handleLineReservationPostback(options) {
     var holdPayload = {
       lineUserId: userId,
       userContext: {
-        username: boundUser.username || "line_bot",
-        role: boundUser.role || "assistant"
+        username: boundUser ? (boundUser.username || "line_bot") : "line_bot",
+        role: boundUser ? (boundUser.role || "assistant") : "assistant"
       },
       sessionToken: "bot_session",
       hold: {
@@ -332,7 +334,7 @@ function handleLineReservationPostback(options) {
         item: draft.productCode,
         quantity: draft.quantity,
         remainingQuantity: draft.quantity,
-        salesOwner: boundUser.salesOwner || "無",
+        salesOwner: boundUser ? (boundUser.salesOwner || "無") : "無",
         status: "ACTIVE"
       }
     };
