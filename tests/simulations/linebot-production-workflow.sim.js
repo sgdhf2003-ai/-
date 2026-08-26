@@ -15,6 +15,7 @@
  * 9. Bridge request body MUST NOT contain userContext, sessionToken, or role.
  * 10. Bridge MUST fail closed (ok: false, BRIDGE_SECRET_MISSING) when LINE_BOT_BRIDGE_SECRET is missing.
  * 11. Model code normalization matching for STU-6101 vs STU6101 in Hash Map inventory catalog.
+ * 12. confirmHoldDraft missing draft diagnostic MUST mask LINE user IDs to last 4 digits and NEVER expose full user ID.
  */
 
 const assert = require("assert");
@@ -248,18 +249,15 @@ const tests = [
   {
     name: "11. Model code normalization matching for STU-6101 vs STU6101 in Hash Map inventory catalog",
     run() {
-      // Test Hash Map inventory catalog with normalized key 'STU6101' against input text 'STU-6101'
       const catalogHashMapNormalized = { "STU6101": 50 };
       const parseRes1 = parseReservationText("美麗空間 STU-6101 1個 豪", catalogHashMapNormalized);
       assert.strictEqual(parseRes1.ok, true, "STU-6101 input MUST match Hash Map catalog key STU6101");
       assert.strictEqual(parseRes1.productCode, "STU-6101");
 
-      // Test Hash Map inventory catalog with hyphenated key 'STU-6101' against input text 'STU6101'
       const catalogHashMapHyphenated = { "STU-6101": 50 };
       const parseRes2 = parseReservationText("美麗空間 STU6101 1個 豪", catalogHashMapHyphenated);
       assert.strictEqual(parseRes2.ok, true, "STU6101 input MUST match Hash Map catalog key STU-6101");
 
-      // Test confirmHoldDraft re-check with Hash Map inventory catalog 'STU6101'
       const testUserId = "U98765432101234567890123456789012";
       const draftId = "DRAFT-TEST-NORM";
       const mockStore = {
@@ -288,6 +286,49 @@ const tests = [
       });
       assert.strictEqual(postbackRes.handled, true);
       assert.strictEqual(postbackRes.success, true, "confirmHoldDraft re-check MUST match normalized model code STU6101");
+    }
+  },
+  {
+    name: "12. confirmHoldDraft missing draft diagnostic MUST mask LINE user IDs to last 4 digits and NEVER expose full user ID",
+    run() {
+      const fullPostbackUserId = "U11111111222222223333333344445555";
+      const fullDraftUserId = "U66666666777777778888888899990000";
+
+      const mockStore = {
+        ["pendingDraftHold:" + fullDraftUserId]: JSON.stringify({
+          draftId: "DRAFT-OTHER-USER",
+          customerName: "測試店家",
+          productCode: "STU-6101",
+          quantity: 1,
+          expiresAt: new Date(Date.now() + 600000).toISOString()
+        })
+      };
+
+      const mockPropertiesStorage = {
+        getProperty(key) { return mockStore[key] || null; },
+        setProperty(key, val) { mockStore[key] = val; },
+        deleteProperty(key) { delete mockStore[key]; },
+        getProperties() { return mockStore; }
+      };
+
+      const res = handleLineReservationPostback({
+        postbackData: "action=confirmHoldDraft&draftId=DRAFT-MISSING",
+        userId: fullPostbackUserId,
+        usersTable: [],
+        inventoryCatalog: {},
+        propertiesStorage: mockPropertiesStorage,
+        upsertHoldActionFn: function() { return { ok: true }; }
+      });
+
+      assert.strictEqual(res.handled, true);
+      assert.strictEqual(res.success, false);
+      assert(res.message.includes("⚠️ 找不到草稿或已取消。"), "MUST preserve original error message prefix");
+      assert(res.message.includes("...5555"), "MUST include masked Postback user ID last 4 digits (...5555)");
+      assert(res.message.includes("...0000"), "MUST include masked draft key user ID last 4 digits (...0000)");
+
+      // ABSOLUTE SECURITY CHECK: full LINE User IDs MUST NOT appear in the response message!
+      assert(!res.message.includes(fullPostbackUserId), "Full postback LINE User ID MUST NOT be exposed");
+      assert(!res.message.includes(fullDraftUserId), "Full draft key LINE User ID MUST NOT be exposed");
     }
   }
 ];

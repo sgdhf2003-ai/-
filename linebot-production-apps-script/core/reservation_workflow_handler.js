@@ -163,12 +163,33 @@ function handleLineReservationPostback(options) {
 
     var draftRaw = propertiesStorage.getProperty("pendingDraftHold:" + userId);
     if (!draftRaw) {
+      var diagStr = "";
+      try {
+        if (propertiesStorage && typeof propertiesStorage.getProperties === "function") {
+          var allProps = propertiesStorage.getProperties() || {};
+          var foundDraftKeys = [];
+          for (var k in allProps) {
+            if (k.indexOf("pendingDraftHold:") === 0) {
+              var uIdInKey = k.replace("pendingDraftHold:", "");
+              var maskedKey = uIdInKey.length > 4 ? "..." + uIdInKey.slice(-4) : uIdInKey;
+              foundDraftKeys.push(maskedKey);
+            }
+          }
+          var currentMasked = userId && userId.length > 4 ? "..." + userId.slice(-4) : (userId || "N/A");
+          if (foundDraftKeys.length > 0) {
+            diagStr = "\n🔍【系統診斷】目前 ID: " + currentMasked + "，發現暫存草稿 ID: " + foundDraftKeys.join(", ");
+          } else {
+            diagStr = "\n🔍【系統診斷】目前 ID: " + currentMasked + "，無任何排隊草稿";
+          }
+        }
+      } catch (diagErr) {}
+
       return {
         handled: true,
         action: "confirmHoldDraft",
         success: false,
         errorCode: "INVALID_DRAFT_ID",
-        message: "⚠️ 找不到草稿或已取消。"
+        message: "⚠️ 找不到草稿或已取消。" + diagStr
       };
     }
 
