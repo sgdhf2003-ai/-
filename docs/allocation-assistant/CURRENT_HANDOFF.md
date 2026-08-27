@@ -38,7 +38,8 @@
 * 完成 Backend 入口防護與責任邊界文件收尾 (`BackendLandingView.html`, `APP_ENTRYPOINT = Vercel`, `API_BACKEND = Apps Script Web App`, 246/246 PASS)。
 * 完成 Stage 42 LINE 身份解析合約加固與生產環境部署 (`fd67b58`, 255/255 PASS, Backend Version 105, LINE Bot Version 3 完好上線)。
 * 完成 Stage 38 Daily Operations Standing Health Monitoring & Maintenance Gate 文件收束與 Fail-Closed 防護驗證 (`2b07526`, 52 Suites, 345/345 PASS, 無 Adapter 均安全傳回 `CANCEL_TRANSACTION_ADAPTER_MISSING` / `CANCEL_TRANSACTION_INCOMPLETE` 0 寫入)。
-* 本機檢查、模擬測試與部署 Dry Run 全數通過 (`npm run check`, `npm run simulate:cancel-release-hold`, `npm run simulate:all`, `python3 deploy.py backend --check`, `python3 deploy.py line-bot --check` PASS)。
+* 完成 Stage 39 Allocation Production Contract Gate 文件收束與生產合約驗證 (`2b07526`, 即時對帳 6/6 PASS, 準備度診斷 10/10 PASS, 生產 Sheet Adapter 11/11 PASS, 端點分發器 16/16 PASS)。
+* 本機檢查、模擬測試與部署 Dry Run 全數通過 (`npm run check`, `npm run simulate:allocation-live-inventory-reconciliation`, `npm run simulate:allocation-production-readiness-diagnostics`, `npm run simulate:allocation-production-sheet-adapter`, `npm run simulate:allocation-endpoint-dispatcher`, `python3 deploy.py backend --check`, `python3 deploy.py line-bot --check` PASS)。
 
 ## 3. 未完成內容與未啟用功能 (Deactivated Features)
 * LINE API 主動 Push/Send 維持關閉 (`notificationBypassed: true`)。
