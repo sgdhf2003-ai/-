@@ -781,7 +781,8 @@ function cancelReleaseHoldAction(data, adapter) {
       releasedQuantity: releasedQty,
       operator: userContext.displayName || userContext.username || "operator",
       operatorRole: role,
-      ledgerRow: ledgerRow
+      ledgerRow: ledgerRow,
+      operationId: (data && data.operationId) || cancelPayload.operationId || null
     });
   } catch (txErr) {
     return { ok: false, errorCode: "TRANSACTION_EXECUTION_ERROR", message: "執行取消交易發生異常: " + (txErr.message || String(txErr)) };
