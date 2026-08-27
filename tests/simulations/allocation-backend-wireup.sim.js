@@ -98,6 +98,36 @@ runSuite("allocation-backend-wireup", [
       assert(emptyRes.ok === false, "empty payload fails");
       assert(emptyRes.errorCode === "INVALID_CANCEL_PAYLOAD", "returns INVALID_CANCEL_PAYLOAD");
 
+      const state = {
+        holds: [{ id: "RES-20260805-001", reservationNumber: "RES-20260805-001", item: "ART-101 (100x200 cm)", quantity: 10, remainingQuantity: 10, status: "ACTIVE" }],
+        inventory: { "ART-101 (100x200 cm)": 0 },
+        auditLogs: []
+      };
+
+      const mockAdapter = {
+        findHoldById(id) {
+          return state.holds.find(h => h.id === id || h.reservationNumber === id) || null;
+        },
+        executeCancelReleaseTransaction(params) {
+          const { reservationNumber, existingHold, releasedQuantity, operator } = params;
+          const tempState = JSON.parse(JSON.stringify(state));
+
+          const hold = tempState.holds.find(h => h.id === reservationNumber);
+          if (!hold) return { ok: false, errorCode: "HOLD_NOT_FOUND" };
+          hold.status = "CANCELLED";
+          hold.remainingQuantity = 0;
+
+          if (tempState.inventory[existingHold.item] !== undefined) {
+            tempState.inventory[existingHold.item] += releasedQuantity;
+          }
+
+          tempState.auditLogs.push({ action: "CANCEL_RELEASE", reservationNumber, operator, releasedQuantity });
+
+          Object.assign(state, tempState);
+          return { ok: true, inventoryReleased: true, holdUpdated: true, auditLogged: true, atomic: true };
+        }
+      };
+
       // Valid cancellation
       const validRes = context.cancelReleaseHoldAction({
         userContext: { username: "admin01", role: "admin" },
@@ -106,7 +136,7 @@ runSuite("allocation-backend-wireup", [
           item: "ART-101 (100x200 cm)",
           quantity: 10
         }
-      });
+      }, mockAdapter);
       assert(validRes.ok === true, "valid cancellation succeeds");
       assert(validRes.remainingQuantity === 0, "remainingQuantity is 0");
       assert(validRes.status === "CANCELLED", "status is CANCELLED");

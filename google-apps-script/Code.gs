@@ -736,44 +736,79 @@ function cancelReleaseHoldAction(data, adapter) {
     return { ok: false, errorCode: "INVALID_CANCEL_PAYLOAD", message: "取消釋放劃扣單號無效" };
   }
 
-  let existingHold = null;
-  if (adapter && typeof adapter.findHoldById === "function") {
-    existingHold = adapter.findHoldById(resNo);
-    if (!existingHold) {
-      return { ok: false, errorCode: "HOLD_NOT_FOUND", message: "找不到該筆劃扣保留記錄" };
-    }
-    if (existingHold.status === "CANCELLED") {
-      return { ok: false, errorCode: "ALREADY_CANCELLED", message: "該劃扣保留已處於取消狀態" };
-    }
+  const hasTxAdapter = adapter && typeof adapter.executeCancelReleaseTransaction === "function";
+  if (!hasTxAdapter) {
+    return { ok: false, errorCode: "CANCEL_TRANSACTION_ADAPTER_MISSING", message: "缺乏安全一致性之正式劃扣取消交易 Adapter" };
   }
 
-  const releasedQty = existingHold ? (existingHold.remainingQuantity !== undefined ? existingHold.remainingQuantity : existingHold.quantity) : (cancelPayload.quantity || 0);
+  let existingHold = null;
+  try {
+    if (typeof adapter.findHoldById === "function") {
+      existingHold = adapter.findHoldById(resNo);
+    } else {
+      return { ok: false, errorCode: "READ_HOLDS_FAILED", message: "劃扣紀錄查詢介面不可用" };
+    }
+  } catch (readErr) {
+    return { ok: false, errorCode: "READ_HOLDS_FAILED", message: "讀取劃扣保留紀錄發生錯誤: " + (readErr.message || String(readErr)) };
+  }
+
+  if (!existingHold) {
+    return { ok: false, errorCode: "HOLD_NOT_FOUND", message: "找不到該筆劃扣保留記錄" };
+  }
+  if (existingHold.status === "CANCELLED" || existingHold.reservationStatus === "CANCELLED") {
+    return { ok: false, errorCode: "ALREADY_CANCELLED", message: "該劃扣保留已處於取消狀態" };
+  }
+
+  const releasedQty = existingHold.remainingQuantity !== undefined
+    ? Number(existingHold.remainingQuantity)
+    : (existingHold.quantity !== undefined ? Number(existingHold.quantity) : Number(cancelPayload.quantity || 0));
 
   const ledgerRow = [
     resNo,
     "CANCEL_RELEASE",
-    cancelPayload.item || (existingHold ? existingHold.item : "品項"),
+    cancelPayload.item || existingHold.item || "品項",
     releasedQty,
     0,
     "CANCELLED",
     new Date().toISOString()
   ];
 
-  let result = null;
-  if (adapter && typeof adapter.cancelReleaseHold === "function") {
-    result = adapter.cancelReleaseHold(resNo, releasedQty, 0, "CANCELLED", ledgerRow);
-  } else {
-    result = {
-      ok: true,
+  let txResult = null;
+  try {
+    txResult = adapter.executeCancelReleaseTransaction({
       reservationNumber: resNo,
-      remainingQuantity: 0,
+      existingHold: existingHold,
       releasedQuantity: releasedQty,
-      status: "CANCELLED",
-      ledgerRow: ledgerRow,
-      notificationBypassed: true,
-      message: "劃扣保留取消與庫存釋放成功"
+      operator: userContext.displayName || userContext.username || "operator",
+      operatorRole: role,
+      ledgerRow: ledgerRow
+    });
+  } catch (txErr) {
+    return { ok: false, errorCode: "TRANSACTION_EXECUTION_ERROR", message: "執行取消交易發生異常: " + (txErr.message || String(txErr)) };
+  }
+
+  if (!txResult || txResult.ok !== true ||
+      txResult.inventoryReleased !== true ||
+      txResult.holdUpdated !== true ||
+      txResult.auditLogged !== true ||
+      txResult.atomic !== true) {
+    return {
+      ok: false,
+      errorCode: (txResult && txResult.errorCode) || "CANCEL_TRANSACTION_INCOMPLETE",
+      message: (txResult && txResult.message) || "劃扣取消交易未達成完整原子提交證明"
     };
   }
+
+  const result = {
+    ok: true,
+    reservationNumber: resNo,
+    remainingQuantity: 0,
+    releasedQuantity: releasedQty,
+    status: "CANCELLED",
+    ledgerRow: ledgerRow,
+    notificationBypassed: true,
+    message: "劃扣保留取消成功"
+  };
 
   const customerName = cancelPayload.customerName || cancelPayload.storeName || (existingHold ? (existingHold.customerName || existingHold.storeName) : "未知客戶");
   const item = cancelPayload.item || (existingHold ? (existingHold.item || existingHold.productCode) : "品項");
@@ -788,13 +823,23 @@ function cancelReleaseHoldAction(data, adapter) {
 
   let recipientLineUserId = null;
   let userOptInStatus = "OPTED_OUT";
-  if (salesOwner && salesOwner !== "無" && typeof SpreadsheetApp !== "undefined") {
-    const users = readObjects(SHEETS.users, HEADERS.users);
-    const targetUser = users.find(u => (u.salesOwner && u.salesOwner === salesOwner) || (u.displayName && u.displayName === salesOwner));
-    if (targetUser && targetUser.lineUserId) {
-      recipientLineUserId = targetUser.lineUserId;
-      userOptInStatus = targetUser.optInStatus || "OPTED_IN";
-    }
+  if (salesOwner && salesOwner !== "無") {
+    try {
+      if (typeof adapter.findUserBySalesOwner === "function") {
+        const targetUser = adapter.findUserBySalesOwner(salesOwner);
+        if (targetUser && targetUser.lineUserId) {
+          recipientLineUserId = targetUser.lineUserId;
+          userOptInStatus = targetUser.optInStatus || "OPTED_IN";
+        }
+      } else if (typeof readObjects === "function" && typeof SHEETS !== "undefined" && SHEETS.users) {
+        const users = readObjects(SHEETS.users, HEADERS.users);
+        const targetUser = users.find(u => (u.salesOwner && u.salesOwner === salesOwner) || (u.displayName && u.displayName === salesOwner));
+        if (targetUser && targetUser.lineUserId) {
+          recipientLineUserId = targetUser.lineUserId;
+          userOptInStatus = targetUser.optInStatus || "OPTED_IN";
+        }
+      }
+    } catch (err) {}
   }
 
   let pilotWhitelistRaw = "";
@@ -812,7 +857,7 @@ function cancelReleaseHoldAction(data, adapter) {
   });
 
   let livePushSuccess = false;
-  if (policyResult.success === true && recipientLineUserId && typeof UrlFetchApp !== "undefined") {
+  if (policyResult.success === true && recipientLineUserId && typeof sendLinePushToOwner === "function") {
     livePushSuccess = sendLinePushToOwner(salesOwner, notificationMessage);
   }
 

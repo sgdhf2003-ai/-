@@ -20,6 +20,8 @@ class MockSpreadsheetDB {
   constructor() {
     this.holds = [];
     this.ledger = [];
+    this.inventory = { "STU-6101 100x200": 10, "STU-6101": 10 };
+    this.auditLogs = [];
   }
 
   upsertHold(hold) {
@@ -77,6 +79,51 @@ const mockAdapter = {
   },
   cancelReleaseHold(reservationNumber, releasedQty, remainingQty, status, ledgerRow) {
     return db.cancelReleaseHold(reservationNumber, releasedQty, remainingQty, status, ledgerRow);
+  },
+  executeCancelReleaseTransaction(params) {
+    const { reservationNumber, existingHold, releasedQuantity, operator, operatorRole, ledgerRow } = params;
+    const tempHolds = JSON.parse(JSON.stringify(db.holds));
+    const tempLedger = JSON.parse(JSON.stringify(db.ledger));
+    const tempInventory = JSON.parse(JSON.stringify(db.inventory));
+    const tempAuditLogs = JSON.parse(JSON.stringify(db.auditLogs));
+
+    const targetHold = tempHolds.find(h => h.id === reservationNumber || h.reservationNumber === reservationNumber);
+    if (!targetHold) {
+      return { ok: false, errorCode: "HOLD_NOT_FOUND", message: "找不到該筆劃扣保留記錄" };
+    }
+    targetHold.remainingQuantity = 0;
+    targetHold.status = "CANCELLED";
+    targetHold.reservationStatus = "CANCELLED";
+    targetHold.updatedAt = new Date().toISOString();
+
+    const itemKey = (existingHold && existingHold.item) || targetHold.item;
+    if (tempInventory[itemKey] !== undefined) {
+      tempInventory[itemKey] += releasedQuantity;
+    }
+
+    tempAuditLogs.push({
+      action: "CANCEL_RELEASE",
+      reservationNumber,
+      operator,
+      operatorRole,
+      releasedQuantity,
+      createdAt: new Date().toISOString()
+    });
+
+    tempLedger.push(ledgerRow);
+
+    db.holds = tempHolds;
+    db.ledger = tempLedger;
+    db.inventory = tempInventory;
+    db.auditLogs = tempAuditLogs;
+
+    return {
+      ok: true,
+      inventoryReleased: true,
+      holdUpdated: true,
+      auditLogged: true,
+      atomic: true
+    };
   }
 };
 
@@ -232,6 +279,8 @@ runSuite("allocation-vertical-slice", [
       assert(cancelRes.ledgerRow[3] === 6, "Cancel ledger row[3] released quantity is 6");
       assert(cancelRes.ledgerRow[4] === 0, "Cancel ledger row[4] remaining quantity is 0");
       assert(cancelRes.ledgerRow[5] === "CANCELLED", "Cancel ledger row[5] status is CANCELLED");
+      assert(db.auditLogs.length === 1, "Phase C audit log recorded in db");
+      assert(db.auditLogs[0].action === "CANCEL_RELEASE", "Phase C audit log action is CANCEL_RELEASE");
 
       // Phase C Immediate Final Readback Audit
       const phaseCAudit = context.readbackAuditAction({
