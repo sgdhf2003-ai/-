@@ -40,7 +40,8 @@
 * 完成 Stage 38 Daily Operations Standing Health Monitoring & Maintenance Gate 文件收束與 Fail-Closed 防護驗證 (`2b07526`, 52 Suites, 345/345 PASS, 無 Adapter 均安全傳回 `CANCEL_TRANSACTION_ADAPTER_MISSING` / `CANCEL_TRANSACTION_INCOMPLETE` 0 寫入)。
 * 完成 Stage 39 Allocation Production Contract Gate 文件收束與生產合約驗證 (`2b07526`, 即時對帳 6/6 PASS, 準備度診斷 10/10 PASS, 生產 Sheet Adapter 11/11 PASS, 端點分發器 16/16 PASS)。
 * 完成 Stage 40 Security and Permission Closure Gate 文件收束與安全權限驗證 (角色權限 7/7 PASS, 身份整合 9/9 PASS, 登入綁定 6/6 PASS, 安全 Push 6/6 PASS, 入口邊界 3/3 PASS)。
-* 本機檢查、模擬測試與部署 Dry Run 全數通過 (`npm run check`, `npm run simulate:security-permission-closure`, `npm run simulate:identity-integration`, `npm run simulate:login-binding`, `npm run simulate:secure-push`, `npm run simulate:backend-landing-boundary`, `python3 deploy.py backend --check`, `python3 deploy.py line-bot --check` PASS)。
+* 完成 Stage 41 Security & Permission Final Regression & Release Gate 文件收束與全量驗證 (全量 52 個測試套件 345/345 PASS, 部署 Dry Run VALID)。
+* 本機檢查、全量模擬測試與部署 Dry Run 全數通過 (`npm run check`, `npm run simulate:all`, `python3 deploy.py backend --check`, `python3 deploy.py line-bot --check` PASS)。
 
 ## 3. 未完成內容與未啟用功能 (Deactivated Features)
 * LINE API 主動 Push/Send 維持關閉 (`notificationBypassed: true`)。

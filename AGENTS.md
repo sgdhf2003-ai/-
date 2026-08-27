@@ -92,7 +92,8 @@ git diff --check
 
 ### Current Known State
 
-- Current Stage: **Stage 40 (Security and Permission Closure Gate Complete)**
+- Current Stage: **Stage 41 (Security & Permission Final Regression & Release Gate Complete)**
+- Security & Permission Regression Audit: **Completed & Certified (52 Suites, 345 / 345 PASS, Dry-Run Deployments VALID)**
 - Security & Permission Closure Audit: **Completed & Certified (Security Permission 7/7 PASS, Identity Integration 9/9 PASS, Login Binding 6/6 PASS, Secure Push 6/6 PASS, Backend Landing Boundary 3/3 PASS)**
 - Allocation Production Contract Audit: **Completed & Certified (Live Inventory Reconciliation 6/6 PASS, Production Readiness Diagnostics 10/10 PASS, Production Sheet Adapter 11/11 PASS, Endpoint Dispatcher 16/16 PASS)**
 - Standing Daily Operations Baseline: **Completed & Certified (52 Suites, 345 / 345 PASS)**
@@ -120,6 +121,7 @@ git diff --check
   - Stage 38 Daily Operations Standing Health Monitoring & Maintenance Gate (`2b07526`, 52 Suites, 345/345 PASS, dry-run deployment readiness certified): `PASS`
   - Stage 39 Allocation Production Contract Gate (`2b07526`, Live Reconciliation 6/6 PASS, Readiness Diagnostics 10/10 PASS, Production Adapter 11/11 PASS, Endpoint Dispatcher 16/16 PASS): `PASS`
   - Stage 40 Security and Permission Closure Gate (Security 7/7, Identity 9/9, Binding 6/6, Secure Push 6/6, Landing Boundary 3/3 PASS): `PASS`
+  - Stage 41 Security & Permission Final Regression & Release Gate (52 Suites, 345/345 PASS, dry-run deployment readiness certified): `PASS`
   - ID Contract (`reservationNumber === holdRecord.id === rowData[0]`): `PASS`
 - Production Operating SOP: Formally documented in `docs/allocation-assistant/OPERATING_SOP.md`
 
@@ -129,12 +131,12 @@ The Stage 24-B warnings regarding hold writeback and fulfillment ledger persiste
 
 ### Current Recommended Next Stage
 
-After Stage 40 Security and Permission Closure Gate documentation closure, the recommended next gate is:
+After Stage 41 Security & Permission Final Regression & Release Gate documentation closure, the recommended standing operational gate is:
 
-**Stage 41: Security & Permission Final Regression & Release Gate**
-- **Purpose**: Execute final security and permission regression verification, review release readiness, and maintain standing system health baseline.
+**Daily Operations Standing Health Monitoring & Maintenance Gate**
+- **Purpose**: Maintain daily system health baseline, execute routine read-only health checks against Backend Web App Version 103, and monitor system operation.
 - **Rules**:
-  - Read-only health monitoring and automated contract checks only.
+  - Read-only health monitoring checks only.
   - No production Google Sheet write, LINE API call, deploy, or commit/push without explicit owner approval.
 
 ## 1. Canonical Workspace
