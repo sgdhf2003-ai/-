@@ -4,13 +4,14 @@
  * TDD Simulation Suite for Formal Production Transaction Adapter & Cancel-Release Contract
  *
  * Enforces strict transaction requirements:
- * 1. ProductionSheetReservationAdapter missing executeCancelReleaseTransaction explicitly fails.
+ * 1. Missing executeCancelReleaseTransaction on adapter explicitly fails closed with CANCEL_TRANSACTION_ADAPTER_MISSING.
  * 2. Complete transaction success atomically updates inventory, Holds, Ledger, Audit.
  * 3. Any step failure (inventory, Holds, Ledger, Audit) leaves original state completely untouched.
  * 4. Retrying the same operationId via cancelReleaseHoldAction does not duplicate inventory release.
  * 5. Already cancelled hold reservation cannot be cancelled again.
  * 6. Readback inconsistency must Fail-Closed.
  * 7. Forged/Mock proof flags are strictly rejected.
+ * 8. ProductionSheetReservationAdapter formally implements executeCancelReleaseTransaction.
  */
 
 const path = require("path");
@@ -45,6 +46,14 @@ function createVmContext() {
   const context = vm.createContext(globalContext);
   vm.runInContext(codeGsContent, context);
   return context;
+}
+
+function createConfigProvider() {
+  return {
+    JYAI_ALLOCATION_PRODUCTION_SPREADSHEET_ID: "prod-sheet-id-999",
+    JYAI_ALLOCATION_PRODUCTION_HOLDS_SHEET_NAME: "Holds",
+    JYAI_ALLOCATION_PRODUCTION_LEDGER_SHEET_NAME: "Ledger"
+  };
 }
 
 function createMockStore(initialHolds = []) {
@@ -180,23 +189,26 @@ function createFormalTransactionAdapter(store, options = {}) {
 
 runSuite("formal-transaction-adapter-cancel-release", [
   {
-    name: "1. ProductionSheetReservationAdapter missing executeCancelReleaseTransaction explicitly fails",
+    name: "1. ProductionSheetReservationAdapter without transaction capabilities fails closed with PRODUCTION_TRANSACTION_CAPABILITY_MISSING",
     run() {
-      const adapter = new ProductionSheetReservationAdapter();
-      // Assert ProductionSheetReservationAdapter does not have executeCancelReleaseTransaction
-      assert(typeof adapter.executeCancelReleaseTransaction === "undefined", "ProductionSheetReservationAdapter must NOT have executeCancelReleaseTransaction until formally implemented");
+      const adapter = new ProductionSheetReservationAdapter({
+        configProvider: createConfigProvider()
+      });
+      const directRes = adapter.executeCancelReleaseTransaction({ operationId: "OP-NO-CAP", releasedQuantity: 5 });
+      assert(directRes.ok === false, "Direct invocation without capabilities must return ok: false");
+      assert(directRes.errorCode === "PRODUCTION_TRANSACTION_CAPABILITY_MISSING", "ErrorCode must be PRODUCTION_TRANSACTION_CAPABILITY_MISSING");
 
       const vmContext = createVmContext();
       const res = vmContext.cancelReleaseHoldAction({
         userContext: { role: "admin" },
         reservationNumber: "RES-20260827-001",
         operator: "AdminUser",
-        operatorRole: "admin"
+        operatorRole: "admin",
+        operationId: "OP-NO-CAP"
       }, adapter);
 
-      assert(res.ok === false, "Execution without transaction adapter must return ok: false");
-      assert(res.errorCode === "CANCEL_TRANSACTION_ADAPTER_MISSING", "ErrorCode must be CANCEL_TRANSACTION_ADAPTER_MISSING");
-      assert(typeof res.releasedQuantity === "undefined", "releasedQuantity must NOT be returned on missing transaction adapter");
+      assert(res.ok === false, "Execution without complete capabilities must return ok: false");
+      assert(typeof res.releasedQuantity === "undefined", "releasedQuantity must NOT be returned on missing capabilities");
     }
   },
   {
@@ -377,16 +389,10 @@ runSuite("formal-transaction-adapter-cancel-release", [
     }
   },
   {
-    name: "8. Invoking executeCancelReleaseTransaction directly on ProductionSheetReservationAdapter fails (Unimplemented)",
+    name: "8. ProductionSheetReservationAdapter formally implements executeCancelReleaseTransaction method",
     run() {
       const adapter = new ProductionSheetReservationAdapter();
-      assert(typeof adapter.executeCancelReleaseTransaction === "undefined", "ProductionSheetReservationAdapter method is undefined until implemented");
-      try {
-        adapter.executeCancelReleaseTransaction({});
-        assert(false, "Should have thrown TypeError");
-      } catch (err) {
-        assert(err instanceof TypeError || err.message.includes("is not a function"), "Must throw TypeError on missing method");
-      }
+      assert(typeof adapter.executeCancelReleaseTransaction === "function", "ProductionSheetReservationAdapter method executeCancelReleaseTransaction must exist");
     }
   }
 ]);

@@ -347,6 +347,234 @@ class ProductionSheetReservationAdapter {
       return createFailure(normalizeErrorCode(err, 'PRODUCTION_LEDGER_WRITE_FAILED'));
     }
   }
+
+  executeCancelReleaseTransaction(params = {}) {
+    let lockAcquired = false;
+    let lockReleaseError = null;
+    let operationIdKey = '';
+    let finalResult = null;
+
+    try {
+      const { reservationNumber, existingHold, releasedQuantity, operator, operatorRole, operationId } = params;
+
+      if (!operationId || typeof operationId !== 'string' || !operationId.trim()) {
+        finalResult = {
+          ok: false,
+          errorCode: 'INVALID_OPERATION_ID',
+          message: '正式劃扣取消交易必須提供合法的 operationId'
+        };
+        return finalResult;
+      }
+      operationIdKey = operationId.trim();
+
+      const numQty = Number(releasedQuantity);
+      if (!Number.isFinite(numQty) || numQty <= 0) {
+        finalResult = {
+          ok: false,
+          errorCode: 'INVALID_RELEASED_QUANTITY',
+          message: '劃扣釋放數量必須為大於 0 之有限數值'
+        };
+        return finalResult;
+      }
+
+      const config = this.getConfig();
+      if (!config.ok) {
+        finalResult = { ok: false, errorCode: config.errorCode };
+        return finalResult;
+      }
+
+      const requiredCapabilities = [
+        'getHeaders',
+        'findRowById',
+        'updateRowById',
+        'adjustInventory',
+        'appendLedgerEntry',
+        'appendAuditEntry',
+        'findOperationId',
+        'acquireTransactionLock',
+        'releaseTransactionLock',
+        'executeNativeAcidTransaction'
+      ];
+      const clientCheck = this.requireClient(requiredCapabilities);
+      if (!clientCheck.success) {
+        finalResult = {
+          ok: false,
+          errorCode: 'PRODUCTION_TRANSACTION_CAPABILITY_MISSING',
+          message: 'SheetClient 缺乏正式劃扣取消交易基礎能力',
+          missingMethods: clientCheck.missingMethods
+        };
+        return finalResult;
+      }
+
+      // Code.gs Contract Alignment & Transaction Abort Guarantee:
+      // Require native ACID capability AND native transaction abort/rollback guarantee
+      if (
+        this.sheetClient.hasNativeAcidTransaction !== true ||
+        this.sheetClient.hasNativeTransactionAbortGuarantee !== true ||
+        typeof this.sheetClient.executeNativeAcidTransaction !== 'function'
+      ) {
+        finalResult = {
+          ok: false,
+          errorCode: 'PRODUCTION_TRANSACTION_CAPABILITY_MISSING',
+          message: 'SheetClient 缺乏原生 ACID 原子交易或完整 Abort/Rollback 保證 (hasNativeAcidTransaction !== true 或 hasNativeTransactionAbortGuarantee !== true)，零寫入退回'
+        };
+        return finalResult;
+      }
+
+      // Concurrency Lock Guard
+      const lockResult = this.sheetClient.acquireTransactionLock(operationIdKey);
+      if (!lockResult || lockResult.success !== true) {
+        finalResult = {
+          ok: false,
+          errorCode: 'TRANSACTION_LOCK_TIMEOUT',
+          message: '無法取得交易鎖，防止競態重複執行'
+        };
+        return finalResult;
+      }
+      lockAcquired = true;
+
+      // Check formal persisted operationId for idempotency
+      let opCheck = null;
+      try {
+        opCheck = this.sheetClient.findOperationId(operationIdKey);
+      } catch (opErr) {
+        finalResult = {
+          ok: false,
+          errorCode: 'OPERATION_ID_CHECK_FAILED',
+          message: '查詢 operationId 發生錯誤，停止交易流程: ' + (opErr.message || String(opErr))
+        };
+        return finalResult;
+      }
+      if (!opCheck || opCheck.error) {
+        finalResult = {
+          ok: false,
+          errorCode: (opCheck && opCheck.errorCode) || 'OPERATION_ID_CHECK_FAILED',
+          message: '查詢 operationId 失敗，停止交易流程'
+        };
+        return finalResult;
+      }
+      if (opCheck.found) {
+        finalResult = {
+          ok: false,
+          errorCode: 'DUPLICATE_OPERATION_BLOCKED',
+          message: '交易操作 ID 已於正式存儲區執行過，防重複釋放攔截'
+        };
+        return finalResult;
+      }
+
+      if (!existingHold) {
+        finalResult = {
+          ok: false,
+          errorCode: 'HOLD_NOT_FOUND',
+          message: '找不到該筆劃扣保留記錄'
+        };
+        return finalResult;
+      }
+
+      if (existingHold.status === 'CANCELLED' || existingHold.reservationStatus === 'CANCELLED') {
+        finalResult = {
+          ok: false,
+          errorCode: 'ALREADY_CANCELLED',
+          message: '劃扣保留單已被取消'
+        };
+        return finalResult;
+      }
+
+      const itemCode = existingHold.productCode || existingHold.item;
+      if (!itemCode || typeof itemCode !== 'string' || !itemCode.trim()) {
+        finalResult = {
+          ok: false,
+          errorCode: 'INVALID_HOLD_ITEM',
+          message: '劃扣保留紀錄缺乏有效之品項代碼或名稱'
+        };
+        return finalResult;
+      }
+
+      const auditSheetName = config.JYAI_ALLOCATION_PRODUCTION_AUDIT_SHEET_NAME || 'Audit';
+      const nowIso = new Date().toISOString();
+
+      // Execute Native ACID Transaction
+      const txExecResult = this.sheetClient.executeNativeAcidTransaction({
+        reservationNumber,
+        existingHold,
+        releasedQuantity: numQty,
+        itemCode,
+        operator,
+        operatorRole,
+        operationId: operationIdKey,
+        auditSheetName,
+        timestamp: nowIso
+      });
+
+      if (!txExecResult || txExecResult.ok !== true) {
+        finalResult = {
+          ok: false,
+          errorCode: (txExecResult && txExecResult.errorCode) || 'TRANSACTION_EXECUTION_FAILED',
+          message: (txExecResult && txExecResult.message) || '原生 ACID 交易執行失敗'
+        };
+        return finalResult;
+      }
+
+      // Item-by-item proof validation: inventoryReleased, holdUpdated, auditLogged, atomic, readbackVerified, operationPersisted
+      const proofValid = txExecResult.inventoryReleased === true &&
+                         txExecResult.holdUpdated === true &&
+                         txExecResult.auditLogged === true &&
+                         txExecResult.atomic === true &&
+                         txExecResult.readbackVerified === true &&
+                         txExecResult.operationPersisted === true;
+
+      if (!proofValid) {
+        finalResult = {
+          ok: false,
+          errorCode: 'CANCEL_TRANSACTION_INCOMPLETE',
+          message: '原生 ACID 交易未提供完整 6 項原子提交證明 (inventoryReleased, holdUpdated, auditLogged, atomic, readbackVerified, operationPersisted)'
+        };
+        return finalResult;
+      }
+
+      finalResult = {
+        ok: true,
+        inventoryReleased: true,
+        holdUpdated: true,
+        auditLogged: true,
+        atomic: true,
+        readbackVerified: true,
+        operationPersisted: true,
+        releasedQuantity: numQty,
+        updatedHold: txExecResult.updatedHold || existingHold
+      };
+    } catch (err) {
+      finalResult = {
+        ok: false,
+        errorCode: normalizeErrorCode(err, 'TRANSACTION_EXECUTION_ERROR'),
+        message: err && err.message ? err.message : String(err)
+      };
+    } finally {
+      if (lockAcquired && this.sheetClient && typeof this.sheetClient.releaseTransactionLock === 'function') {
+        try {
+          const relRes = this.sheetClient.releaseTransactionLock(operationIdKey);
+          if (!relRes || relRes.success !== true) {
+            lockReleaseError = (relRes && relRes.message) || '解鎖傳回失敗狀態';
+          }
+        } catch (lockReleaseErr) {
+          lockReleaseError = lockReleaseErr.message || String(lockReleaseErr);
+        }
+      }
+
+      // Lock release failure handling for both success and failure cases
+      if (lockReleaseError) {
+        const isTxSuccess = finalResult && finalResult.ok === true;
+        finalResult = {
+          ok: false,
+          errorCode: 'TRANSACTION_LOCK_RELEASE_FAILED',
+          transactionState: isTxSuccess ? 'UNKNOWN' : 'FAILED',
+          message: '交易釋放鎖失敗: ' + lockReleaseError + ' (交易狀態: ' + (isTxSuccess ? 'UNKNOWN' : 'FAILED') + ')'
+        };
+      }
+    }
+
+    return finalResult;
+  }
 }
 
 module.exports = {
