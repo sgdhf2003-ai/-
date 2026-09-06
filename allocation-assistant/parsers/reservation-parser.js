@@ -50,7 +50,7 @@ class ReservationParser {
       // Product code token pattern: e.g. STU-6101, ABC-1001 (contains uppercase letters and hyphen or numbers)
       // Quantity token pattern: e.g. 1個, 10, 5PCS
       tokens.forEach((token) => {
-        const qtyTokenMatch = token.match(/^(\d+)(?:個|pcs|張|箱|包)?$/i);
+        const qtyTokenMatch = token.match(/^(\d+)(?:個|pcs|張|箱|包|片)?$/i);
         const codeTokenMatch = token.match(/^[A-Z0-9]{2,10}-[A-Z0-9]{2,10}$/i);
 
         if (qtyTokenMatch && quantity === null) {

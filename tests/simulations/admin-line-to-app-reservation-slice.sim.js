@@ -1,12 +1,13 @@
 /**
- * Admin End-to-End Reservation Vertical Slice & Code.gs App Readback Integration Simulation Test
+ * Admin & Sales Assistant End-to-End Reservation Vertical Slice & Code.gs App Readback Integration Simulation Test
  *
  * Flow & Scope:
- * 1. LINE text event -> Parse Draft -> Store Pending Draft under Admin lineUserId
- * 2. LINE Postback confirm -> Backend lineCreateHoldAction verifies Admin role -> Creates Hold
+ * 1. LINE text event -> Parse Draft -> Store Pending Draft under lineUserId
+ * 2. LINE Postback confirm -> Backend lineCreateHoldAction verifies role -> Creates Hold
  * 3. App Readback via Code.gs doGet(e) -> Returns JSON payload from doGet containing newly created hold
- * 4. Complete End-to-End Vertical Slice (LINE Text -> Postback -> Code.gs Hold Creation -> Code.gs doGet App Readback)
- * 5. Role Allowlist & Security Verification:
+ * 4. Complete End-to-End Vertical Slice for Admin (LINE Text -> Postback -> Code.gs Hold Creation -> Code.gs doGet App Readback)
+ * 5. Complete End-to-End Vertical Slice for Sales Assistant (role === "assistant")
+ * 6. Role Allowlist & Security Verification:
  *    - Authorized roles (admin, boss, assistant) create hold successfully
  *    - Unauthorized roles (sales, retail, showroomsales, unbound lineUserId) are rejected with UNAUTHORIZED_OPERATOR / INTERNAL_USER_UNBOUND
  *    - Rejections result in 0 hold writes in backend store
@@ -353,7 +354,7 @@ const tests = [
     }
   },
   {
-    name: "4. End-to-End Vertical Flow (LINE Text -> Postback -> Code.gs Hold Creation -> Code.gs doGet App Readback)",
+    name: "4. End-to-End Vertical Flow for Admin (LINE Text -> Postback -> Code.gs Hold Creation -> Code.gs doGet App Readback)",
     run() {
       const storage = new MockPropertiesStorage();
       const backendStore = new MockBackendStore();
@@ -404,7 +405,65 @@ const tests = [
     }
   },
   {
-    name: "5. Role Allowlist & Security Boundary Verification (Admin/Boss/Assistant ALLOWED, Sales/Retail/Showroom/Unbound REJECTED with 0 writes)",
+    name: "5. Sales Assistant End-to-End Vertical Flow (role === 'assistant', LINE Text -> Postback -> Code.gs Hold -> App Readback)",
+    run() {
+      const storage = new MockPropertiesStorage();
+      const backendStore = new MockBackendStore();
+      const runner = createCodeGsRunner(backendStore);
+      const mockAdapter = {
+        upsertHold(hold) { return backendStore.upsertHold(hold); }
+      };
+      const mockCatalog = [{ item: "EQA-6522", name: "60x120灰霧石英磚", availableQuantity: 100 }];
+
+      // Step 1: Sales Assistant LINE Text Event (lineUserId: U_ASSISTANT_LIN, role: assistant, status: 啟用)
+      const textRes = handleLineReservationTextEvent({
+        text: "極致空間 EQA-6522 10片 林助理",
+        userId: "U_ASSISTANT_LIN",
+        usersTable: backendStore.users,
+        inventoryCatalog: mockCatalog,
+        propertiesStorage: storage
+      });
+      assert.strictEqual(textRes.handled, true, "Sales Assistant text event MUST be handled");
+      assert.ok(textRes.draftId, "draftId generated for Sales Assistant");
+
+      // Step 2: Postback event (confirmHoldDraft) from Sales Assistant
+      const postbackRes = handleLineReservationPostback({
+        postbackData: `action=confirmHoldDraft&draftId=${textRes.draftId}`,
+        userId: "U_ASSISTANT_LIN",
+        usersTable: backendStore.users,
+        inventoryCatalog: mockCatalog,
+        propertiesStorage: storage,
+        upsertHoldActionFn(holdPayload) {
+          return runner.lineCreateHold({
+            bridgeSecret: "TEST_BRIDGE_SECRET_123",
+            lineUserId: "U_ASSISTANT_LIN",
+            usersTable: backendStore.users,
+            hold: holdPayload.hold
+          }, mockAdapter);
+        }
+      });
+
+      assert.strictEqual(postbackRes.handled, true, "Postback event MUST be handled for Sales Assistant");
+      assert.strictEqual(postbackRes.success, true, "Sales Assistant postback confirm MUST succeed");
+      assert.ok(postbackRes.reservationNumber.startsWith("RES-"), "Reservation number generated");
+
+      // Step 3: App Readback via Code.gs doGet(e)
+      const doGetOutput = runner.doGet({ parameter: { action: "readAll" } });
+      const readbackData = JSON.parse(doGetOutput.getContent());
+
+      assert.strictEqual(readbackData.ok, true, "doGet readback ok MUST be true");
+      assert.strictEqual(readbackData.holds.length, 1, "App query MUST see Sales Assistant created hold");
+
+      const createdHold = readbackData.holds[0];
+      const resNo = createdHold.id || createdHold.reservationNumber;
+      assert.strictEqual(resNo, postbackRes.reservationNumber, "Reservation number matched in App readback");
+      assert.strictEqual(createdHold.storeName, "極致空間");
+      assert.strictEqual(createdHold.item, "EQA-6522");
+      assert.strictEqual(createdHold.salesOwner, "林助理");
+    }
+  },
+  {
+    name: "6. Role Allowlist & Security Boundary Verification (Admin/Boss/Assistant ALLOWED, Sales/Retail/Showroom/Unbound REJECTED with 0 writes)",
     run() {
       const backendStore = new MockBackendStore();
       const runner = createCodeGsRunner(backendStore);
@@ -495,4 +554,4 @@ const tests = [
   }
 ];
 
-runSuite("Admin Line-to-App Reservation Vertical Slice Suite", tests);
+runSuite("Admin & Sales Assistant Line-to-App Reservation Vertical Slice Suite", tests);
