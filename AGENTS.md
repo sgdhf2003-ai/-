@@ -92,24 +92,27 @@ git diff --check
 
 ### Current Known State
 
-- Current Stage: **Stage 42-D (Firestore Emulator ACID Integration Complete)**
+- Current Stage: **Stage 42-E Phase 1 (Projection Worker Isolation & Idempotency Contract Complete)**
+- Projection Worker Isolation & Idempotency Contract: **Completed & Certified (Contract Simulation Only 7/7 PASS, Full 55 Suites 378/378 PASS)**
 - Firestore Emulator ACID Integration: **Completed & Certified (Real Emulator 7/7 PASS, Local Adapter 19/19 PASS, Formal Transaction Contract 6/6 PASS, 54 Suites, 371 / 371 PASS)**
 - Security & Permission Regression Audit: **Completed & Certified (52 Suites, 345 / 345 PASS, Dry-Run Deployments VALID)**
 - Security & Permission Closure Audit: **Completed & Certified (Security Permission 7/7 PASS, Identity Integration 9/9 PASS, Login Binding 6/6 PASS, Secure Push 6/6 PASS, Backend Landing Boundary 3/3 PASS)**
 - Allocation Production Contract Audit: **Completed & Certified (Live Inventory Reconciliation 6/6 PASS, Production Readiness Diagnostics 10/10 PASS, Production Sheet Adapter 11/11 PASS, Endpoint Dispatcher 16/16 PASS)**
-- Standing Daily Operations Baseline: **Completed & Certified (54 Suites, 371 / 371 PASS)**
+- Standing Daily Operations Baseline: **Completed & Certified (55 Suites, 378 / 378 PASS)**
 - Handoff & Stage Documentation: **Completed & Synchronized**
-- Latest Feature Commit: `2eeac70a31a7a09b5d6f54456e37acc2fe7be110` (`test: add firestore emulator acid integration`)
-- Metadata Sync Commit: `2eeac70a31a7a09b5d6f54456e37acc2fe7be110` (`test: add firestore emulator acid integration`)
+- Latest Feature Commit: `da11d2be7bd0bd56cf5933e6fc6b5de85fa6a09f` (`test: add projection worker isolation contract`)
+- Metadata Sync Commit: `da11d2be7bd0bd56cf5933e6fc6b5de85fa6a09f` (`test: add projection worker isolation contract`)
 - Status: Synced with `origin/main` (0 ahead / 0 behind)
 - Working tree: Documentation update only (clean code baseline)
 - Backend Web App production record: Version 103 (Deployment ID: [REDACTED_DEPLOYMENT_ID] - 97 versions headroom remaining; Version 102 was an unattached script snapshot)
 - Fresh LINE Bot production record: Version 1 (Script ID: `1C_5hZKIlWl_B9pdRrzcrA9ZAWD2Xuqwd0ZetQ-lIt2CFlxZ8yELcTLJf`, Deployment ID: `AKfycbwskF_c2VpW6Cv3yR-wUevRXdrG754ZzxyYMorroqjwkjJZT10wp3DqIZ2kA-GrKK0a`)
-- Latest verified simulation baseline: `npm run simulate:all` = **54 Suites, 371 / 371 PASS**
+- Latest verified simulation baseline: `npm run simulate:all` = **55 Suites, 378 / 378 PASS**
+- Projection Worker Safety Boundary:
+  - Currently local TDD simulation & contract enforcement only; NO production Projection Worker, Cloud Function, Pub/Sub, Cloud DLQ, or Google Sheet Projection created.
+  - 0 Production Google Sheet writes, 0 LINE API calls, 0 deploys, 0 Cloud resources.
 - Fail-Closed Safety Boundary:
   - Cancel-Release action requires formal transaction adapter supplying complete atomic proof (`ok`, `inventoryReleased`, `holdUpdated`, `auditLogged`, `atomic`).
   - Without a formal transaction adapter, requests fail closed with `CANCEL_TRANSACTION_ADAPTER_MISSING` (0 writes, no `releasedQuantity`).
-  - Safety commit `2b07526` provides strict Fail-Closed defense guards; it does **NOT** represent completion of a formal Production Transaction Adapter.
 - Local Emulator Safety Boundary:
   - Local Firestore Emulator running on `127.0.0.1:8080` with `demo-jingyang-sales` project ID and fail-closed rules (`allow read, write: if false;`).
   - Firebase login unexecuted; no connection to live GCP or production Cloud Firestore.
@@ -127,6 +130,7 @@ git diff --check
   - Stage 40 Security and Permission Closure Gate (Security 7/7, Identity 9/9, Binding 6/6, Secure Push 6/6, Landing Boundary 3/3 PASS): `PASS`
   - Stage 41 Security & Permission Final Regression & Release Gate (52 Suites, 345/345 PASS, dry-run deployment readiness certified): `PASS`
   - Stage 42-D Firestore Emulator ACID Integration (Real Emulator 7/7 PASS, Local Adapter 19/19 PASS, Formal Transaction Contract 6/6 PASS, Full 54 Suites 371/371 PASS): `PASS`
+  - Stage 42-E Phase 1 Projection Worker Isolation Contract (7/7 PASS, Full 55 Suites 378/378 PASS): `PASS`
   - ID Contract (`reservationNumber === holdRecord.id === rowData[0]`): `PASS`
 - Production Operating SOP: Formally documented in `docs/allocation-assistant/OPERATING_SOP.md`
 
@@ -136,13 +140,13 @@ The Stage 24-B warnings regarding hold writeback and fulfillment ledger persiste
 
 ### Current Recommended Next Stage
 
-After Stage 42-D Firestore Emulator ACID Integration documentation closure, the recommended next stage is:
+After Stage 42-E Phase 1 Projection Worker Isolation & Idempotency Contract documentation closure, the recommended next stage is:
 
-**Projection Worker Isolation & Idempotency Contract Review**
-- **Purpose**: Maintain local and dry-run scope to review projection worker isolation and idempotency handling contracts.
+**正式 Worker 實作前的架構與安全審查 (Architecture & Security Audit Before Formal Worker Implementation)**
+- **Purpose**: Maintain local and dry-run scope to perform architecture and security audit before formal Cloud Worker implementation.
 - **Rules**:
   - Local simulation and dry-run checks only.
-  - No production Google Sheet write, LINE API call, deploy, or commit/push without explicit owner approval.
+  - No cloud resource creation, production Google Sheet write, LINE API call, deploy, or commit/push without explicit owner approval.
 
 ## 1. Canonical Workspace
 

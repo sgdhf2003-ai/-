@@ -5,13 +5,13 @@
 - repo root: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 - branch: `main`
 - source of truth: Canonical cloud-drive checkout path above
-- latest feature commit: `2eeac70a31a7a09b5d6f54456e37acc2fe7be110` (`test: add firestore emulator acid integration`)
-- metadata sync commit: `2eeac70a31a7a09b5d6f54456e37acc2fe7be110` (`test: add firestore emulator acid integration`)
+- latest feature commit: `da11d2be7bd0bd56cf5933e6fc6b5de85fa6a09f` (`test: add projection worker isolation contract`)
+- metadata sync commit: `da11d2be7bd0bd56cf5933e6fc6b5de85fa6a09f` (`test: add projection worker isolation contract`)
 - ahead / behind vs origin/main: `0 / 0`
 
 ## Current Stage
 
-- current stage: Stage 42-D Firestore Emulator ACID Integration (Completed & Certified)
+- current stage: Stage 42-E Phase 1 Projection Worker Isolation & Idempotency Contract (Completed & Certified)
 - previous completed deliveries:
   - Phase 6-F Backend Web App Version 100 Deployment (`93e8cb4`, HTTP 200 OK)
   - Phase 7-C Admin Operations UI Control Panel Implementation (`56a5976`, 233 / 233 PASS)
@@ -31,14 +31,31 @@
   - Stage 42 LINE Identity Resolution Contract Hardening & Production Deployment Gate (`fd67b58`, 255 / 255 PASS, Backend Version 105 & LINE Bot Version 3 deployed)
   - Formal Transaction Adapter Fail-Closed & Atomic Cancel-Release Defense Gate (`2b07526`, 52 Suites, 345 / 345 PASS)
   - Stage 42-D Firestore Emulator ACID Integration (`2eeac70`, 54 Suites, 371 / 371 PASS, Real Emulator 7/7 PASS)
-- latest feature commit: `2eeac70a31a7a09b5d6f54456e37acc2fe7be110` (`test: add firestore emulator acid integration`)
-- latest metadata sync commit: `2eeac70a31a7a09b5d6f54456e37acc2fe7be110` (`test: add firestore emulator acid integration`)
+  - Stage 42-E Phase 1 Projection Worker Isolation Contract (`da11d2b`, 55 Suites, 378 / 378 PASS, 7/7 new contract tests PASS)
+- latest feature commit: `da11d2be7bd0bd56cf5933e6fc6b5de85fa6a09f` (`test: add projection worker isolation contract`)
+- latest metadata sync commit: `da11d2be7bd0bd56cf5933e6fc6b5de85fa6a09f` (`test: add projection worker isolation contract`)
 - backend deployed version: `103` (canonical active deployment record)
 - LINE Bot deployed version: `1` (canonical active deployment record)
-- automated simulations: 54 Suites, 371 / 371 PASS (`npm run simulate:all`)
+- automated simulations: 55 Suites, 378 / 378 PASS (`npm run simulate:all`)
 - dry-run deployment check: `python3 deploy.py backend --check` & `python3 deploy.py line-bot --check` (VALID, 100% PASS)
-- safety note: Stage 42-D verifies local Firestore Emulator ACID transaction integration on `127.0.0.1:8080`; it does NOT represent production Firebase or Cloud Firestore deployment.
-- recommended next stage: **Projection Worker Isolation & Idempotency Contract Review**
+- safety note: Currently local contract simulation only; NO production Projection Worker, Cloud Function, Pub/Sub, Cloud DLQ, or Google Sheet Projection created.
+- recommended next stage: **正式 Worker 實作前的架構與安全審查 (Architecture & Security Audit Before Formal Worker Implementation)**
+
+## Stage 42-E Phase 1 Summary & Projection Worker Isolation Contract Record
+
+- **Stage 42-E Phase 1 Status**: **COMPLETED & CERTIFIED (Contract Simulation Only)**
+- **Baseline Commit**: `da11d2be7bd0bd56cf5933e6fc6b5de85fa6a09f`
+- **Verification Evidence**:
+  - `npm run simulate:projection-worker-contract`: **7 / 7 PASS**
+  - `npm run simulate:all`: **55 / 55 Suites (378 / 378 PASS)**
+  - `npm run check`: **PASS**
+  - `git diff --check`: **PASS**
+- **Side-Effect Summary**:
+  - Production Google Sheet Writes: `0`
+  - LINE API Calls: `0`
+  - Deployments Executed: `0`
+  - Firebase / GCP Production Resources: `0`
+- **Recommended Next Gate**: `正式 Worker 實作前的架構與安全審查 (Architecture & Security Audit Before Formal Worker Implementation)`
 
 ## Stage 42-D Summary & Firestore Emulator ACID Integration Record
 
