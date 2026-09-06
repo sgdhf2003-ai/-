@@ -5,13 +5,13 @@
 - repo root: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 - branch: `main`
 - source of truth: Canonical cloud-drive checkout path above
-- latest feature commit: `2b0752697ca7d1784d3cc25d2cdcd633289cd63d` (`fix: fail closed cancel release without formal transaction adapter`)
-- metadata sync commit: `2b0752697ca7d1784d3cc25d2cdcd633289cd63d` (`fix: fail closed cancel release without formal transaction adapter`)
+- latest feature commit: `2eeac70a31a7a09b5d6f54456e37acc2fe7be110` (`test: add firestore emulator acid integration`)
+- metadata sync commit: `2eeac70a31a7a09b5d6f54456e37acc2fe7be110` (`test: add firestore emulator acid integration`)
 - ahead / behind vs origin/main: `0 / 0`
 
 ## Current Stage
 
-- current stage: Stage 41 Security & Permission Final Regression & Release Gate (Completed & Certified)
+- current stage: Stage 42-D Firestore Emulator ACID Integration (Completed & Certified)
 - previous completed deliveries:
   - Phase 6-F Backend Web App Version 100 Deployment (`93e8cb4`, HTTP 200 OK)
   - Phase 7-C Admin Operations UI Control Panel Implementation (`56a5976`, 233 / 233 PASS)
@@ -30,14 +30,35 @@
   - Backend Entrypoint Guard & Boundary Hardening Gate (`BackendLandingView.html`, 246 / 246 PASS, entrypoint responsibility boundary documented)
   - Stage 42 LINE Identity Resolution Contract Hardening & Production Deployment Gate (`fd67b58`, 255 / 255 PASS, Backend Version 105 & LINE Bot Version 3 deployed)
   - Formal Transaction Adapter Fail-Closed & Atomic Cancel-Release Defense Gate (`2b07526`, 52 Suites, 345 / 345 PASS)
-- latest feature commit: `2b0752697ca7d1784d3cc25d2cdcd633289cd63d` (`fix: fail closed cancel release without formal transaction adapter`)
-- latest metadata sync commit: `2b0752697ca7d1784d3cc25d2cdcd633289cd63d` (`fix: fail closed cancel release without formal transaction adapter`)
+  - Stage 42-D Firestore Emulator ACID Integration (`2eeac70`, 54 Suites, 371 / 371 PASS, Real Emulator 7/7 PASS)
+- latest feature commit: `2eeac70a31a7a09b5d6f54456e37acc2fe7be110` (`test: add firestore emulator acid integration`)
+- latest metadata sync commit: `2eeac70a31a7a09b5d6f54456e37acc2fe7be110` (`test: add firestore emulator acid integration`)
 - backend deployed version: `103` (canonical active deployment record)
 - LINE Bot deployed version: `1` (canonical active deployment record)
-- automated simulations: 52 Suites, 345 / 345 PASS (`npm run simulate:all`)
+- automated simulations: 54 Suites, 371 / 371 PASS (`npm run simulate:all`)
 - dry-run deployment check: `python3 deploy.py backend --check` & `python3 deploy.py line-bot --check` (VALID, 100% PASS)
-- safety note: Safety commit `2b07526` enforces strict Fail-Closed defense guards (`CANCEL_TRANSACTION_ADAPTER_MISSING`); it does NOT represent completion of a formal Production Transaction Adapter.
-- recommended next stage: **Daily Operations Standing Health Monitoring & Maintenance Gate**
+- safety note: Stage 42-D verifies local Firestore Emulator ACID transaction integration on `127.0.0.1:8080`; it does NOT represent production Firebase or Cloud Firestore deployment.
+- recommended next stage: **Projection Worker Isolation & Idempotency Contract Review**
+
+## Stage 42-D Summary & Firestore Emulator ACID Integration Record
+
+- **Stage 42-D Status**: **COMPLETED & CERTIFIED**
+- **Baseline Commit**: `2eeac70a31a7a09b5d6f54456e37acc2fe7be110`
+- **Emulator Configuration**: `127.0.0.1:8080` (`demo-jingyang-sales`, Firebase CLI `15.29.0`, OpenJDK `21`)
+- **Verification Evidence**:
+  - `npm run simulate:firestore-emulator-acid-transaction`: **7 / 7 PASS**
+  - `npm run simulate:firestore-reservation-transaction-adapter`: **19 / 19 PASS**
+  - `npm run simulate:formal-production-transaction-adapter`: **6 / 6 PASS**
+  - `npm run simulate:all`: **54 / 54 Suites (371 / 371 PASS)**
+  - `npm run check`: **PASS**
+  - `git diff --check`: **PASS**
+- **Side-Effect Summary**:
+  - Production Google Sheet Writes: `0`
+  - LINE API Calls: `0`
+  - Deployments Executed: `0`
+  - Firebase Login Executed: `No`
+  - Live GCP/Firebase Connected: `No`
+- **Recommended Next Gate**: `Projection Worker Isolation & Idempotency Contract Review`
 
 ## Stage 41 Summary & Security Permission Final Regression Record
 
