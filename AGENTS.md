@@ -92,7 +92,8 @@ git diff --check
 
 ### Current Known State
 
-- Current Stage: **Stage 42-E Phase 1 (Projection Worker Isolation & Idempotency Contract Complete)**
+- Current Stage: **Stage 42-E Phase 2 (Projection Worker Architecture & Security Audit Complete)**
+- Projection Worker Architecture & Security Audit: **Completed & Certified (Audit Complete; Formal Worker NOT IMPLEMENTED; Production Readiness NOT APPROVED)**
 - Projection Worker Isolation & Idempotency Contract: **Completed & Certified (Contract Simulation Only 7/7 PASS, Full 55 Suites 378/378 PASS)**
 - Firestore Emulator ACID Integration: **Completed & Certified (Real Emulator 7/7 PASS, Local Adapter 19/19 PASS, Formal Transaction Contract 6/6 PASS, 54 Suites, 371 / 371 PASS)**
 - Security & Permission Regression Audit: **Completed & Certified (52 Suites, 345 / 345 PASS, Dry-Run Deployments VALID)**
@@ -100,15 +101,15 @@ git diff --check
 - Allocation Production Contract Audit: **Completed & Certified (Live Inventory Reconciliation 6/6 PASS, Production Readiness Diagnostics 10/10 PASS, Production Sheet Adapter 11/11 PASS, Endpoint Dispatcher 16/16 PASS)**
 - Standing Daily Operations Baseline: **Completed & Certified (55 Suites, 378 / 378 PASS)**
 - Handoff & Stage Documentation: **Completed & Synchronized**
-- Latest Feature Commit: `da11d2be7bd0bd56cf5933e6fc6b5de85fa6a09f` (`test: add projection worker isolation contract`)
-- Metadata Sync Commit: `da11d2be7bd0bd56cf5933e6fc6b5de85fa6a09f` (`test: add projection worker isolation contract`)
+- Latest Feature Commit: `846e68804d6654e219205f05b3ec9be563e1fb10` (`docs: close Stage 42-E projection worker contract`)
+- Metadata Sync Commit: `846e68804d6654e219205f05b3ec9be563e1fb10` (`docs: close Stage 42-E projection worker contract`)
 - Status: Synced with `origin/main` (0 ahead / 0 behind)
 - Working tree: Documentation update only (clean code baseline)
 - Backend Web App production record: Version 103 (Deployment ID: [REDACTED_DEPLOYMENT_ID] - 97 versions headroom remaining; Version 102 was an unattached script snapshot)
 - Fresh LINE Bot production record: Version 1 (Script ID: `1C_5hZKIlWl_B9pdRrzcrA9ZAWD2Xuqwd0ZetQ-lIt2CFlxZ8yELcTLJf`, Deployment ID: `AKfycbwskF_c2VpW6Cv3yR-wUevRXdrG754ZzxyYMorroqjwkjJZT10wp3DqIZ2kA-GrKK0a`)
 - Latest verified simulation baseline: `npm run simulate:all` = **55 Suites, 378 / 378 PASS**
 - Projection Worker Safety Boundary:
-  - Currently local TDD simulation & contract enforcement only; NO production Projection Worker, Cloud Function, Pub/Sub, Cloud DLQ, or Google Sheet Projection created.
+  - Architecture & Security Audit completed. Formal Projection Worker, Cloud Function, Pub/Sub, Cloud DLQ, and Google Sheet Projection tab are NOT IMPLEMENTED. Production readiness NOT APPROVED.
   - 0 Production Google Sheet writes, 0 LINE API calls, 0 deploys, 0 Cloud resources.
 - Fail-Closed Safety Boundary:
   - Cancel-Release action requires formal transaction adapter supplying complete atomic proof (`ok`, `inventoryReleased`, `holdUpdated`, `auditLogged`, `atomic`).
@@ -131,6 +132,7 @@ git diff --check
   - Stage 41 Security & Permission Final Regression & Release Gate (52 Suites, 345/345 PASS, dry-run deployment readiness certified): `PASS`
   - Stage 42-D Firestore Emulator ACID Integration (Real Emulator 7/7 PASS, Local Adapter 19/19 PASS, Formal Transaction Contract 6/6 PASS, Full 54 Suites 371/371 PASS): `PASS`
   - Stage 42-E Phase 1 Projection Worker Isolation Contract (7/7 PASS, Full 55 Suites 378/378 PASS): `PASS`
+  - Stage 42-E Phase 2 Projection Worker Architecture & Security Audit (Audit Complete; Formal Worker NOT IMPLEMENTED; Production Readiness NOT APPROVED): `PASS`
   - ID Contract (`reservationNumber === holdRecord.id === rowData[0]`): `PASS`
 - Production Operating SOP: Formally documented in `docs/allocation-assistant/OPERATING_SOP.md`
 
@@ -140,12 +142,12 @@ The Stage 24-B warnings regarding hold writeback and fulfillment ledger persiste
 
 ### Current Recommended Next Stage
 
-After Stage 42-E Phase 1 Projection Worker Isolation & Idempotency Contract documentation closure, the recommended next stage is:
+After Stage 42-E Phase 2 Architecture & Security Audit documentation closure, the recommended next stage is:
 
-**正式 Worker 實作前的架構與安全審查 (Architecture & Security Audit Before Formal Worker Implementation)**
-- **Purpose**: Maintain local and dry-run scope to perform architecture and security audit before formal Cloud Worker implementation.
+**Formal Projection Worker Architecture Specification**
+- **Purpose**: Draft formal Projection Worker architecture design specification before any formal Cloud Worker implementation.
 - **Rules**:
-  - Local simulation and dry-run checks only.
+  - Local specification and documentation only.
   - No cloud resource creation, production Google Sheet write, LINE API call, deploy, or commit/push without explicit owner approval.
 
 ## 1. Canonical Workspace
