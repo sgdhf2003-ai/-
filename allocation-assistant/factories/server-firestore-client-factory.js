@@ -7,8 +7,9 @@
  * 1. Uses a module-private unique Symbol (not Symbol.for) that CANNOT be retrieved, constructed, or exported outside this file.
  * 2. Does NOT export any bootstrap token or supply any `getServerBootstrapToken()` helper method.
  * 3. Does NOT expose an open `wrapAdminSdkClient` wrapper accepting unverified caller objects.
- * 4. Only `createEmulatorFake` is exposed as the single controlled entry point for local simulation testing.
- * 5. Clients failing Server Factory validation return `hasNativeAcidTransaction: false`, causing Adapter preflight to fail closed with `PRODUCTION_TRANSACTION_CAPABILITY_MISSING`.
+ * 4. Only `createEmulatorFake` and `createEmulatorAdminClient` are exposed as controlled entry points for local testing.
+ * 5. `createEmulatorAdminClient` strictly connects to local emulator (127.0.0.1 / localhost) using firebase-admin without live GCP/Firebase connection.
+ * 6. Clients failing Server Factory validation return `hasNativeAcidTransaction: false`, causing Adapter preflight to fail closed with `PRODUCTION_TRANSACTION_CAPABILITY_MISSING`.
  */
 
 // Module-private unique Symbol (NOT Symbol.for, not exported, unavailable externally)
@@ -128,6 +129,60 @@ class ServerFirestoreClientFactory {
    */
   static createEmulatorFake(initialState = {}) {
     return new FakeFirestoreClient(initialState, PRIVATE_FACTORY_CAPABILITY);
+  }
+
+  /**
+   * Create a certified trusted Server-side Firestore Client connected strictly to the local Firestore Emulator via firebase-admin.
+   */
+  static createEmulatorAdminClient(options = {}) {
+    const projectId = options.projectId || "demo-jingyang-sales";
+    const emulatorHost = options.emulatorHost || "127.0.0.1:8080";
+
+    // Enforce local emulator host boundary
+    if (!emulatorHost.startsWith("127.0.0.1:") && !emulatorHost.startsWith("localhost:")) {
+      throw new Error(`INVALID_EMULATOR_HOST: Host must be local (127.0.0.1 or localhost). Got: ${emulatorHost}`);
+    }
+
+    process.env.FIRESTORE_EMULATOR_HOST = emulatorHost;
+
+    const { initializeApp, getApps } = require("firebase-admin/app");
+    const { getFirestore, FieldValue } = require("firebase-admin/firestore");
+
+    const appName = `emulator-${projectId}`;
+    const appsList = getApps();
+    const existingApp = appsList.find((a) => a && a.name === appName);
+    let app;
+    if (existingApp) {
+      app = existingApp;
+    } else {
+      app = initializeApp({ projectId }, appName);
+    }
+
+    const firestoreDb = getFirestore(app);
+
+    // Attach controlled trust flags and FieldValue binding
+    Object.defineProperty(firestoreDb, "isTrustedServerBackend", {
+      value: true,
+      writable: false,
+      configurable: false
+    });
+    Object.defineProperty(firestoreDb, "hasNativeTransactionAbortGuarantee", {
+      value: true,
+      writable: false,
+      configurable: false
+    });
+    Object.defineProperty(firestoreDb, "isEmulatorAdminClient", {
+      value: true,
+      writable: false,
+      configurable: false
+    });
+    Object.defineProperty(firestoreDb, "FieldValue", {
+      value: FieldValue,
+      writable: false,
+      configurable: false
+    });
+
+    return firestoreDb;
   }
 }
 
