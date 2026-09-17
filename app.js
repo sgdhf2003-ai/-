@@ -2059,19 +2059,129 @@ async function sendCloudWriteWithResponse_(payload = {}) {
 }
 
 async function sendCloudRead() {
-  const response = await fetch(getCloudApiUrl(), {
-    method: "GET",
-    cache: "no-store",
-  });
-  const text = await response.text();
-  let data;
   try {
-    data = JSON.parse(text);
-  } catch {
-    throw new Error("Google 後台讀取失敗，請直接開啟 Apps Script URL 確認是否為 JSON 畫面。");
+    const response = await fetch(getCloudApiUrl(), {
+      method: "GET",
+      cache: "no-store",
+    });
+    const text = await response.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw new Error("Google 後台讀取失敗，請直接開啟 Apps Script URL 確認是否為 JSON 畫面。");
+    }
+    if (!data.ok) throw new Error(data.error || "Google 後台處理失敗");
+    return data;
+  } catch (fetchError) {
+    // Ordinary fetch failed (e.g. CORS "Failed to fetch" in browser) -> Fallback to dynamic script JSONP
+    try {
+      return await sendCloudReadJsonp_();
+    } catch (jsonpError) {
+      throw new Error(jsonpError.message || fetchError.message || "Google 後台讀取失敗");
+    }
   }
-  if (!data.ok) throw new Error(data.error || "Google 後台處理失敗");
-  return data;
+}
+
+function sendCloudReadJsonp_(options = {}) {
+  const timeoutMs = options.timeoutMs || 15000;
+  return new Promise((resolve, reject) => {
+    if (typeof window === "undefined" || typeof document === "undefined") {
+      reject(new Error("非瀏覽器環境無法使用 JSONP fallback"));
+      return;
+    }
+
+    const callbackName = "jy_jsonp_" + Date.now() + "_" + Math.floor(Math.random() * 100000);
+    let url;
+    try {
+      url = new URL(getCloudApiUrl());
+    } catch (err) {
+      reject(new Error("無效的後端網址：" + err.message));
+      return;
+    }
+    url.searchParams.set("action", "readAll");
+    url.searchParams.set("callback", callbackName);
+
+    let timer = null;
+    let script = null;
+    let settled = false;
+
+    function cleanupScript() {
+      if (script && script.parentNode) {
+        script.parentNode.removeChild(script);
+      }
+      script = null;
+    }
+
+    function cleanupTimer() {
+      if (timer) {
+        clearTimeout(timer);
+        timer = null;
+      }
+    }
+
+    function safeDeactivateCallback() {
+      // Protect against late-evaluating script throwing "ReferenceError: callback is not defined"
+      window[callbackName] = () => {
+        try {
+          delete window[callbackName];
+        } catch (_) {
+          window[callbackName] = undefined;
+        }
+      };
+      setTimeout(() => {
+        try {
+          delete window[callbackName];
+        } catch (_) {
+          window[callbackName] = undefined;
+        }
+      }, 30000);
+    }
+
+    timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      cleanupTimer();
+      cleanupScript();
+      safeDeactivateCallback();
+      reject(new Error("Google 後台 JSONP 回應逾時，請檢查連線或稍後再試。"));
+    }, timeoutMs);
+
+    window[callbackName] = (data) => {
+      if (settled) return;
+      settled = true;
+      cleanupTimer();
+      cleanupScript();
+      try {
+        delete window[callbackName];
+      } catch (_) {
+        window[callbackName] = undefined;
+      }
+      if (!data) {
+        reject(new Error("Google 後台回傳空資料"));
+        return;
+      }
+      if (!data.ok) {
+        reject(new Error(data.error || data.message || "Google 後台處理失敗"));
+        return;
+      }
+      resolve(data);
+    };
+
+    script = document.createElement("script");
+    script.src = url.toString();
+    script.async = true;
+    script.onerror = () => {
+      if (settled) return;
+      settled = true;
+      cleanupTimer();
+      cleanupScript();
+      safeDeactivateCallback();
+      reject(new Error("Google 後台 JSONP 載入失敗，請確認 Apps Script Web App 權限設定。"));
+    };
+
+    (document.head || document.documentElement).appendChild(script);
+  });
 }
 
 function mergeById(localItems, cloudItems) {
@@ -3155,7 +3265,7 @@ if (state.currentUser && initialView) {
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js?v=20260711-task-dashboard-v12").catch(() => {});
+    navigator.serviceWorker.register("./service-worker.js?v=20260911-cross-origin-fix-v1").catch(() => {});
   });
   
   let refreshing = false;

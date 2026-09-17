@@ -1,5 +1,5 @@
 
-const CACHE_NAME = "jingyang-manager-pwa-v54-task-dashboard-v12";
+const CACHE_NAME = "jingyang-manager-pwa-v55-task-dashboard-v13";
 const ASSETS = [
   "./",
   "./index.html",
@@ -40,15 +40,44 @@ self.addEventListener("message", (event) => {
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
 
+  // Same-origin guard: ONLY process same-origin requests.
+  // Cross-origin requests (e.g., script.google.com, script.googleusercontent.com)
+  // MUST NOT be intercepted with respondWith, allowing the browser to handle them natively.
+  try {
+    const requestUrl = new URL(event.request.url);
+    const host = requestUrl.hostname.toLowerCase();
+    if (
+      host.includes("script.google.com") ||
+      host.includes("script.googleusercontent.com") ||
+      requestUrl.origin !== self.location.origin
+    ) {
+      return;
+    }
+  } catch (_) {
+    return;
+  }
+
   if (event.request.mode === "navigate") {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put("./index.html", copy));
+          if (response && response.status === 200) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put("./index.html", copy));
+          }
           return response;
         })
-        .catch(() => caches.match("./index.html"))
+        .catch(async () => {
+          const cached = await caches.match("./index.html");
+          return (
+            cached ||
+            new Response("Offline", {
+              status: 503,
+              statusText: "Service Unavailable",
+              headers: { "Content-Type": "text/plain; charset=utf-8" },
+            })
+          );
+        })
     );
     return;
   }
@@ -56,10 +85,22 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        const copy = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        if (response && response.status === 200) {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        }
         return response;
       })
-      .catch(() => caches.match(event.request))
+      .catch(async () => {
+        const cached = await caches.match(event.request);
+        return (
+          cached ||
+          new Response("Not found in cache", {
+            status: 404,
+            statusText: "Not Found",
+            headers: { "Content-Type": "text/plain; charset=utf-8" },
+          })
+        );
+      })
   );
 });

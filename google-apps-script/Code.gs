@@ -25,8 +25,24 @@ const HEADERS = {
 };
 
 function doGet(e) {
+  let callback = null;
   try {
     const data = parseQuery(e);
+
+    // Validate callback parameter if present (whitelist: /^[A-Za-z_$][A-Za-z0-9_$]*$/)
+    if (data && data.callback !== undefined && data.callback !== null) {
+      const rawCb = String(data.callback).trim();
+      if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(rawCb)) {
+        return jsonOutput({ ok: false, errorCode: "INVALID_CALLBACK", error: "Invalid callback name" });
+      }
+      callback = rawCb;
+    }
+
+    // Security Gate: JSONP is strictly restricted to action=readAll only.
+    // Sensitive actions (login, setup, write actions, etc.) MUST NOT return JSONP.
+    if (callback && data && data.action && data.action !== "readAll") {
+      return jsonOutput({ ok: false, errorCode: "JSONP_NOT_ALLOWED", error: "JSONP callback is only permitted for action=readAll" });
+    }
 
     // 1. API Route Dispatcher (when action parameter is explicitly specified)
     if (data && data.action) {
@@ -43,7 +59,11 @@ function doGet(e) {
         const values = sheet.getDataRange().getValues();
         return jsonOutput({ ok: true, logs: values });
       }
-      return jsonOutput(readAll());
+      return jsonOutput(readAll(), callback);
+    }
+
+    if (callback) {
+      return jsonOutput(readAll(), callback);
     }
 
     // 2. Web App View Route Dispatcher (browser access without action parameter)
@@ -66,7 +86,7 @@ function doGet(e) {
       .addMetaTag("viewport", "width=device-width, initial-scale=1, viewport-fit=cover")
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   } catch (error) {
-    return jsonOutput({ ok: false, error: error.message || String(error) });
+    return jsonOutput({ ok: false, error: error.message || String(error) }, callback);
   }
 }
 
@@ -1280,7 +1300,11 @@ function testLineNotifyAction(data) {
   }
 }
 
-function jsonOutput(data) {
+function jsonOutput(data, callback) {
+  if (callback && typeof callback === "string" && /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(callback)) {
+    return ContentService.createTextOutput(callback + "(" + JSON.stringify(data) + ");")
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
   return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
 }
 
