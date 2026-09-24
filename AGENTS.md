@@ -448,3 +448,33 @@ the project context again when `AGENTS.md` and the remote repository are
 available.
 
 <!-- WORKBENCH_CONTEXT_GATE_END -->
+
+<!-- BEGIN JYAI_PROJECT_LOCATION_GATE -->
+## Mandatory Project Location and Memory Gate
+
+Before reading project source, editing, testing, committing, pushing, deploying, or calling an external API:
+
+1. Read the cloud-root `JYAI-PROJECT-REGISTRY.md`.
+2. Read this repository's `PROJECT_LOCATION.md` and `PROJECT_MEMORY.md`.
+3. Resolve the canonical repository using Drive folder ID, relative path, and Git origin.
+4. Verify this folder and all Drive parents are not trashed.
+5. Verify repository root, origin URL, branch, upstream, working-tree state, and canonical marker.
+6. Read project boundaries and the current handoff/status documents.
+7. Stop if any identifier conflicts or if the checkout is scratch, archived, stale, trashed, or a noncanonical worktree.
+8. Never substitute another JYAI repository or perform cross-project pushing/deployment.
+9. Default to dry-run/read-only until the Owner explicitly authorizes the requested mutation.
+
+Required preflight report:
+
+- PROJECT
+- CANONICAL_ROOT
+- DRIVE_FOLDER_ID
+- GIT_REMOTE
+- BRANCH
+- HEAD / UPSTREAM
+- WORKING_TREE
+- LOCATION_GATE
+- MEMORY_READ
+- BOUNDARIES_READ
+- SAFE_TO_CONTINUE
+<!-- END JYAI_PROJECT_LOCATION_GATE -->
