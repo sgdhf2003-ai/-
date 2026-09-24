@@ -34,18 +34,18 @@ Source of truth: PROJECT_LOCATION.md + AGENTS.md + PROJECT_BOUNDARIES.md + docs/
 
 ## Current state
 
-- Current stage/release: Stage 42-E Phase 2 (Projection Worker Architecture & Security Audit Complete)
+- Current stage/release: Stage 42-F Formal Projection Worker Architecture Specification (APPROVED — STAGE 42-G IMPLEMENTATION NOT STARTED)
 - Current handoff: docs/stages/CURRENT_HANDOFF.md
-- Last verified commit: e126b3d21ac87510b3bb278a026d7ad101e02dbe
-- Upstream state: 1 commit ahead vs origin/main (`1fadee47f8db000308c639a653b0bc912f2722b0`)
-- Working-tree state: clean code baseline (governance documentation updates only)
+- Last verified commit: 59d892678bdbe9b103574903907fd167f86cce14
+- Upstream state: HEAD == origin/main (59d892678bdbe9b103574903907fd167f86cce14)
+- Working-tree state: Stage 42-F approved specification commit staging (4 files: docs/stages/stage-42-f-formal-projection-worker-architecture-spec.md, docs/stages/CURRENT_HANDOFF.md, docs/allocation-assistant/CURRENT_HANDOFF.md, PROJECT_MEMORY.md; 0 code changes, clean code baseline)
 - Production/deployment state: Backend Web App Version 103, LINE Bot Version 1
 - Known blockers: None blocking main axis. Formal Projection Worker, Cloud Functions, and live Sheet projection tab remain unapproved and not implemented.
 
 ## Verification commands
 
 - Context gate: `./scripts/workbench-context-gate.sh --check`
-- Tests: `npm run simulate:all` (55 Suites, 378 / 378 PASS)
+- Tests: `npm run simulate:all` (59 Suites, 479 / 479 PASS)
 - Dry-run commands: `python3 deploy.py backend --check`, `python3 deploy.py line-bot --check`
 - Production checks: `npm run check`, `git diff --check`
 
@@ -66,7 +66,8 @@ Source of truth: PROJECT_LOCATION.md + AGENTS.md + PROJECT_BOUNDARIES.md + docs/
 - 2026-08-11: Stage 42-D Firestore Emulator ACID integration certified (`2eeac70`).
 - 2026-08-12: Stage 42-E Phase 1 Projection Worker isolation contract certified (`da11d2b`).
 - 2026-08-13: Stage 42-E Phase 2 Projection Worker architecture and security audit certified (`846e688`).
-- 2026-09-24: Location and Project Memory Governance formalized across JYAI ecosystem.
+- 2026-09-24: Location and Project Memory Governance formalized across JYAI ecosystem (`59d8926`).
+- 2026-09-24: Stage 42-F Formal Projection Worker Architecture Specification formally approved by Owner (`docs/stages/stage-42-f-formal-projection-worker-architecture-spec.md`, Status: `APPROVED — STAGE 42-G IMPLEMENTATION NOT STARTED`), establishing eventId immutability across resends, Transport CloudEvent unpacking, 120s timeout / 180s lease boundary, concurrency=1 pilot constraint, pre-Sheet-write Firestore authoritative lease re-validation (status, leaseOwner, claimVersion, leaseExpiresAt > server timestamp), full 64-character hex SHA-256 payload hash, Projection Reconciler specification for SUCCEEDED row recovery, active lease duplicate delivery fixed ACK, strict Runtime vs Trigger IAM separation, Owner-approved baseline parameters (`OWNER_APPROVED_STAGE_42_F_PARAMETER`), and 18-case TDD acceptance matrix. Next phase is Stage 42-G TDD Implementation Plan awaiting separate Owner authorization; formal worker, Cloud Functions, and live Sheet projection tab remain unapproved and not implemented.
 
 ## Recovery procedure
 

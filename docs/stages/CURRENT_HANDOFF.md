@@ -11,7 +11,7 @@
 
 ## Current Stage
 
-- current stage: Stage 42-E Phase 2 Projection Worker Architecture & Security Audit (Completed & Certified)
+- current stage: Stage 42-F Formal Projection Worker Architecture Specification (APPROVED — STAGE 42-G IMPLEMENTATION NOT STARTED)
 - previous completed deliveries:
   - Phase 6-F Backend Web App Version 100 Deployment (`93e8cb4`, HTTP 200 OK)
   - Phase 7-C Admin Operations UI Control Panel Implementation (`56a5976`, 233 / 233 PASS)
@@ -33,14 +33,37 @@
   - Stage 42-D Firestore Emulator ACID Integration (`2eeac70`, 54 Suites, 371 / 371 PASS, Real Emulator 7/7 PASS)
   - Stage 42-E Phase 1 Projection Worker Isolation Contract (`da11d2b`, 55 Suites, 378 / 378 PASS, 7/7 new contract tests PASS)
   - Stage 42-E Phase 2 Projection Worker Architecture & Security Audit (`846e688`, Audit Complete, Formal Worker NOT IMPLEMENTED, Production Readiness NOT APPROVED)
+- active approved specification: **Stage 42-F: Formal Projection Worker Architecture Specification** (`docs/stages/stage-42-f-formal-projection-worker-architecture-spec.md`, Status: `APPROVED — STAGE 42-G IMPLEMENTATION NOT STARTED`)
 - latest feature commit: `846e68804d6654e219205f05b3ec9be563e1fb10` (`docs: close Stage 42-E projection worker contract`)
-- latest metadata sync commit: `846e68804d6654e219205f05b3ec9be563e1fb10` (`docs: close Stage 42-E projection worker contract`)
+- latest metadata sync commit: `59d892678bdbe9b103574903907fd167f86cce14` (`chore: add canonical location and project memory governance`)
 - backend deployed version: `103` (canonical active deployment record)
 - LINE Bot deployed version: `1` (canonical active deployment record)
-- automated simulations: 55 Suites, 378 / 378 PASS (`npm run simulate:all`)
+- automated simulations: 59 Suites, 479 / 479 PASS (`npm run simulate:all`)
 - dry-run deployment check: `python3 deploy.py backend --check` & `python3 deploy.py line-bot --check` (VALID, 100% PASS)
-- safety note: Architecture & Security Audit completed. Formal Projection Worker, Cloud Function, Pub/Sub, Cloud DLQ, and Google Sheet Projection tab are NOT IMPLEMENTED. Production readiness NOT APPROVED.
-- recommended next stage: **Formal Projection Worker Architecture Specification**
+- safety note: Architecture specification approved in Stage 42-F. Formal Projection Worker, Cloud Function, Pub/Sub, Cloud DLQ, and Google Sheet Projection tab are NOT IMPLEMENTED. Production readiness NOT APPROVED.
+- recommended next stage: **Stage 42-G TDD Implementation Plan — awaiting separate Owner authorization**
+
+## Stage 42-F Summary & Projection Worker Architecture Specification Approval Record
+
+- **Stage 42-F Status**: **APPROVED — STAGE 42-G IMPLEMENTATION NOT STARTED**
+- **Specification Document**: `docs/stages/stage-42-f-formal-projection-worker-architecture-spec.md`
+- **Core Architecture Blueprint**:
+  - Event Flow: Firestore Transaction -> Transactional Outbox (`projectionOutbox/{operationId}`) -> Pub/Sub (`jy-reservation-events`) -> Eventarc -> Cloud Run function Projection Worker -> 獨立「系統稽核試算表」(`PROJECTION_LOG`)
+  - Semantics: At-least-once delivery, out-of-order tolerance, effectively-once projection outcome by `PROJECTION_${operationId}`
+  - Transport vs Application Envelope: Outlayer Eventarc CloudEvent (`google.cloud.pubsub.topic.v1.messagePublished`) unpacked to decode inner Application Projection Event Envelope
+  - Event Identifiers: `eventId` created with Outbox document and immutable across retries; `publishAttemptId` unique per attempt; `publishedMessageId` returned from Pub/Sub
+  - Pilot Concurrency & Timeouts: `max-instances = 1`, `concurrency = 1`, `timeout = 120s`, `lease duration = 180s`
+  - Concurrency & Fencing: Re-verify lease via Firestore authoritative read/transaction before Google Sheets API call; active lease duplicate delivery returns fixed ACK with 0 Sheet writes
+  - Authoritative State & Reconciler: Firestore `projectionOperations/{operationId}` as system state source of truth; dedicated Projection Reconciler scans SUCCEEDED records and repairs deleted rows
+  - Canonical Hashing: Full 64-character hex SHA-256 hash using recursive deterministic key sorting
+  - IAM Principle: Strict separation of 5 Runtime SAs vs 4 Trigger/Scheduler SAs; Projection Worker runtime SA does NOT hold `roles/run.invoker`; personal OAuth tokens strictly forbidden
+  - Approved Parameters: `OWNER_APPROVED_STAGE_42_F_PARAMETER` (max delivery attempts 5, Outbox reconciliation 5m, stale PENDING 2m, ack deadline 600s, 90d PROJECTION_LOG, 400d projectionOperations tombstone)
+- **Side-Effect Summary**:
+  - Production Google Sheet Writes: `0`
+  - Cloud / GCP Resources Created: `0`
+  - LINE API Calls: `0`
+  - Deployments Executed: `0`
+- **Current Gate State**: Specification formally approved by Owner. Formal Projection Worker, Cloud Function, Pub/Sub, Cloud DLQ, and Google Sheet Projection tab are NOT IMPLEMENTED. Production readiness NOT APPROVED. Next phase requires separate Owner authorization.
 
 ## Stage 42-E Phase 2 Summary & Projection Worker Architecture & Security Audit Record
 
@@ -823,13 +846,12 @@
 
 ## Required Next Step
 
-Stage 26-X9 Owner-Approved Secret Rotation Gate (only if Owner confirms removed token literals were live operational secrets).
+Stage 42-G TDD Implementation Plan — awaiting separate Owner authorization.
 
-Forbidden until Stage 26-X9 is explicitly approved:
-- no token/secret/property access
-- no token rotation
-- no Apps Script function execution
-- no Google Sheet write/append/update/delete/clear
-- no LINE / OneSignal call
-- no deploy
-- no commit/push
+Forbidden until Stage 42-G is explicitly authorized by Owner:
+- no code implementation (Projection Worker, Outbox Publisher, or any worker code)
+- no GCP / Cloud resource creation (Pub/Sub topics, subscriptions, Eventarc triggers, Cloud Run functions)
+- no Google Sheet writes or tab creation
+- no LINE API calls
+- no deployments
+- no git commit or push

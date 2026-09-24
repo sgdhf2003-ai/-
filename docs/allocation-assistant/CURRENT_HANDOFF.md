@@ -44,6 +44,7 @@
 * 完成 Stage 42-D Firestore Emulator ACID Integration 文件收束與本機 Emulator ACID 交易驗證 (`2eeac70`, Real Emulator 7/7 PASS, Local Adapter 19/19 PASS, Formal Transaction Contract 6/6 PASS, 全量 54 個測試套件 371/371 PASS)。
 * 完成 Stage 42-E Phase 1 Projection Worker Isolation & Idempotency Contract 文件收束與本機 Worker 隔離合約驗證 (`da11d2b`, 7/7 PASS, 全量 55 個測試套件 378/378 PASS)。
 * 完成 Stage 42-E Phase 2 Projection Worker Architecture & Security Audit 唯讀審查紀錄 (Audit Complete; Formal Worker NOT IMPLEMENTED; Production Readiness NOT APPROVED)。
+* 完成 Stage 42-F 正式 Projection Worker 架構規格書核准備查 (`docs/stages/stage-42-f-formal-projection-worker-architecture-spec.md`，狀態：`APPROVED — STAGE 42-G IMPLEMENTATION NOT STARTED`；Owner 正式核准架構規格；涵蓋 eventId 不變原則、Transport CloudEvent 解包、120s timeout / 180s lease 邊界、concurrency=1 設定、寫入前 Firestore 權威租約校驗、完整 64 碼 SHA-256、Projection Reconciler 對帳、有效租約固定 ACK、IAM Runtime vs Trigger 角色嚴格拆分、Owner 核定基準參數與 18 項 TDD 驗收矩陣；Formal Worker NOT IMPLEMENTED；未授權程式實作或雲端資源建立)。
 * 本機檢查、全量模擬測試與部署 Dry Run 全數通過 (`npm run check`, `npm run simulate:all`, `python3 deploy.py backend --check`, `python3 deploy.py line-bot --check` PASS)。
 
 ## 3. 未完成內容與未啟用功能 (Deactivated Features)
@@ -59,7 +60,7 @@
 > 本次交接確無未授權之 LINE 機器人發送通知、無 OneSignal 警報、無真實庫存銷扣損壞。所有安全性防護邊界、Server-Side Role Guard 與 UI 角色防護控制項均完好。
 
 ## 6. 下一個精確步驟 (Next Recommended Step)
-* 撰寫 **Formal Projection Worker Architecture Specification** (未經 Owner 授權不得建立雲端資源或寫入正式 Sheet)。
+* **Stage 42-G TDD Implementation Plan — awaiting separate Owner authorization** (測試先行實作計畫，須待 Owner 獨立授權後方可展開；嚴禁在未經授權前進行任何程式實作、雲端資源建立或 Sheet 寫入)。
 
 ## 7. 禁止下一位 Agent 自行執行的事項 (Prohibited Actions)
 * 嚴禁在未經 Owner 審查同意前進行未授權之 Google Sheet 寫入。
