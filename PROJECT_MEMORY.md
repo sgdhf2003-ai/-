@@ -34,13 +34,13 @@ Source of truth: PROJECT_LOCATION.md + AGENTS.md + PROJECT_BOUNDARIES.md + docs/
 
 ## Current state
 
-- Current stage/release: Stage 42-F Formal Projection Worker Architecture Specification (APPROVED — STAGE 42-G IMPLEMENTATION NOT STARTED)
+- Current stage/release: Stage 42-F Erratum 1 & Stage 42-G TDD Plans Approved (Stage 42-F: `APPROVED WITH ERRATUM 1`; Stage 42-G: `TDD IMPLEMENTATION PLANS APPROVED — IMPLEMENTATION NOT STARTED`; Implementation Authorization: `NOT AUTHORIZED`; Next Step: `Stage 42-G implementation awaits separate Owner authorization`)
 - Current handoff: docs/stages/CURRENT_HANDOFF.md
-- Last verified commit: 59d892678bdbe9b103574903907fd167f86cce14
-- Upstream state: HEAD == origin/main (59d892678bdbe9b103574903907fd167f86cce14)
-- Working-tree state: Stage 42-F approved specification commit staging (4 files: docs/stages/stage-42-f-formal-projection-worker-architecture-spec.md, docs/stages/CURRENT_HANDOFF.md, docs/allocation-assistant/CURRENT_HANDOFF.md, PROJECT_MEMORY.md; 0 code changes, clean code baseline)
+- Last verified commit: 5b2f7e4e8a16735d534e82d1337999c739f049e2
+- Upstream state: HEAD == origin/main (5b2f7e4e8a16735d534e82d1337999c739f049e2)
+- Working-tree state: Stage 42-F Erratum 1 and Stage 42-G TDD Plans approved, undergoing final verification, staging, commit and push (1 spec with Erratum 1, 7 plan files in docs/superpowers/plans/, 3 updated governance files; 0 code changes, clean code baseline)
 - Production/deployment state: Backend Web App Version 103, LINE Bot Version 1
-- Known blockers: None blocking main axis. Formal Projection Worker, Cloud Functions, and live Sheet projection tab remain unapproved and not implemented.
+- Known blockers: None blocking main axis. Formal Projection Worker, Cloud Functions, and live Sheet projection tab remain unapproved and not implemented. Implementation strictly NOT AUTHORIZED. Stage 42-H Pilot requires separate Owner authorization. Production spreadsheets remain 0 writes.
 
 ## Verification commands
 
@@ -67,7 +67,7 @@ Source of truth: PROJECT_LOCATION.md + AGENTS.md + PROJECT_BOUNDARIES.md + docs/
 - 2026-08-12: Stage 42-E Phase 1 Projection Worker isolation contract certified (`da11d2b`).
 - 2026-08-13: Stage 42-E Phase 2 Projection Worker architecture and security audit certified (`846e688`).
 - 2026-09-24: Location and Project Memory Governance formalized across JYAI ecosystem (`59d8926`).
-- 2026-09-24: Stage 42-F Formal Projection Worker Architecture Specification formally approved by Owner (`docs/stages/stage-42-f-formal-projection-worker-architecture-spec.md`, Status: `APPROVED — STAGE 42-G IMPLEMENTATION NOT STARTED`), establishing eventId immutability across resends, Transport CloudEvent unpacking, 120s timeout / 180s lease boundary, concurrency=1 pilot constraint, pre-Sheet-write Firestore authoritative lease re-validation (status, leaseOwner, claimVersion, leaseExpiresAt > server timestamp), full 64-character hex SHA-256 payload hash, Projection Reconciler specification for SUCCEEDED row recovery, active lease duplicate delivery fixed ACK, strict Runtime vs Trigger IAM separation, Owner-approved baseline parameters (`OWNER_APPROVED_STAGE_42_F_PARAMETER`), and 18-case TDD acceptance matrix. Next phase is Stage 42-G TDD Implementation Plan awaiting separate Owner authorization; formal worker, Cloud Functions, and live Sheet projection tab remain unapproved and not implemented.
+- 2026-09-29: Stage 42-F Architecture Specification approved with Erratum 1 (`APPROVED WITH ERRATUM 1`) and Stage 42-G Master & Six Subplans approved (`TDD IMPLEMENTATION PLANS APPROVED — IMPLEMENTATION NOT STARTED`) in accordance with Owner Authorization Token `OWNER FINAL APPROVAL — STAGE 42-F ERRATUM 1 AND STAGE 42-G PLANS COMMIT AND PUSH`. Erratum 1 formalizes `projectionSnapshot` (minimal 12-column source: reservationNumber, eventType, storeId, productCode, quantity, pseudonymousActorId, occurredAt, payloadHash; Fail-Closed validation strictly forbidding fictional "N/A", "USR_ANONYMOUS", or 0 fallbacks) and `projectionSnapshotExpiresAt` (90-day retention after completedAt) to provide authoritative source for Reconciler row reconstruction without relying on Outbox. Reconciler dedicated lease fields (`reconciliationLeaseOwner`, `reconciliationLeaseExpiresAt`, `reconciliationClaimVersion`, etc.) established with 10 concurrency rules. Stage 42-G TDD plans feature true Firestore Timestamp Clock abstraction, real Acceptance Test Registry, true test execution, full 10-identity IAM allowlist (5 Runtime, 4 Trigger, 1 System, forbidding secretmanager everywhere), stable compound pagination, isolated stub self-check runner, non-destructive rollback rules, strict Transport CloudEvent unpacking, duplicate payloadHash format validation & rejectedDuplicateCount defense, and preWriteCheck authoritative re-verification. Implementation remains strictly NOT AUTHORIZED; Next Step: `Stage 42-G implementation awaits separate Owner authorization`. 0 GCP resources created, 0 code changes, 0 Sheet writes.
 
 ## Recovery procedure
 

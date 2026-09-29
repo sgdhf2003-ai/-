@@ -1,17 +1,23 @@
 # Stage 42-F: Formal Projection Worker Architecture Specification
 
-> **Status**: `APPROVED — STAGE 42-G IMPLEMENTATION NOT STARTED`<br>
-> **Target Release / Gate**: Stage 42-F Formal Projection Worker Architecture Specification (Owner Approved)<br>
+> **Status**: `APPROVED WITH ERRATUM 1`<br>
+> **Target Release / Gate**: Stage 42-F Formal Projection Worker Architecture Specification (Owner Approved Baseline with Erratum 1)<br>
 > **Author**: Antigravity (Canonical Checkout)<br>
-> **Baseline Commit**: `59d892678bdbe9b103574903907fd167f86cce14`<br>
-> **Authority**: In accordance with Owner Authorization Token `OWNER FINAL APPROVAL — STAGE 42-F SPECIFICATION COMMIT AND PUSH`<br>
-> **Date**: 2026-09-24
+> **Baseline Commit**: `5b2f7e4e8a16735d534e82d1337999c739f049e2`<br>
+> **Authority**: In accordance with Owner Authorization Token `OWNER FINAL APPROVAL — STAGE 42-F ERRATUM 1 AND STAGE 42-G PLANS COMMIT AND PUSH`<br>
+> **Date**: 2026-09-29
 >
 > [!IMPORTANT]
-> **正式核准聲明 (Formal Approval Declaration)**：
-> - 本 Stage 42-F 架構規格書已獲專案 Owner 正式核准。
-> - 本核准**嚴格不等於**授權建立 GCP 資源或部署。
-> - 下一階段工作僅限於 **Stage 42-G 測試先行實作計畫 (TDD Implementation Plan)**，且須待 Owner 獨立授權後方可展開。
+> **正式核准聲明與狀態 (Formal Approval Declaration & Status)**：
+> - **Stage 42-F 架構規格**：`APPROVED WITH ERRATUM 1`（含第 21 章 Erratum 1 權威重建來源、Projection Snapshot 與 Reconciler 專用租約規範）。
+> - **Stage 42-G 實作計畫**：`TDD IMPLEMENTATION PLANS APPROVED — IMPLEMENTATION NOT STARTED`。
+> - **Implementation Authorization**：`NOT AUTHORIZED`。
+> - **Next Step**：`Stage 42-G implementation awaits separate Owner authorization.`。
+> - **安全聲明**：
+>   - 規格與計畫核准**嚴格不等於**程式實作授權。
+>   - 不得建立 GCP 資源或執行部署。
+>   - Stage 42-H Pilot 仍需獨立 Owner 授權。
+>   - 正式營運表保持 0 修改。
 
 ---
 
@@ -328,27 +334,46 @@ Worker 將 `data.message.data` 進行 Base64 解碼後解析出之核心應用 P
 
 ### 8.2 文件 Schema 定義
 ```typescript
+interface ProjectionSnapshot {
+  reservationNumber: string;        // 預約單號 (RES-YYYYMMDD-XXX)
+  eventType: string;                // 業務事件類型 (HOLD_CREATED 等)
+  storeId: string;                  // 門市/店家代號
+  productCode: string;              // 產品貨號
+  quantity: number;                 // 變更數量 (大於 0 之有限正整數)
+  pseudonymousActorId: string;      // 假名化操作者代號 (嚴禁個資)
+  occurredAt: string;               // 業務發生時間戳記 (ISO8601 UTC)
+  payloadHash: string;              // 完整 64 個十六進位小寫字元 SHA-256
+}
+
 interface ProjectionOperationDocument {
   operationId: string;              // Document ID
-  eventId: string;                  // 來源事件 ID
+  eventId: string;                  // 來源事件 ID (建立時產生，重發保持不變)
   reservationNumber: string;        // 關聯預約單號
   projectionKey: string;            // 確定性鍵: "PROJECTION_" + operationId
   status: "PENDING" | "PROCESSING" | "SUCCEEDED" | "RETRYABLE_FAILED" | "DEAD_LETTERED" | "MANUAL_REVIEW_REQUIRED";
   attemptCount: number;             // 當前執行嘗試次數
   leaseOwner: string | null;        // 當前認領 Worker 實例 ID
-  leaseExpiresAt: string | null;    // 租約到期時間 ISO8601 UTC (NOW + 180s)
+  leaseExpiresAt: FirebaseFirestore.Timestamp | null; // 租約到期 Firestore Timestamp (NOW + 180s)
   claimVersion: number;             // Fencing Token (每次認領遞增 +1)
   payloadHash: string;              // 完整 64 個十六進位字元之 SHA-256 雜湊
   lastMessageId: string | null;     // 最近一次處理之 Pub/Sub Message ID
-  firstAttemptAt: string;           // 首次嘗試 ISO8601 UTC
-  lastAttemptAt: string;            // 最近嘗試 ISO8601 UTC
-  completedAt: string | null;       // 成功完成 ISO8601 UTC
+  firstAttemptAt: FirebaseFirestore.Timestamp;        // 首次嘗試時間戳記
+  lastAttemptAt: FirebaseFirestore.Timestamp;         // 最近嘗試時間戳記
+  completedAt: FirebaseFirestore.Timestamp | null;    // 成功完成時間戳記
   lastErrorCode: string | null;     // 僅存 sanitized error code
   lastErrorMessage: string | null;  // 僅存 sanitized error message
   sheetDocumentId: string;          // 目標試算表 ID (獨立稽核表)
   sheetTabName: "PROJECTION_LOG";   // 固定為 PROJECTION_LOG
   sheetRowKey: string;              // 寫入試算表的主鍵值 (PROJECTION_${operationId})
   traceId: string;                  // 跨服務追蹤 ID
+  projectionSnapshot?: ProjectionSnapshot;            // Erratum 1: 權威重建快照 (90 天保存)
+  projectionSnapshotExpiresAt?: FirebaseFirestore.Timestamp | null; // Erratum 1: 快照過期時間戳記 (completedAt + 90 天)
+  reconciliationLeaseOwner?: string | null;           // Erratum 1: Reconciler 獨立認領實例 ID
+  reconciliationLeaseExpiresAt?: FirebaseFirestore.Timestamp | null; // Erratum 1: Reconciler 租約到期 Timestamp
+  reconciliationClaimVersion?: number;                // Erratum 1: Reconciler 獨立 Fencing Token
+  lastReconciledAt?: FirebaseFirestore.Timestamp | null; // Erratum 1: 最近一次對帳成功 Timestamp
+  reconciliationAttemptCount?: number;                // Erratum 1: 對帳嘗試次數 (正整數)
+  reconciliationLastError?: string | null;            // Erratum 1: 對帳錯誤紀錄
 }
 ```
 
@@ -588,3 +613,63 @@ Stage 42-H 試辦期間，Projection Worker 的 Cloud Run service 必須同時�
 - ❌ 讀取、列印、輸出或儲存任何 Token / 憑證。
 
 ---
+
+## 21. Erratum 1: 權威重建來源、Projection Snapshot 與 Reconciler 專用租約規範 (Draft Awaiting Owner Review)
+
+> **Erratum 狀態**：`APPROVED WITH ERRATUM 1 — FINAL OWNER REVIEW REQUIRED`<br>
+> **目的**：補齊 Projection Reconciler 重建被刪除之 `PROJECTION_LOG` 試算表列所需的權威資料來源，解決 `projectionOperations` 原 schema 缺乏重建欄位之缺陷，並定義 Reconciler 專用之分散式租約與併發防護機制。
+
+### 21.1 權威重建資料模型 (`projectionSnapshot`)
+為確保 Projection Reconciler 具備完整且權威的重建模組，在 `projectionOperations/{operationId}` 文件中新增 `projectionSnapshot` 物件：
+
+```typescript
+interface ProjectionSnapshot {
+  reservationNumber: string;        // 預約單號 (來自 Envelope 根層級，對應 PROJECTION_LOG C 欄)
+  eventType: string;                // 事件類型 (來自 Envelope 根層級，對應 PROJECTION_LOG D 欄)
+  storeId: string;                  // 店家代號 (來自 Payload，對應 PROJECTION_LOG E 欄)
+  productCode: string;              // 產品貨號 (來自 Payload，對應 PROJECTION_LOG F 欄)
+  quantity: number;                 // 變更數量 (來自 Payload，大於 0 之有限正整數，對應 PROJECTION_LOG G 欄)
+  pseudonymousActorId: string;      // 操作者假名代號 (來自 Envelope operator，對應 PROJECTION_LOG H 欄)
+  occurredAt: string;               // 業務時間 ISO8601 UTC (來自 Envelope 根層級，對應 PROJECTION_LOG I 欄)
+  payloadHash: string;              // 完整 64 碼 SHA-256 (來自 Envelope 根層級，對應 PROJECTION_LOG L 欄)
+}
+```
+
+### 21.2 Projection Snapshot 十一項嚴格架構規則
+1. **最小必要性**：`projectionSnapshot` 僅包含建立 12 欄物理稽核列所絕對必需之業務欄位，嚴格不冗餘存儲非稽核資料。
+2. **嚴格防護與零虛構值 (Fail-Closed & Zero Fictional Values)**：
+   - 明確區分 Envelope 根欄位（`operationId`, `reservationNumber`, `eventType`, `occurredAt`, `payloadHash`）與 Payload 業務欄位（`storeId`, `productCode`, `quantity`, `pseudonymousActorId`）。
+   - `reservationNumber` 必須取自經驗證之 Envelope / 核心實體，嚴格不得單純自 Payload 盲目提取。
+   - 嚴格禁止使用預設填補值（如虛構字串或掩蓋缺失之數值），任一必要欄位缺失或型別不符時必須立即 Fail-Closed，拋出明確結構化錯誤並依錯誤分類處置，絕不建立不完整之快照或寫入試算表。
+   - 零敏感個資：嚴格禁止包含真實姓名、Email、LINE User ID、Token 或 Stack Trace。
+3. **初次建立時初始化**：當且僅當第一次在 Firestore 建立 `projectionOperations` 紀錄時，由已解包並通過 schema 驗證之 Application Envelope 產生 `projectionSnapshot`。
+4. **重發防覆蓋原則**：相同 `operationId` 的重試或重複 delivery 抵達時，**絕對嚴禁覆蓋**既有之 `projectionSnapshot`。
+5. **雜湊衝突轉人工審查**：若重送事件之 `operationId` 相同但 `payloadHash` 與既有 snapshot 之 `payloadHash` 不符，立即將狀態轉移為 `MANUAL_REVIEW_REQUIRED`，發送 P1 警報並拒絕任何覆蓋。
+6. **Reconciler 重建權威來源限制**：Projection Reconciler 於修復遭人為誤刪的試算表列時，**只能且必須**使用以下 5 項資料來源組合出 12 欄物理資料：
+   - 1. `projectionOperations.operationId` (B 欄)
+   - 2. `projectionOperations.projectionKey` (A 欄)
+   - 3. `projectionOperations.projectionSnapshot` (C, D, E, F, G, H, I, L 欄)
+   - 4. `projectionOperations.attemptCount` (K 欄)
+   - 5. 重建完成時間戳記 (J 欄)
+7. **嚴禁依賴 Outbox**：Reconciler 重建程序**絕對嚴禁**依賴或跨集合讀取 `projectionOutbox`，因為 Outbox 集合在發布完成 30 天後可能已遭 TTL 自動刪除。
+8. **90 天快照保存週期**：`projectionSnapshotExpiresAt` 嚴禁在第一次認領時設定，**必須在單據成功轉移為 `SUCCEEDED` 時，以 `completedAt + 90 天` 之 Firestore Timestamp 設定**。
+9. **90 天快照修剪**：單據完成超過 90 天後，維運清理程序主動清除 `projectionSnapshot` 欄位以節省儲存空間，但完整保留 `operationId`、`status`、`claimVersion`、`payloadHash` 與稽核指標。
+10. **400 天 Tombstone 最小化**：單據完成超過 400 天後，依據原規格進一步最小化修剪為 Tombstone 結構（僅保留 `operationId`、`projectionKey`、`completedAt`、`payloadHash`）。
+11. **實作前置閘門約束**：本 Erratum 1 在未獲 Owner 正式審查核准之前，**嚴格不得開始實作 G3（Projection Worker）與 G5（Projection Reconciler）**。
+
+### 21.3 Projection Reconciler 專用租約與併發控制規範
+為防止一般 Worker 執行租約與 Reconciler 租約衝突，並防範多個 Reconciler 同時修復同一筆單據造成重複列：
+1. **租約狀態欄位完全隔離**：一般 Projection Worker 租約（`leaseOwner`, `leaseExpiresAt`, `claimVersion`）與 Reconciler 專用租約（`reconciliationLeaseOwner`, `reconciliationLeaseExpiresAt`, `reconciliationClaimVersion`）完全獨立。
+2. **核心狀態保護**：Reconciler 執行正常修復補列時，**嚴禁將核心 `status` 從 `SUCCEEDED` 改為 `PROCESSING`**，核心狀態必須維持 `SUCCEEDED`。
+3. **原子租約認領**：Reconciler 必須透過 Firestore transaction 原子取得專用 reconciliation lease（租約時長 180 秒）。
+4. **認領前提**：當且僅當 `status == 'SUCCEEDED'` 且 `projectionSnapshot` 存在且未過期（`nowTimestamp <= projectionSnapshotExpiresAt`）時，方可認領租約。
+5. **呼叫 Sheets API 前強制再校驗**：在向 Google Sheets API 發送追加請求前，Reconciler 必須重新執行 Firestore authoritative read/transaction，同時校驗四項條件：
+   - a. `status == 'SUCCEEDED'`
+   - b. `reconciliationLeaseOwner == currentReconcilerId`
+   - c. `reconciliationClaimVersion == claimedVersion`
+   - d. `reconciliationLeaseExpiresAt > clock.nowTimestamp()`
+6. **違規立即終止**：若上述任一條件不成立，Reconciler 立即終止修復流程，執行 0 次 Sheet 寫入。
+7. **缺列且雜湊相符時重建**：若試算表中無該列且 Firestore `projectionSnapshot` 之 `payloadHash` 驗證合法，由 `projectionSnapshot` 產生 12 欄物理資料追加回試算表。
+8. **雜湊衝突嚴禁覆蓋**：若試算表中存在相同 `projection_key` 但 L 欄雜湊不符，嚴禁自動覆蓋，立即將狀態標記為 `MANUAL_REVIEW_REQUIRED` 並發送警報。
+9. **修復完成釋放租約**：修復成功後在 Firestore 交易中記錄 `lastReconciledAt` 並清空 `reconciliationLeaseOwner` 或維持安全過期。
+10. **併發互斥性**：若兩個 Reconciler 同時嘗試修復同一 `operationId`，只有一個能成功取得 `reconciliationLeaseOwner`，試算表最多僅會被追加一列。

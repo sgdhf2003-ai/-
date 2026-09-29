@@ -1,13 +1,13 @@
 # JYAI Allocation Assistant - CURRENT HANDOFF
 
 ## 1. 專案基線狀態 (Project Baseline)
-* **交接日期**: 2026-08-09
+* **交接日期**: 2026-09-24
 * **執行目錄**: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 * **目前分支**: `main`
 * **Latest Feature Commit**: `846e68804d6654e219205f05b3ec9be563e1fb10` (`docs: close Stage 42-E projection worker contract`)
-* **Metadata Sync Commit**: `846e68804d6654e219205f05b3ec9be563e1fb10` (`docs: close Stage 42-E projection worker contract`)
+* **Metadata Sync Commit**: `5b2f7e4e8a16735d534e82d1337999c739f049e2` (`docs: approve stage 42-f projection worker architecture`)
 * **分支關係**: `0 ahead / 0 behind` (完全同步)
-* **Working Tree 狀態**: Clean (synced with origin/main as of metadata sync)
+* **Working Tree 狀態**: Stage 42-F Erratum 1 and Stage 42-G corrected plans awaiting Owner review (1 spec with Erratum 1, 7 plan files in docs/superpowers/plans/, 3 updated governance files; 0 code changes, clean code baseline)
 
 ## 2. 本次完成內容 (Completed Work)
 * 完成 Stage 30 & 31 生產環境 Google Sheet 劃扣與出貨生命週期驗證 (`RES-20260801-001`, `RES-20260801-002`)。
@@ -44,7 +44,8 @@
 * 完成 Stage 42-D Firestore Emulator ACID Integration 文件收束與本機 Emulator ACID 交易驗證 (`2eeac70`, Real Emulator 7/7 PASS, Local Adapter 19/19 PASS, Formal Transaction Contract 6/6 PASS, 全量 54 個測試套件 371/371 PASS)。
 * 完成 Stage 42-E Phase 1 Projection Worker Isolation & Idempotency Contract 文件收束與本機 Worker 隔離合約驗證 (`da11d2b`, 7/7 PASS, 全量 55 個測試套件 378/378 PASS)。
 * 完成 Stage 42-E Phase 2 Projection Worker Architecture & Security Audit 唯讀審查紀錄 (Audit Complete; Formal Worker NOT IMPLEMENTED; Production Readiness NOT APPROVED)。
-* 完成 Stage 42-F 正式 Projection Worker 架構規格書核准備查 (`docs/stages/stage-42-f-formal-projection-worker-architecture-spec.md`，狀態：`APPROVED — STAGE 42-G IMPLEMENTATION NOT STARTED`；Owner 正式核准架構規格；涵蓋 eventId 不變原則、Transport CloudEvent 解包、120s timeout / 180s lease 邊界、concurrency=1 設定、寫入前 Firestore 權威租約校驗、完整 64 碼 SHA-256、Projection Reconciler 對帳、有效租約固定 ACK、IAM Runtime vs Trigger 角色嚴格拆分、Owner 核定基準參數與 18 項 TDD 驗收矩陣；Formal Worker NOT IMPLEMENTED；未授權程式實作或雲端資源建立)。
+* 完成 Stage 42-F 正式 Projection Worker 架構規格書核准備查與 Erratum 1 (`docs/stages/stage-42-f-formal-projection-worker-architecture-spec.md`，狀態：`APPROVED WITH ERRATUM 1`；包含 projectionSnapshot 與 projectionSnapshotExpiresAt 權威重建來源，Fail-Closed 校驗嚴禁 "N/A"、"USR_ANONYMOUS" 或 0 偽造，Reconciler 專屬租約與 10 大併發規則)。
+* 完成 Stage 42-G TDD 測試先行實作計畫套件修訂與核准 (`docs/superpowers/plans/`，涵蓋 Master Plan 與 G1-G6 六大子計畫，共 19 項任務均拆解為 7 個明確步驟，實作真實 Firestore Timestamp Clock 抽象、真實 Acceptance Test Registry、完整 10 大 IAM 身分角色白名單、隔離 Stub 自我校驗、非破壞性回滾與 transport contract micro-patch；狀態：`TDD IMPLEMENTATION PLANS APPROVED — IMPLEMENTATION NOT STARTED`；Implementation Authorization: `NOT AUTHORIZED`；Next Step: `Stage 42-G implementation awaits separate Owner authorization`；規格與計畫核准不等於程式實作授權；不得建立 GCP 資源或執行部署；Stage 42-H Pilot 仍需獨立 Owner 授權；正式營運表保持 0 修改)。
 * 本機檢查、全量模擬測試與部署 Dry Run 全數通過 (`npm run check`, `npm run simulate:all`, `python3 deploy.py backend --check`, `python3 deploy.py line-bot --check` PASS)。
 
 ## 3. 未完成內容與未啟用功能 (Deactivated Features)
@@ -60,7 +61,7 @@
 > 本次交接確無未授權之 LINE 機器人發送通知、無 OneSignal 警報、無真實庫存銷扣損壞。所有安全性防護邊界、Server-Side Role Guard 與 UI 角色防護控制項均完好。
 
 ## 6. 下一個精確步驟 (Next Recommended Step)
-* **Stage 42-G TDD Implementation Plan — awaiting separate Owner authorization** (測試先行實作計畫，須待 Owner 獨立授權後方可展開；嚴禁在未經授權前進行任何程式實作、雲端資源建立或 Sheet 寫入)。
+* **Stage 42-G implementation awaits separate Owner authorization. Implementation remains strictly unauthorized.** (規格與計畫核准不等於程式實作授權；不得建立 GCP 資源或執行部署；Stage 42-H Pilot 仍需獨立 Owner 授權；正式營運表保持 0 修改)。
 
 ## 7. 禁止下一位 Agent 自行執行的事項 (Prohibited Actions)
 * 嚴禁在未經 Owner 審查同意前進行未授權之 Google Sheet 寫入。

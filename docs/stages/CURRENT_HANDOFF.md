@@ -11,7 +11,7 @@
 
 ## Current Stage
 
-- current stage: Stage 42-F Formal Projection Worker Architecture Specification (APPROVED — STAGE 42-G IMPLEMENTATION NOT STARTED)
+- current stage: Stage 42-F Erratum 1 & Stage 42-G TDD Planning (Stage 42-F: `APPROVED WITH ERRATUM 1 — FINAL OWNER REVIEW REQUIRED`; Stage 42-G: `IMPLEMENTATION PLANS CORRECTED — IMPLEMENTATION NOT STARTED`; Next Step: `Owner reviews final Erratum 1 and Stage 42-G plans before commit authorization`; Implementation: `NOT AUTHORIZED`)
 - previous completed deliveries:
   - Phase 6-F Backend Web App Version 100 Deployment (`93e8cb4`, HTTP 200 OK)
   - Phase 7-C Admin Operations UI Control Panel Implementation (`56a5976`, 233 / 233 PASS)
@@ -33,19 +33,22 @@
   - Stage 42-D Firestore Emulator ACID Integration (`2eeac70`, 54 Suites, 371 / 371 PASS, Real Emulator 7/7 PASS)
   - Stage 42-E Phase 1 Projection Worker Isolation Contract (`da11d2b`, 55 Suites, 378 / 378 PASS, 7/7 new contract tests PASS)
   - Stage 42-E Phase 2 Projection Worker Architecture & Security Audit (`846e688`, Audit Complete, Formal Worker NOT IMPLEMENTED, Production Readiness NOT APPROVED)
-- active approved specification: **Stage 42-F: Formal Projection Worker Architecture Specification** (`docs/stages/stage-42-f-formal-projection-worker-architecture-spec.md`, Status: `APPROVED — STAGE 42-G IMPLEMENTATION NOT STARTED`)
+  - Stage 42-F Formal Projection Worker Architecture Specification (`5b2f7e4`, Approved Architecture Specification committed and pushed)
+- active approved specification: **Stage 42-F: Formal Projection Worker Architecture Specification** (`docs/stages/stage-42-f-formal-projection-worker-architecture-spec.md`, Status: `APPROVED WITH ERRATUM 1`)
+- active planning suite: **Stage 42-G: TDD Implementation Master Plan & Six Subplans** (`docs/superpowers/plans/`, Status: `TDD IMPLEMENTATION PLANS APPROVED — IMPLEMENTATION NOT STARTED`)
 - latest feature commit: `846e68804d6654e219205f05b3ec9be563e1fb10` (`docs: close Stage 42-E projection worker contract`)
-- latest metadata sync commit: `59d892678bdbe9b103574903907fd167f86cce14` (`chore: add canonical location and project memory governance`)
+- latest metadata sync commit: `5b2f7e4e8a16735d534e82d1337999c739f049e2` (`docs: approve stage 42-f projection worker architecture`)
 - backend deployed version: `103` (canonical active deployment record)
 - LINE Bot deployed version: `1` (canonical active deployment record)
 - automated simulations: 59 Suites, 479 / 479 PASS (`npm run simulate:all`)
 - dry-run deployment check: `python3 deploy.py backend --check` & `python3 deploy.py line-bot --check` (VALID, 100% PASS)
-- safety note: Architecture specification approved in Stage 42-F. Formal Projection Worker, Cloud Function, Pub/Sub, Cloud DLQ, and Google Sheet Projection tab are NOT IMPLEMENTED. Production readiness NOT APPROVED.
-- recommended next stage: **Stage 42-G TDD Implementation Plan — awaiting separate Owner authorization**
+- safety note: Architecture specification approved baseline with Erratum 1 (`APPROVED WITH ERRATUM 1`). Stage 42-G TDD implementation plans approved (`TDD IMPLEMENTATION PLANS APPROVED — IMPLEMENTATION NOT STARTED`). Formal Projection Worker, Cloud Function, Pub/Sub, Cloud DLQ, and Google Sheet Projection tab are NOT IMPLEMENTED. Implementation Authorization: `NOT AUTHORIZED`. Next Step: `Stage 42-G implementation awaits separate Owner authorization`. 規格與計畫核准不等於程式實作授權。不得建立 GCP 資源或執行部署。Stage 42-H Pilot 仍需獨立 Owner 授權。正式營運表保持 0 修改。
+- recommended next stage: **Stage 42-G implementation awaits separate Owner authorization. Implementation remains strictly NOT AUTHORIZED.**
 
 ## Stage 42-F Summary & Projection Worker Architecture Specification Approval Record
 
-- **Stage 42-F Status**: **APPROVED — STAGE 42-G IMPLEMENTATION NOT STARTED**
+- **Stage 42-F Status**: **APPROVED WITH ERRATUM 1**
+- **Stage 42-G Status**: **TDD IMPLEMENTATION PLANS APPROVED — IMPLEMENTATION NOT STARTED**
 - **Specification Document**: `docs/stages/stage-42-f-formal-projection-worker-architecture-spec.md`
 - **Core Architecture Blueprint**:
   - Event Flow: Firestore Transaction -> Transactional Outbox (`projectionOutbox/{operationId}`) -> Pub/Sub (`jy-reservation-events`) -> Eventarc -> Cloud Run function Projection Worker -> 獨立「系統稽核試算表」(`PROJECTION_LOG`)
@@ -63,7 +66,7 @@
   - Cloud / GCP Resources Created: `0`
   - LINE API Calls: `0`
   - Deployments Executed: `0`
-- **Current Gate State**: Specification formally approved by Owner. Formal Projection Worker, Cloud Function, Pub/Sub, Cloud DLQ, and Google Sheet Projection tab are NOT IMPLEMENTED. Production readiness NOT APPROVED. Next phase requires separate Owner authorization.
+- **Current Gate State**: Specification formally approved by Owner with Erratum 1 (`APPROVED WITH ERRATUM 1`). Stage 42-G TDD implementation plans approved (`TDD IMPLEMENTATION PLANS APPROVED — IMPLEMENTATION NOT STARTED`). Formal Projection Worker, Cloud Function, Pub/Sub, Cloud DLQ, and Google Sheet Projection tab are NOT IMPLEMENTED. Implementation Authorization: `NOT AUTHORIZED`. Next Step: `Stage 42-G implementation awaits separate Owner authorization`. 規格與計畫核准不等於程式實作授權。不得建立 GCP 資源或執行部署。Stage 42-H Pilot 仍需獨立 Owner 授權。正式營運表保持 0 修改。
 
 ## Stage 42-E Phase 2 Summary & Projection Worker Architecture & Security Audit Record
 
@@ -846,9 +849,9 @@
 
 ## Required Next Step
 
-Stage 42-G TDD Implementation Plan — awaiting separate Owner authorization.
+Owner review of Stage 42-F Erratum 1 draft and Stage 42-G corrected master plan and six subplans. Implementation remains unauthorized.
 
-Forbidden until Stage 42-G is explicitly authorized by Owner:
+Forbidden until Stage 42-G implementation is explicitly authorized by Owner:
 - no code implementation (Projection Worker, Outbox Publisher, or any worker code)
 - no GCP / Cloud resource creation (Pub/Sub topics, subscriptions, Eventarc triggers, Cloud Run functions)
 - no Google Sheet writes or tab creation
