@@ -2,6 +2,11 @@
 
 > For agentic workers:
 > REQUIRED SUB-SKILL: use executing-plans or an equivalent task-by-task execution workflow. Do not implement tasks in parallel when they modify shared event schemas or Firestore state contracts.
+>
+> **Status**: `APPROVED FOR COMMIT REVIEW — NOT YET COMMITTED`<br>
+> **Authority**: In accordance with Owner Authorization Token `OWNER AUTHORIZATION — STAGE 42-G1 FINAL GOVERNANCE CONSISTENCY CORRECTION`<br>
+> **Implementation Authorization**: G1 authorized only; G2–G6 `NOT AUTHORIZED`<br>
+> **Next Step**: `Owner may authorize one Stage 42-G1 commit and push; G2–G6 remain NOT AUTHORIZED.`<br>
 
 Goal:
 實作事件契約核心模組，提供雙層 CloudEvent 解包、確定性 Canonical JSON 序列化、完整 64 碼 SHA-256 雜湊比對、受控 Clock 抽象介面（ProductionClock 與 FakeClock）與去識別化驗證。
@@ -12,7 +17,11 @@ Architecture:
 Tech Stack:
 - 執行環境：Node.js 20+ (CommonJS)
 - 內建模組：`crypto` (SHA-256 計算), `assert`
-- 外部依賴：無（純函式與契約驗證，0 網路 I/O，0 GCP 資源連線）
+- 外部依賴：
+  - New external packages: none
+  - Existing repository dependency used: firebase-admin/firestore Timestamp
+  - package-lock.json unchanged
+  - 0 network I/O / 0 GCP resource mutation during tests
 
 Spec:
 docs/stages/stage-42-f-formal-projection-worker-architecture-spec.md (含 Erratum 1)
@@ -55,7 +64,7 @@ Review Focus:
   - `computePayloadHash64(data: any): string`
 
 - **TDD 執行步驟清單**:
-  - [ ] **Step 1: 寫入單一明確失敗測試**
+  - [x] **Step 1: 寫入單一明確失敗測試**
     在 `tests/simulations/stage-42-g1-event-contracts.sim.js` 中寫入 `testCanonicalJsonAndHasher()`，涵蓋：
     1. 相同物件不同 key order 產出相同 hash。
     2. 字串 payload `"abc"` 經 JSON canonicalization 序列化為 `"\"abc\""` 並計算正確 hash。
@@ -64,16 +73,16 @@ Review Focus:
     5. 非有限數（`NaN`, `Infinity`）拋出 `INVALID_CANONICAL_JSON`。
     6. 非 ASCII key（如 `"測試"`, `"品項"`）具備確定性 Unicode code-point 排序。
     7. hash 結果嚴格匹配 `/^[0-9a-f]{64}$/`。
-  - [ ] **Step 2: 執行並確認指定原因失敗**
+  - [x] **Step 2: 執行並確認指定原因失敗**
     執行 `node tests/simulations/stage-42-g1-event-contracts.sim.js`，預期因找不到 `serializeCanonicalJson` 或模組拋出 `Cannot find module` 失敗。
-  - [ ] **Step 3: 寫入最小實作**
+  - [x] **Step 3: 寫入最小實作**
     在 `allocation-assistant/contracts/projection-contract.js` 中實作遞迴型別檢查、鍵排序演算法與 SHA-256 雜湊計算函式。
-  - [ ] **Step 4: 執行並確認指定測試通過**
+  - [x] **Step 4: 執行並確認指定測試通過**
     執行 `node tests/simulations/stage-42-g1-event-contracts.sim.js`，確認所有 7 項 Canonical 測試通過。
-  - [ ] **Step 5: 執行該子系統回歸測試**
+  - [x] **Step 5: 執行該子系統回歸測試**
     執行 `npm run simulate:stage-42-g1-event-contracts`，確認模組測試為 PASS。
-  - [ ] **Step 6: 執行全量既有回歸**
-    執行 `npm run simulate:all`，確認既有 59 個套件（479 案例）100% PASS。
+  - [x] **Step 6: 執行全量既有回歸**
+    執行 `npm run simulate:all`（已納入 G1，確認 60 套件 / 503 案例 100% PASS）。
   - [ ] **Step 7: 建議 commit checkpoint**
     `test(projection): implement canonical json serializer and 64-char hasher`
 
@@ -176,18 +185,18 @@ function computePayloadHash64(data) {
   - `getProductionClock(): object`
 
 - **TDD 執行步驟清單**:
-  - [ ] **Step 1: 寫入單一明確失敗測試**
+  - [x] **Step 1: 寫入單一明確失敗測試**
     在測試中撰寫 `testApplicationEnvelopeAndClock()`，驗證 `ProductionClock` 與 `FakeClock` 推進功能，以及 Envelope 欄位（`eventId` 格式 `evt_`、`schemaVersion: "1.0.0"`、`payloadHash` 為 64 碼、必填 `eventType` 且必須為 Stage 42-F 核准 enum：`HOLD_CREATED`, `HOLD_FULFILLED`, `HOLD_CANCELLED`, `HOLD_RECONCILED`；未知 `eventType` 如 `UNKNOWN_EVENT` 必須 Fail-Closed 拋出 `INVALID_ENVELOPE_PARAMS`）。
-  - [ ] **Step 2: 執行並確認指定原因失敗**
+  - [x] **Step 2: 執行並確認指定原因失敗**
     執行測試，預期因尚未匯出 `buildApplicationEnvelope` 或 `createFakeClock` 失敗。
-  - [ ] **Step 3: 寫入最小實作**
+  - [x] **Step 3: 寫入最小實作**
     在 `projection-contract.js` 中實作 Envelope Builder 與 Clock 物件。
-  - [ ] **Step 4: 執行並確認指定測試通過**
+  - [x] **Step 4: 執行並確認指定測試通過**
     執行測試，確認 Envelope 結構與 FakeClock advance 功能完全正常。
-  - [ ] **Step 5: 執行該子系統回歸測試**
+  - [x] **Step 5: 執行該子系統回歸測試**
     執行 `npm run simulate:stage-42-g1-event-contracts`。
-  - [ ] **Step 6: 執行全量既有回歸**
-    執行 `npm run simulate:all`。
+  - [x] **Step 6: 執行全量既有回歸**
+    執行 `npm run simulate:all`（已納入 G1，確認 60 套件 / 503 案例 100% PASS）。
   - [ ] **Step 7: 建議 commit checkpoint**
     `feat(projection): implement application envelope builder and clock abstraction`
 
@@ -290,18 +299,18 @@ function buildApplicationEnvelope(params, clock = getProductionClock()) {
   - `unpackTransportCloudEvent(cloudEvent: object): object`
 
 - **TDD 執行步驟清單**:
-  - [ ] **Step 1: 寫入單一明確失敗測試 (TC-02)**
+  - [x] **Step 1: 寫入單一明確失敗測試 (TC-02)**
     寫入 `runTC02()`，驗證合法 CloudEvent（包含精確 `type: google.cloud.pubsub.topic.v1.messagePublished` 與完整 `message.attributes`）解包、錯誤 CloudEvent type 被拒絕、缺 attributes 被拒絕、attributes 與內層 Envelope 之 `operationId` / `eventId` / `eventType` 不一致拋出 `TRANSPORT_ATTRIBUTE_MISMATCH`、無效 Base64 拋出 `INVALID_BASE64_FORMAT`、非 JSON 字串拋出 `INVALID_PAYLOAD_FORMAT`。
-  - [ ] **Step 2: 執行並確認指定原因失敗**
+  - [x] **Step 2: 執行並確認指定原因失敗**
     執行測試，預期因尚未實作嚴格檢驗之 `unpackTransportCloudEvent` 失敗。
-  - [ ] **Step 3: 寫入最小實作**
+  - [x] **Step 3: 寫入最小實作**
     實作解包邏輯。
-  - [ ] **Step 4: 執行並確認 TC-02 測試通過**
+  - [x] **Step 4: 執行並確認 TC-02 測試通過**
     確認 TC-02 8 項邊界測試全數通過。
-  - [ ] **Step 5: 執行該子系統回歸測試**
+  - [x] **Step 5: 執行該子系統回歸測試**
     執行 `npm run simulate:stage-42-g1-event-contracts`。
-  - [ ] **Step 6: 執行全量既有回歸**
-    執行 `npm run simulate:all`。
+  - [x] **Step 6: 執行全量既有回歸**
+    執行 `npm run simulate:all`（已納入 G1，確認 60 套件 / 503 案例 100% PASS）。
   - [ ] **Step 7: 建議 commit checkpoint**
     `feat(projection): implement transport cloudevent unpacker (TC-02)`
 
@@ -429,18 +438,18 @@ function unpackTransportCloudEvent(cloudEvent) {
   - `sanitizeLogEntry(entry: any): any`
 
 - **TDD 執行步驟清單**:
-  - [ ] **Step 1: 寫入單一明確失敗測試 (TC-07, TC-12, TC-17)**
+  - [x] **Step 1: 寫入單一明確失敗測試 (TC-07, TC-12, TC-17)**
     寫入 `runTC07()`, `runTC12()`, `runTC17()`，驗證 64 碼雜湊不符回傳 `PAYLOAD_HASH_MISMATCH`、未知 schemaVersion 回傳 `UNSUPPORTED_SCHEMA_VERSION`、個資與 token 均被脫敏過濾。
-  - [ ] **Step 2: 執行並確認指定原因失敗**
+  - [x] **Step 2: 執行並確認指定原因失敗**
     執行測試，確認因尚未實作防護而失敗。
-  - [ ] **Step 3: 寫入最小實作**
+  - [x] **Step 3: 寫入最小實作**
     實作合約驗證與脫敏常規過濾。
-  - [ ] **Step 4: 執行並確認 TC-07, TC-12, TC-17 全數通過**
+  - [x] **Step 4: 執行並確認 TC-07, TC-12, TC-17 全數通過**
     確認三個 TC 全數 PASS。
-  - [ ] **Step 5: 執行該子系統回歸測試**
+  - [x] **Step 5: 執行該子系統回歸測試**
     執行 `npm run simulate:stage-42-g1-event-contracts`。
-  - [ ] **Step 6: 執行全量既有回歸**
-    執行 `npm run simulate:all`。
+  - [x] **Step 6: 執行全量既有回歸**
+    執行 `npm run simulate:all`（已納入 G1，確認 60 套件 / 503 案例 100% PASS）。
   - [ ] **Step 7: 建議 commit checkpoint**
     `feat(projection): implement schema guard and pii redaction (TC-07, TC-12, TC-17)`
 

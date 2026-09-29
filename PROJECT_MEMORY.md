@@ -1,6 +1,6 @@
 # Project Memory — jingyang-sales-app
 
-Last verified: 2026-09-24 13:45 CST
+Last verified: 2026-09-29 15:56 CST
 Source of truth: PROJECT_LOCATION.md + AGENTS.md + PROJECT_BOUNDARIES.md + docs/stages/CURRENT_HANDOFF.md
 
 ## Identity
@@ -13,9 +13,9 @@ Source of truth: PROJECT_LOCATION.md + AGENTS.md + PROJECT_BOUNDARIES.md + docs/
 - Default branch: main
 - Project-specific IDs:
   - Backend Apps Script ID: 1vRepq_HNkjbs8vRQvbkkDE8unGPHfksfhOTrkrNZthFZHs2GSHO8Gasc
-  - Backend Deployment ID: AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw (Version 103)
+  - Backend Deployment ID: AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw (Version 122)
   - LINE Bot Apps Script ID: 1C_5hZKIlWl_B9pdRrzcrA9ZAWD2Xuqwd0ZetQ-lIt2CFlxZ8yELcTLJf
-  - LINE Bot Deployment ID: AKfycbwskF_c2VpW6Cv3yR-wUevRXdrG754ZzxyYMorroqjwkjJZT10wp3DqIZ2kA-GrKK0a (Version 1)
+  - LINE Bot Deployment ID: AKfycbwskF_c2VpW6Cv3yR-wUevRXdrG754ZzxyYMorroqjwkjJZT10wp3DqIZ2kA-GrKK0a (Version 4)
   - Vercel Web App URL: https://brown-phi.vercel.app/
 
 ## Scope and boundaries
@@ -34,18 +34,18 @@ Source of truth: PROJECT_LOCATION.md + AGENTS.md + PROJECT_BOUNDARIES.md + docs/
 
 ## Current state
 
-- Current stage/release: Stage 42-F Erratum 1 & Stage 42-G TDD Plans Approved (Stage 42-F: `APPROVED WITH ERRATUM 1`; Stage 42-G: `TDD IMPLEMENTATION PLANS APPROVED — IMPLEMENTATION NOT STARTED`; Implementation Authorization: `NOT AUTHORIZED`; Next Step: `Stage 42-G implementation awaits separate Owner authorization`)
+- Current stage/release: Stage 42-G1 Event Contracts: APPROVED FOR COMMIT REVIEW — NOT YET COMMITTED (G1: `APPROVED FOR COMMIT REVIEW — NOT YET COMMITTED`; G2–G6: `NOT STARTED`; Implementation Authorization: `G1 AUTHORIZED ONLY, G2–G6 NOT AUTHORIZED`; Next Step: `Owner may authorize one Stage 42-G1 commit and push; G2–G6 remain NOT AUTHORIZED.`)
 - Current handoff: docs/stages/CURRENT_HANDOFF.md
-- Last verified commit: 5b2f7e4e8a16735d534e82d1337999c739f049e2
-- Upstream state: HEAD == origin/main (5b2f7e4e8a16735d534e82d1337999c739f049e2)
-- Working-tree state: Stage 42-F Erratum 1 and Stage 42-G TDD Plans approved, undergoing final verification, staging, commit and push (1 spec with Erratum 1, 7 plan files in docs/superpowers/plans/, 3 updated governance files; 0 code changes, clean code baseline)
-- Production/deployment state: Backend Web App Version 103, LINE Bot Version 1
-- Known blockers: None blocking main axis. Formal Projection Worker, Cloud Functions, and live Sheet projection tab remain unapproved and not implemented. Implementation strictly NOT AUTHORIZED. Stage 42-H Pilot requires separate Owner authorization. Production spreadsheets remain 0 writes.
+- Last verified commit: f8caaac197d0cd31d06f2957bd9d68ed5c650766
+- Upstream state: HEAD == origin/main (f8caaac197d0cd31d06f2957bd9d68ed5c650766)
+- Working-tree state: Stage 42-G1 Event Contracts implementation, blocker corrections, and governance consistency review completed; `projection-contract.js` updated with true Unicode code-point sorting, fatal UTF-8 decoding, strict envelope & PII validation, clean Timestamp clock, and circular-safe log sanitization; `stage-42-g1-event-contracts.sim.js` updated (24/24 PASS); `package.json` `simulate:all` includes G1 (60 suites / 503 cases PASS); G1 registry standalone/direct execution verified; G2–G6 not started; awaits Owner authorization to commit and push
+- Production/deployment state: Backend Web App Version 122 (Deployment ID: AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw), LINE Bot Version 4 (Deployment ID: AKfycbwskF_c2VpW6Cv3yR-wUevRXdrG754ZzxyYMorroqjwkjJZT10wp3DqIZ2kA-GrKK0a)
+- Known blockers: None blocking main axis. Stage 42-G1 code, test, and governance consistency review passed. G1 approved for commit review — awaiting Owner authorization to commit and push. G2–G6 remain unapproved and not started. Stage 42-H Pilot requires separate Owner authorization. Production spreadsheets remain 0 writes.
 
 ## Verification commands
 
 - Context gate: `./scripts/workbench-context-gate.sh --check`
-- Tests: `npm run simulate:all` (59 Suites, 479 / 479 PASS)
+- Tests: `npm run simulate:all` (60 Suites, 503 / 503 PASS)
 - Dry-run commands: `python3 deploy.py backend --check`, `python3 deploy.py line-bot --check`
 - Production checks: `npm run check`, `git diff --check`
 
@@ -68,6 +68,7 @@ Source of truth: PROJECT_LOCATION.md + AGENTS.md + PROJECT_BOUNDARIES.md + docs/
 - 2026-08-13: Stage 42-E Phase 2 Projection Worker architecture and security audit certified (`846e688`).
 - 2026-09-24: Location and Project Memory Governance formalized across JYAI ecosystem (`59d8926`).
 - 2026-09-29: Stage 42-F Architecture Specification approved with Erratum 1 (`APPROVED WITH ERRATUM 1`) and Stage 42-G Master & Six Subplans approved (`TDD IMPLEMENTATION PLANS APPROVED — IMPLEMENTATION NOT STARTED`) in accordance with Owner Authorization Token `OWNER FINAL APPROVAL — STAGE 42-F ERRATUM 1 AND STAGE 42-G PLANS COMMIT AND PUSH`. Erratum 1 formalizes `projectionSnapshot` (minimal 12-column source: reservationNumber, eventType, storeId, productCode, quantity, pseudonymousActorId, occurredAt, payloadHash; Fail-Closed validation strictly forbidding fictional "N/A", "USR_ANONYMOUS", or 0 fallbacks) and `projectionSnapshotExpiresAt` (90-day retention after completedAt) to provide authoritative source for Reconciler row reconstruction without relying on Outbox. Reconciler dedicated lease fields (`reconciliationLeaseOwner`, `reconciliationLeaseExpiresAt`, `reconciliationClaimVersion`, etc.) established with 10 concurrency rules. Stage 42-G TDD plans feature true Firestore Timestamp Clock abstraction, real Acceptance Test Registry, true test execution, full 10-identity IAM allowlist (5 Runtime, 4 Trigger, 1 System, forbidding secretmanager everywhere), stable compound pagination, isolated stub self-check runner, non-destructive rollback rules, strict Transport CloudEvent unpacking, duplicate payloadHash format validation & rejectedDuplicateCount defense, and preWriteCheck authoritative re-verification. Implementation remains strictly NOT AUTHORIZED; Next Step: `Stage 42-G implementation awaits separate Owner authorization`. 0 GCP resources created, 0 code changes, 0 Sheet writes.
+- 2026-09-29: Stage 42-G1 Event Contracts blocker corrections and final governance consistency correction completed under Owner authorization tokens `OWNER AUTHORIZATION — STAGE 42-G1 BLOCKER CORRECTION AND RE-REVIEW` and `OWNER AUTHORIZATION — STAGE 42-G1 FINAL GOVERNANCE CONSISTENCY CORRECTION`. Hardened `projection-contract.js`: true Unicode code-point sorting in `serializeCanonicalJson` distinguishing U+E000 from U+10000; strict fatal UTF-8 TextDecoder in `unpackTransportCloudEvent` fail-closed rejecting invalid byte sequences like [0xC3, 0x28] with `INVALID_UTF8_PAYLOAD`; full schemaVersion 1.0.0 envelope and PII validation (eventId UUIDv4, eventType, source, occurredAt, traceId, projectionKey, payloadHash, operator pseudonymousActorId with email/raw LINE ID rejection and operator extra fields forbidden, and strict payload schema forbidding any extra fields); un-monkey-patched Timestamp Clock abstraction; and circular-reference / deep-structure safe log sanitization in `sanitizeLogEntry`. 24 simulation tests implemented in `tests/simulations/stage-42-g1-event-contracts.sim.js` (24/24 PASS). `simulate:all` in `package.json` updated to include G1 (60 Suites, 503 / 503 PASS). G1 test registry (TC-02, TC-07, TC-12, TC-17) standalone/direct execution verified. Production deployment facts verified via live clasp deployments: target Backend Deployment ID AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw points to Version 122; target LINE Bot Deployment ID AKfycbwskF_c2VpW6Cv3yR-wUevRXdrG754ZzxyYMorroqjwkjJZT10wp3DqIZ2kA-GrKK0a points to Version 4. Implementation strictly confined to G1; G2–G6 NOT STARTED and NOT AUTHORIZED. Stage 42-G1 APPROVED FOR COMMIT REVIEW — NOT YET COMMITTED. Next Step: Owner may authorize one Stage 42-G1 commit and push; G2–G6 remain NOT AUTHORIZED.
 
 ## Recovery procedure
 
