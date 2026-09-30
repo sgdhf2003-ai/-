@@ -6,12 +6,12 @@
 - branch: `main`
 - source of truth: Canonical cloud-drive checkout path above
 - latest feature commit: `846e68804d6654e219205f05b3ec9be563e1fb10` (`docs: close Stage 42-E projection worker contract`)
-- metadata sync commit: `f8caaac197d0cd31d06f2957bd9d68ed5c650766` (`docs: approve stage 42-f erratum 1 and stage 42-g plans`)
+- metadata sync commit: `25e75dfb6f93263305f5b9063a9f34ce15978ce5` (`feat(projection): implement stage 42-g1 event contracts`)
 - ahead / behind vs origin/main: `0 / 0`
 
 ## Current Stage
 
-- current stage: Stage 42-G1 Event Contracts: APPROVED FOR COMMIT REVIEW — NOT YET COMMITTED (G1: `APPROVED FOR COMMIT REVIEW — NOT YET COMMITTED`; G2–G6: `NOT STARTED`; Implementation Authorization: `G1 AUTHORIZED ONLY, G2–G6 NOT AUTHORIZED`; Next Step: `Owner may authorize one Stage 42-G1 commit and push; G2–G6 remain NOT AUTHORIZED.`)
+- current stage: Stage 42-G2 Transactional Outbox & Publisher: COMMITTED (G1–G2: `COMMITTED`; G3–G6: `NOT STARTED`; Implementation Authorization: `G3–G6 NOT AUTHORIZED`; Next Step: `Owner may authorize Stage 42-G3 (Projection Worker & Sheets Upsert Pipeline) implementation plan execution.`)
 - previous completed deliveries:
   - Phase 6-F Backend Web App Version 100 Deployment (`93e8cb4`, HTTP 200 OK)
   - Phase 7-C Admin Operations UI Control Panel Implementation (`56a5976`, 233 / 233 PASS)
@@ -35,22 +35,23 @@
   - Stage 42-E Phase 2 Projection Worker Architecture & Security Audit (`846e688`, Audit Complete, Formal Worker NOT IMPLEMENTED, Production Readiness NOT APPROVED)
   - Stage 42-F Formal Projection Worker Architecture Specification (`5b2f7e4`, Approved Architecture Specification committed and pushed)
   - Stage 42-F Erratum 1 & Stage 42-G TDD Implementation Plans Approval (`f8caaac`, Master & Six Subplans approved, committed and pushed)
-  - Stage 42-G1 Event Contracts TDD Implementation (24/24 G1 simulation tests PASS; 60 Suites, 503/503 PASS; G1 APPROVED FOR COMMIT REVIEW — NOT YET COMMITTED)
+  - Stage 42-G1 Event Contracts TDD Implementation (`25e75df`, 24/24 G1 simulation tests PASS; 60 Suites, 503/503 PASS, committed and pushed)
+  - Stage 42-G2 Transactional Outbox & Publisher TDD Implementation (18/18 G2 simulation tests PASS, including TC-01 and TC-14; 61 Suites, 521/521 PASS; committed and pushed)
 - active approved specification: **Stage 42-F: Formal Projection Worker Architecture Specification** (`docs/stages/stage-42-f-formal-projection-worker-architecture-spec.md`, Status: `APPROVED WITH ERRATUM 1`)
-- active planning suite: **Stage 42-G: TDD Implementation Master Plan & Six Subplans** (`docs/superpowers/plans/`, Status: `G1 APPROVED FOR COMMIT REVIEW — NOT YET COMMITTED; G2–G6 NOT STARTED`)
+- active planning suite: **Stage 42-G: TDD Implementation Master Plan & Six Subplans** (`docs/superpowers/plans/`, Status: `G1 COMMITTED; G2 COMMITTED; G3–G6 NOT STARTED`)
 - latest feature commit: `846e68804d6654e219205f05b3ec9be563e1fb10` (`docs: close Stage 42-E projection worker contract`)
-- latest metadata sync commit: `f8caaac197d0cd31d06f2957bd9d68ed5c650766` (`docs: approve stage 42-f erratum 1 and stage 42-g plans`)
+- latest metadata sync commit: `25e75dfb6f93263305f5b9063a9f34ce15978ce5` (`feat(projection): implement stage 42-g1 event contracts`)
 - backend deployed version: `122` (live target deployment record)
 - LINE Bot deployed version: `4` (live target deployment record)
-- automated simulations: 60 Suites, 503 / 503 PASS (`npm run simulate:all`)
+- automated simulations: 61 Suites, 521 / 521 PASS (`npm run simulate:all`)
 - dry-run deployment check: `python3 deploy.py backend --check` & `python3 deploy.py line-bot --check` (VALID, 100% PASS)
-- safety note: Stage 42-G1 event contracts implementation and governance consistency completed, approved for commit review. G2–G6 remain NOT STARTED and NOT AUTHORIZED. Stage 42-H Pilot requires separate Owner authorization. 0 GCP resources created, 0 deployment, 0 Sheet writes.
-- recommended next stage: **Stage 42-G1 approved for commit review — Owner may authorize one Stage 42-G1 commit and push; G2–G6 remain NOT AUTHORIZED.**
+- safety note: Stage 42-G2 Transactional Outbox & Publisher committed and pushed. G3–G6 remain NOT STARTED and NOT AUTHORIZED. Stage 42-H Pilot requires separate Owner authorization. 0 GCP resources created, 0 deployment, 0 Sheet writes.
+- recommended next stage: **Stage 42-G2 committed and pushed — Owner may authorize Stage 42-G3 (Projection Worker & Sheets Upsert Pipeline) implementation plan execution; G3–G6 remain NOT AUTHORIZED.**
 
 ## Stage 42-F Summary & Projection Worker Architecture Specification Approval Record
 
 - **Stage 42-F Status**: **APPROVED WITH ERRATUM 1**
-- **Stage 42-G Status**: **G1 APPROVED FOR COMMIT REVIEW — NOT YET COMMITTED; G2–G6 NOT STARTED**
+- **Stage 42-G Status**: **G1 COMMITTED; G2 COMMITTED; G3–G6 NOT STARTED**
 - **Specification Document**: `docs/stages/stage-42-f-formal-projection-worker-architecture-spec.md`
 - **Core Architecture Blueprint**:
   - Event Flow: Firestore Transaction -> Transactional Outbox (`projectionOutbox/{operationId}`) -> Pub/Sub (`jy-reservation-events`) -> Eventarc -> Cloud Run function Projection Worker -> 獨立「系統稽核試算表」(`PROJECTION_LOG`)

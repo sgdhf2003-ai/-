@@ -4,9 +4,9 @@
 > REQUIRED SUB-SKILL: use executing-plans or an equivalent task-by-task execution workflow. Do not implement tasks in parallel when they modify shared event schemas or Firestore state contracts.
 >
 > **Stage 42-F Status**: `APPROVED WITH ERRATUM 1`<br>
-> **Stage 42-G Status**: `G1 APPROVED FOR COMMIT REVIEW — NOT YET COMMITTED; G2–G6 NOT STARTED`<br>
-> **Implementation Authorization**: `G1 AUTHORIZED ONLY; G2–G6 NOT AUTHORIZED`<br>
-> **Next Step**: `Owner may authorize one Stage 42-G1 commit and push; G2–G6 remain NOT AUTHORIZED.`<br>
+> **Stage 42-G Status**: `G1 COMMITTED; G2 COMMITTED; G3–G6 NOT STARTED`<br>
+> **Implementation Authorization**: `G1–G2 COMMITTED; G3–G6 NOT AUTHORIZED`<br>
+> **Next Step**: `Owner may authorize Stage 42-G3 (Projection Worker & Sheets Upsert Pipeline) implementation plan execution.`<br>
 > **安全聲明**：規格與計畫核准不等於程式實作授權；不得建立 GCP 資源或執行部署；Stage 42-H Pilot 仍需獨立 Owner 授權；正式營運表保持 0 修改。
 
 Goal:
@@ -235,7 +235,7 @@ interface ProjectionSnapshot {
 ## 6. 回滾與停止條件 (Rollback & Stop Conditions)
 
 1. **停止條件**：
-   - 任何現有 60 個模擬測試套件（503 案例）發生回歸失敗。
+   - 任何現有 61 個模擬測試套件（521 案例）發生回歸失敗。
    - `scripts/workbench-context-gate.sh --check` 回傳非 PASS。
    - 發現任一實作需求試圖發起未經授權的實體 GCP 資源建立或 Google Sheet 實體寫入。
    - 發現不同子計畫間對於 `operationId`、`eventId`、`claimVersion`、`payloadHash` 出現型別定義衝突。
@@ -263,7 +263,7 @@ interface ProjectionSnapshot {
 # 2. 語法檢查
 npm run check
 
-# 3. 執行既有全量回歸測試 (保證 503/503 PASS)
+# 3. 執行既有全量回歸測試 (保證 521/521 PASS)
 npm run simulate:all
 
 # 4. 執行 Stage 42-G 新增全量測試套件
@@ -321,37 +321,37 @@ git status --short
   - [ ] Step 7: 建議 commit checkpoint: `feat(projection): implement schema guard and pii redaction (TC-07, TC-12, TC-17)`
 
 ### G2: Transactional Outbox & Pub/Sub Publisher Adapter
-- [ ] **G2-Task 1: Transactional Outbox Creator & In-Transaction Idempotency Guard**
-  - [ ] Step 1: 寫入單一明確失敗測試 (Outbox 交易內建立、同 hash 重送沿用 eventId、異 hash 拋出 OUTBOX_IDEMPOTENCY_CONFLICT)
-  - [ ] Step 2: 執行並確認測試因尚未實作 `stageProjectionOutboxInTransaction` 失敗
-  - [ ] Step 3: 寫入最小實作 (`allocation-assistant/adapters/outbox-publisher-adapter.js`)
-  - [ ] Step 4: 執行並確認測試通過
-  - [ ] Step 5: 執行 G2 子系統回歸測試 (`node tests/simulations/stage-42-g2-outbox-publisher.sim.js`)
-  - [ ] Step 6: 執行全量既有回歸 (`npm run simulate:all`)
+- [x] **G2-Task 1: Transactional Outbox Creator & In-Transaction Idempotency Guard**
+  - [x] Step 1: 寫入單一明確失敗測試 (Outbox 交易內建立、同 hash 重送沿用 eventId、異 hash 拋出 OUTBOX_IDEMPOTENCY_CONFLICT)
+  - [x] Step 2: 執行並確認測試因尚未實作 `stageProjectionOutboxInTransaction` 失敗
+  - [x] Step 3: 寫入最小實作 (`allocation-assistant/adapters/outbox-publisher-adapter.js`)
+  - [x] Step 4: 執行並確認測試通過
+  - [x] Step 5: 執行 G2 子系統回歸測試 (`node tests/simulations/stage-42-g2-outbox-publisher.sim.js`)
+  - [x] Step 6: 執行全量既有回歸 (`npm run simulate:all`，已納入 G2，確認 61 套件 / 521 案例 100% PASS)
   - [ ] Step 7: 建議 commit checkpoint: `feat(projection): implement transactional outbox creator and idempotency guard`
-- [ ] **G2-Task 2: 60-Second Lease Claim Protocol with FakeClock**
-  - [ ] Step 1: 寫入單一明確失敗測試 (驗證 Publisher 60s 租約認領、FakeClock 推進後過期接手)
-  - [ ] Step 2: 執行並確認測試因尚未實作 `claimOutboxBatchForPublishing` 失敗
-  - [ ] Step 3: 寫入最小實作
-  - [ ] Step 4: 執行並確認測試通過 (使用 FakeClock 驗證到期租約更新)
-  - [ ] Step 5: 執行 G2 子系統回歸測試
-  - [ ] Step 6: 執行全量既有回歸
+- [x] **G2-Task 2: 60-Second Lease Claim Protocol with FakeClock**
+  - [x] Step 1: 寫入單一明確失敗測試 (驗證 Publisher 60s 租約認領、FakeClock 推進後過期接手)
+  - [x] Step 2: 執行並確認測試因尚未實作 `claimOutboxBatchForPublishing` 失敗
+  - [x] Step 3: 寫入最小實作
+  - [x] Step 4: 執行並確認測試通過 (使用 FakeClock 驗證到期租約更新)
+  - [x] Step 5: 執行 G2 子系統回歸測試
+  - [x] Step 6: 執行全量既有回歸 (`npm run simulate:all`，已納入 G2，確認 61 套件 / 521 案例 100% PASS)
   - [ ] Step 7: 建議 commit checkpoint: `feat(projection): implement outbox lease claim protocol with clock`
-- [ ] **G2-Task 3: Pub/Sub Publisher Adapter Boundary & Completion Fencing (TC-01)**
-  - [ ] Step 1: 寫入單一明確失敗測試 (涵蓋 TC-01 崩潰重試與 markOutboxPublished 完成防護)
-  - [ ] Step 2: 執行並確認測試因尚未實作發布完成防護失敗
-  - [ ] Step 3: 寫入最小實作
-  - [ ] Step 4: 執行並確認 TC-01 通過且租約失效時安全回傳 PUBLISH_LEASE_LOST
-  - [ ] Step 5: 執行 G2 子系統回歸測試
-  - [ ] Step 6: 執行全量既有回歸
+- [x] **G2-Task 3: Pub/Sub Publisher Adapter Boundary & Completion Fencing (TC-01)**
+  - [x] Step 1: 寫入單一明確失敗測試 (涵蓋 TC-01 崩潰重試與 markOutboxPublished 完成防護)
+  - [x] Step 2: 執行並確認測試因尚未實作發布完成防護失敗
+  - [x] Step 3: 寫入最小實作
+  - [x] Step 4: 執行並確認 TC-01 通過且租約失效時安全回傳 PUBLISH_LEASE_LOST
+  - [x] Step 5: 執行 G2 子系統回歸測試
+  - [x] Step 6: 執行全量既有回歸 (`npm run simulate:all`，已納入 G2，確認 61 套件 / 521 案例 100% PASS)
   - [ ] Step 7: 建議 commit checkpoint: `feat(projection): implement publisher adapter and completion fencing (TC-01)`
-- [ ] **G2-Task 4: 5-Minute Outbox Reconciliation Sweep with FakeClock (TC-14)**
-  - [ ] Step 1: 寫入單一明確失敗測試 (涵蓋 TC-14 滯留 PENDING 補償發布與 FakeClock 推進)
-  - [ ] Step 2: 執行並確認測試因尚未實作補償掃描失敗
-  - [ ] Step 3: 寫入最小實作
-  - [ ] Step 4: 執行並確認 TC-14 通過 (沿用原始 eventId 重發)
-  - [ ] Step 5: 執行 G2 子系統回歸測試
-  - [ ] Step 6: 執行全量既有回歸
+- [x] **G2-Task 4: 5-Minute Outbox Reconciliation Sweep with FakeClock (TC-14)**
+  - [x] Step 1: 寫入單一明確失敗測試 (涵蓋 TC-14 滯留 PENDING 補償發布與 FakeClock 推進)
+  - [x] Step 2: 執行並確認測試因尚未實作補償掃描失敗
+  - [x] Step 3: 寫入最小實作
+  - [x] Step 4: 執行並確認 TC-14 通過 (沿用原始 eventId 重發)
+  - [x] Step 5: 執行 G2 子系統回歸測試
+  - [x] Step 6: 執行全量既有回歸 (`npm run simulate:all`，已納入 G2，確認 61 套件 / 521 案例 100% PASS)
   - [ ] Step 7: 建議 commit checkpoint: `feat(projection): implement outbox reconciliation sweep (TC-14)`
 
 ### G3: Projection Worker State Machine & Sheets Client

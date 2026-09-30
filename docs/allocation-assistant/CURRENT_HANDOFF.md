@@ -1,13 +1,13 @@
 # JYAI Allocation Assistant - CURRENT HANDOFF
 
 ## 1. 專案基線狀態 (Project Baseline)
-* **交接日期**: 2026-09-29
+* **交接日期**: 2026-09-30
 * **執行目錄**: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 * **目前分支**: `main`
 * **Latest Feature Commit**: `846e68804d6654e219205f05b3ec9be563e1fb10` (`docs: close Stage 42-E projection worker contract`)
-* **Metadata Sync Commit**: `f8caaac197d0cd31d06f2957bd9d68ed5c650766` (`docs: approve stage 42-f erratum 1 and stage 42-g plans`)
+* **Metadata Sync Commit**: `25e75dfb6f93263305f5b9063a9f34ce15978ce5` (`feat(projection): implement stage 42-g1 event contracts`)
 * **分支關係**: `0 ahead / 0 behind` (完全同步)
-* **Working Tree 狀態**: Stage 42-G1 Event Contracts implementation and governance consistency completed (APPROVED FOR COMMIT REVIEW — NOT YET COMMITTED); projection-contract.js updated with true Unicode code-point sorting, fatal UTF-8 decoding, strict envelope & PII validation, clean Timestamp clock, and circular-safe log sanitization; stage-42-g1-event-contracts.sim.js updated (24/24 PASS); package.json simulate:all includes G1 (60 suites / 503 cases PASS); G1 registry standalone/direct execution verified; G2–G6 not started; awaits Owner authorization to commit and push
+* **Working Tree 狀態**: Stage 42-G2 Transactional Outbox & Publisher committed and pushed; G3–G6 not started; awaits Owner authorization for Stage 42-G3.
 
 ## 2. 本次完成內容 (Completed Work)
 * 完成 Stage 30 & 31 生產環境 Google Sheet 劃扣與出貨生命週期驗證 (`RES-20260801-001`, `RES-20260801-002`)。
@@ -45,7 +45,8 @@
 * 完成 Stage 42-E Phase 2 Projection Worker Architecture & Security Audit 唯讀審查紀錄 (Audit Complete; Formal Worker NOT IMPLEMENTED; Production Readiness NOT APPROVED)。
 * 完成 Stage 42-F 正式 Projection Worker 架構規格書核准備查與 Erratum 1 (`docs/stages/stage-42-f-formal-projection-worker-architecture-spec.md`，狀態：`APPROVED WITH ERRATUM 1`；包含 projectionSnapshot 與 projectionSnapshotExpiresAt 權威重建來源，Fail-Closed 校驗嚴禁 "N/A"、"USR_ANONYMOUS" 或 0 偽造，Reconciler 專屬租約與 10 大併發規則)。
 * 完成 Stage 42-G TDD 測試先行實作計畫套件修訂與核准 (`docs/superpowers/plans/`，涵蓋 Master Plan 與 G1-G6 六大子計畫，共 19 項任務均拆解為 7 個明確步驟，實作真實 Firestore Timestamp Clock 抽象、真實 Acceptance Test Registry、完整 10 大 IAM 身分角色白名單、隔離 Stub 自我校驗、非破壞性回滾與 transport contract micro-patch；狀態：`TDD IMPLEMENTATION PLANS APPROVED — IMPLEMENTATION NOT STARTED`；Implementation Authorization: `NOT AUTHORIZED`；Next Step: `Stage 42-G implementation awaits separate Owner authorization`；規格與計畫核准不等於程式實作授權；不得建立 GCP 資源或執行部署；Stage 42-H Pilot 仍需獨立 Owner 授權；正式營運表保持 0 修改)。
-* 完成 Stage 42-G1 Event Contracts TDD 測試先行實作、阻礙修正與治理文件一致性校驗 (`allocation-assistant/contracts/projection-contract.js` 與 `tests/simulations/stage-42-g1-event-contracts.sim.js`，包含真 Unicode code-point 字典排序區分 U+E000 與 U+10000、64 碼 SHA-256 雜湊、Fatal UTF-8 解碼器防範、未 monkey-patch 之 Firestore modular Timestamp Clock 抽象、完整 schemaVersion 1.0.0 Application Envelope 建構與雙向一致性校驗、包含 eventId UUIDv4/occurredAt/traceId/projectionKey、operator 脫敏與 payload 嚴格 schema 拒絕額外欄位之 Fail-Closed 守衛、循環引用與過深結構安全脫敏日誌；24/24 G1 模擬測試 PASS；全量 60 Suites, 503/503 PASS；G1 測試 Registry 獨立直接執行驗證 PASS；dry-run deploy 檢查 PASS；G1 審查通過核准進入提交審查 `APPROVED FOR COMMIT REVIEW — NOT YET COMMITTED`；G2–G6 尚未開始且未獲授權)。
+* 完成 Stage 42-G1 Event Contracts TDD 測試先行實作、阻礙修正與治理文件一致性校驗 (`allocation-assistant/contracts/projection-contract.js` 與 `tests/simulations/stage-42-g1-event-contracts.sim.js`，包含真 Unicode code-point 字典排序區分 U+E000 與 U+10000、64 碼 SHA-256 雜湊、Fatal UTF-8 解碼器防範、未 monkey-patch 之 Firestore modular Timestamp Clock 抽象、完整 schemaVersion 1.0.0 Application Envelope 建構與雙向一致性校驗、包含 eventId UUIDv4/occurredAt/traceId/projectionKey、operator 脫敏與 payload 嚴格 schema 拒絕額外欄位之 Fail-Closed 守衛、循環引用與過深結構安全脫敏日誌；24/24 G1 模擬測試 PASS；全量 60 Suites, 503/503 PASS；G1 測試 Registry 獨立直接執行驗證 PASS；dry-run deploy 檢查 PASS；已於 `25e75df` commit 與 push)。
+* 完成 Stage 42-G2 Transactional Outbox & Publisher TDD 測試先行實作與本地模擬驗證 (`allocation-assistant/adapters/outbox-publisher-adapter.js`, `tests/mocks/fake-pubsub-client-adapter.js`, `tests/simulations/stage-42-g2-outbox-publisher.sim.js`，包含 Firestore 交易內原子且冪等建立 `projectionOutbox`、相同 hash 沿用 `eventId` 0 寫入、異 hash 拋出 `OUTBOX_IDEMPOTENCY_CONFLICT` fail-closed、交易 abort 保證 0 寫入、`claimOutboxBatchForPublishing` 原子認領 60 秒發布租約與 FakeClock 推進超時接手、`publishOutboxBatch` 發布至 FakePubSubClientAdapter、`markOutboxPublished` Completion Fencing 驗證租約擁有權與到期時間、以及 `reconcileOutboxPendingBatch` 每 5 分鐘補償掃描滯留超過 2 分鐘 PENDING 紀錄安全補發；18/18 G2 模擬測試 PASS；全量 61 Suites, 521/521 PASS；G2 測試 Registry 獨立直接執行驗證 PASS；狀態：`COMMITTED`；G3–G6 尚未開始且未獲授權)。
 * 本機檢查、全量模擬測試與部署 Dry Run 全數通過 (`npm run check`, `npm run simulate:all`, `python3 deploy.py backend --check`, `python3 deploy.py line-bot --check` PASS)。
 
 ## 3. 未完成內容與未啟用功能 (Deactivated Features)
@@ -61,7 +62,7 @@
 > 本次交接確無未授權之 LINE 機器人發送通知、無 OneSignal 警報、無真實庫存銷扣損壞。所有安全性防護邊界、Server-Side Role Guard 與 UI 角色防護控制項均完好。
 
 ## 6. 下一個精確步驟 (Next Recommended Step)
-* **Stage 42-G1 approved for commit review — Owner may authorize one Stage 42-G1 commit and push; G2–G6 remain NOT AUTHORIZED.** (規格與計畫核准不等於程式實作授權；不得建立 GCP 資源或執行部署；Stage 42-H Pilot 仍需獨立 Owner 授權；正式營運表保持 0 修改)。
+* **Stage 42-G2 committed and pushed — Owner may authorize Stage 42-G3 (Projection Worker & Sheets Upsert Pipeline) implementation plan execution; G3–G6 remain NOT AUTHORIZED.** (規格與計畫核准不等於程式實作授權；不得建立 GCP 資源或執行部署；Stage 42-H Pilot 仍需獨立 Owner 授權；正式營運表保持 0 修改)。
 
 ## 7. 禁止下一位 Agent 自行執行的事項 (Prohibited Actions)
 * 嚴禁在未經 Owner 審查同意前進行未授權之 Google Sheet 寫入。

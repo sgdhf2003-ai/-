@@ -2,6 +2,11 @@
 
 > For agentic workers:
 > REQUIRED SUB-SKILL: use executing-plans or an equivalent task-by-task execution workflow. Do not implement tasks in parallel when they modify shared event schemas or Firestore state contracts.
+>
+> **Status**: `COMMITTED`<br>
+> **Authority**: In accordance with Owner Authorization Token `OWNER AUTHORIZATION — STAGE 42-G2 TRANSACTIONAL OUTBOX AND PUBLISHER TDD IMPLEMENTATION`<br>
+> **Implementation Authorization**: G2 committed; G3–G6 `NOT AUTHORIZED`<br>
+> **Next Step**: `Owner may authorize Stage 42-G3 (Projection Worker & Sheets Upsert Pipeline) implementation plan execution.`<br>
 
 Goal:
 實作 Transactional Outbox 建立、受控 Clock 下的租約認領、Publisher Completion Fencing 發布防護，以及 5 分鐘 Outbox 對帳補償掃描機制。
@@ -51,23 +56,23 @@ Review Focus:
   - `stageProjectionOutboxInTransaction(transaction: object, db: object, params: object, clock: object): Promise<object>`
 
 - **TDD 執行步驟清單**:
-  - [ ] **Step 1: 寫入單一明確失敗測試**
+  - [x] **Step 1: 寫入單一明確失敗測試**
     在 `tests/simulations/stage-42-g2-outbox-publisher.sim.js` 中寫入測試：
     1. 交易 abort 時，業務資料與 Outbox 均為 0 寫入。
     2. 首次呼叫時建立新 Outbox，`status = 'PENDING'`，`eventId` 格式正確。
     3. 相同 `operationId` 且相同 `payloadHash` 重送時，回傳既有 Outbox 並沿用原始 `eventId`。
     4. 相同 `operationId` 但不同 `payloadHash` 重送時，fail-closed 拋出 `OUTBOX_IDEMPOTENCY_CONFLICT`。
     5. 模擬兩次併發建立僅產生一份 Outbox 文件。
-  - [ ] **Step 2: 執行並確認指定原因失敗**
+  - [x] **Step 2: 執行並確認指定原因失敗**
     執行 `node tests/simulations/stage-42-g2-outbox-publisher.sim.js`，預期因找不到 `stageProjectionOutboxInTransaction` 失敗。
-  - [ ] **Step 3: 寫入最小實作**
+  - [x] **Step 3: 寫入最小實作**
     在 `allocation-assistant/adapters/outbox-publisher-adapter.js` 中實作交易內讀取、雜湊比對與安全 set 邏輯。
-  - [ ] **Step 4: 執行並確認指定測試通過**
+  - [x] **Step 4: 執行並確認指定測試通過**
     執行測試，確認交易防護與冪等性全部 PASS。
-  - [ ] **Step 5: 執行該子系統回歸測試**
+  - [x] **Step 5: 執行該子系統回歸測試**
     執行 `npm run simulate:stage-42-g2-outbox-publisher`。
-  - [ ] **Step 6: 執行全量既有回歸**
-    執行 `npm run simulate:all`。
+  - [x] **Step 6: 執行全量既有回歸**
+    執行 `npm run simulate:all`（61 Suites, 521 / 521 PASS）。
   - [ ] **Step 7: 建議 commit checkpoint**
     `feat(projection): implement transactional outbox creator and idempotency guard`
 
@@ -133,18 +138,18 @@ async function stageProjectionOutboxInTransaction(transaction, db, params, clock
   - `claimOutboxBatchForPublishing(db: object, publisherInstanceId: string, options: object, clock: object): Promise<object[]>`
 
 - **TDD 執行步驟清單**:
-  - [ ] **Step 1: 寫入單一明確失敗測試**
+  - [x] **Step 1: 寫入單一明確失敗測試**
     寫入租約認領測試：未過期租約無法被其他 Publisher 搶占；使用 `fakeClock.advanceMillis(61000)` 推進時間後，過期租約能被新 Publisher 成功認領接手。
-  - [ ] **Step 2: 執行並確認指定原因失敗**
+  - [x] **Step 2: 執行並確認指定原因失敗**
     執行測試，預期因尚未實作 `claimOutboxBatchForPublishing` 失敗。
-  - [ ] **Step 3: 寫入最小實作**
+  - [x] **Step 3: 寫入最小實作**
     實作批次查詢與交易認領邏輯，使用 `clock.nowTimestamp()` 與 Firestore Timestamp 運算。
-  - [ ] **Step 4: 執行並確認指定測試通過**
+  - [x] **Step 4: 執行並確認指定測試通過**
     確認租約認領與 FakeClock 時間推進接手測試通過。
-  - [ ] **Step 5: 執行該子系統回歸測試**
+  - [x] **Step 5: 執行該子系統回歸測試**
     執行 `npm run simulate:stage-42-g2-outbox-publisher`。
-  - [ ] **Step 6: 執行全量既有回歸**
-    執行 `npm run simulate:all`。
+  - [x] **Step 6: 執行全量既有回歸**
+    執行 `npm run simulate:all`（61 Suites, 521 / 521 PASS）。
   - [ ] **Step 7: 建議 commit checkpoint**
     `feat(projection): implement outbox lease claim protocol with clock`
 
@@ -202,20 +207,20 @@ async function claimOutboxBatchForPublishing(db, publisherInstanceId, options = 
   - `markOutboxPublished(db: object, claimContext: object, clock: object): Promise<{ success: boolean, errorCode?: string }>`
 
 - **TDD 執行步驟清單**:
-  - [ ] **Step 1: 寫入單一明確失敗測試 (TC-01)**
+  - [x] **Step 1: 寫入單一明確失敗測試 (TC-01)**
     撰寫 `runTC01()`：
     1. 驗證 Publisher 發布後若未標記前崩潰，重試時沿用原始 `eventId` 並指派新 `publishAttemptId`。
     2. 驗證 `markOutboxPublished` 進行 Completion Fencing：若 `publisherLeaseOwner` 不符、`publishAttemptId` 不符、狀態非 `PENDING` 或 `publisherLeaseExpiresAt` 已過期，拒絕標記為 `PUBLISHED` 並回傳 `PUBLISH_LEASE_LOST`。
-  - [ ] **Step 2: 執行並確認指定原因失敗**
+  - [x] **Step 2: 執行並確認指定原因失敗**
     執行測試，預期因尚未實作防護邏輯失敗。
-  - [ ] **Step 3: 寫入最小實作**
+  - [x] **Step 3: 寫入最小實作**
     實作 Fake Pub/Sub Client 與 `markOutboxPublished` 嚴格校驗。
-  - [ ] **Step 4: 執行並確認 TC-01 測試通過**
+  - [x] **Step 4: 執行並確認 TC-01 測試通過**
     確認 TC-01 通過且過期標記被安全攔截。
-  - [ ] **Step 5: 執行該子系統回歸測試**
+  - [x] **Step 5: 執行該子系統回歸測試**
     執行 `npm run simulate:stage-42-g2-outbox-publisher`。
-  - [ ] **Step 6: 執行全量既有回歸**
-    執行 `npm run simulate:all`。
+  - [x] **Step 6: 執行全量既有回歸**
+    執行 `npm run simulate:all`（61 Suites, 521 / 521 PASS）。
   - [ ] **Step 7: 建議 commit checkpoint**
     `feat(projection): implement publisher adapter and completion fencing (TC-01)`
 
@@ -271,18 +276,18 @@ async function markOutboxPublished(db, claimContext, clock) {
   - `reconcileOutboxPendingBatch(db: object, pubsubClient: object, clock: object): Promise<{ recoveredCount: number }>`
 
 - **TDD 執行步驟清單**:
-  - [ ] **Step 1: 寫入單一明確失敗測試 (TC-14)**
+  - [x] **Step 1: 寫入單一明確失敗測試 (TC-14)**
     撰寫 `runTC14()`：建立 1 筆 `PENDING` 事件，使用 `fakeClock.advanceMillis(150000)`（2.5 分鐘），執行對帳補發，確認：沿用原始 `eventId`、產生新 `publishAttemptId`、最終狀態更新為 `PUBLISHED`。
-  - [ ] **Step 2: 執行並確認指定原因失敗**
+  - [x] **Step 2: 執行並確認指定原因失敗**
     執行測試，預期因尚未實作 `reconcileOutboxPendingBatch` 失敗。
-  - [ ] **Step 3: 寫入最小實作**
+  - [x] **Step 3: 寫入最小實作**
     實作滯留掃描與安全補發調度。
-  - [ ] **Step 4: 執行並確認 TC-14 測試通過**
+  - [x] **Step 4: 執行並確認 TC-14 測試通過**
     確認 TC-14 通過。
-  - [ ] **Step 5: 執行該子系統回歸測試**
+  - [x] **Step 5: 執行該子系統回歸測試**
     執行 `npm run simulate:stage-42-g2-outbox-publisher`。
-  - [ ] **Step 6: 執行全量既有回歸**
-    執行 `npm run simulate:all`。
+  - [x] **Step 6: 執行全量既有回歸**
+    執行 `npm run simulate:all`（61 Suites, 521 / 521 PASS）。
   - [ ] **Step 7: 建議 commit checkpoint**
     `feat(projection): implement outbox reconciliation sweep (TC-14)`
 
