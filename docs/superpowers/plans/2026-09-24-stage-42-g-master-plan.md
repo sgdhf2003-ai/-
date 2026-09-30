@@ -4,9 +4,9 @@
 > REQUIRED SUB-SKILL: use executing-plans or an equivalent task-by-task execution workflow. Do not implement tasks in parallel when they modify shared event schemas or Firestore state contracts.
 >
 > **Stage 42-F Status**: `APPROVED WITH ERRATUM 1`<br>
-> **Stage 42-G Status**: `G1 COMMITTED; G2 COMMITTED; G3–G6 NOT STARTED`<br>
-> **Implementation Authorization**: `G1–G2 COMMITTED; G3–G6 NOT AUTHORIZED`<br>
-> **Next Step**: `Owner may authorize Stage 42-G3 (Projection Worker & Sheets Upsert Pipeline) implementation plan execution.`<br>
+> **Stage 42-G Status**: `G1 COMMITTED; G2 OWNER-RATIFIED (17bde3215440f0ce805b04a2af7e56091db2a18e); G3 OWNER APPROVED / IMPLEMENTED / TESTED — COMMIT AND PUSH AUTHORIZED; G4–G6 NOT STARTED`<br>
+> **Implementation Authorization**: `G1 COMMITTED; G2 RATIFIED; G3 OWNER APPROVED / COMMIT AND PUSH AUTHORIZED; G4–G6 NOT AUTHORIZED`<br>
+> **Next Step**: `Commit and push Stage 42-G3 implementation; G4–G6 remain NOT AUTHORIZED.`<br>
 > **安全聲明**：規格與計畫核准不等於程式實作授權；不得建立 GCP 資源或執行部署；Stage 42-H Pilot 仍需獨立 Owner 授權；正式營運表保持 0 修改。
 
 Goal:
@@ -235,7 +235,7 @@ interface ProjectionSnapshot {
 ## 6. 回滾與停止條件 (Rollback & Stop Conditions)
 
 1. **停止條件**：
-   - 任何現有 61 個模擬測試套件（521 案例）發生回歸失敗。
+   - 任何現有 62 個模擬測試套件（538 案例）發生回歸失敗。
    - `scripts/workbench-context-gate.sh --check` 回傳非 PASS。
    - 發現任一實作需求試圖發起未經授權的實體 GCP 資源建立或 Google Sheet 實體寫入。
    - 發現不同子計畫間對於 `operationId`、`eventId`、`claimVersion`、`payloadHash` 出現型別定義衝突。
@@ -263,7 +263,7 @@ interface ProjectionSnapshot {
 # 2. 語法檢查
 npm run check
 
-# 3. 執行既有全量回歸測試 (保證 521/521 PASS)
+# 3. 執行既有全量回歸測試 (保證 538/538 PASS)
 npm run simulate:all
 
 # 4. 執行 Stage 42-G 新增全量測試套件
@@ -355,37 +355,37 @@ git status --short
   - [ ] Step 7: 建議 commit checkpoint: `feat(projection): implement outbox reconciliation sweep (TC-14)`
 
 ### G3: Projection Worker State Machine & Sheets Client
-- [ ] **G3-Task 1: Projection Operations State Claim, Fail-Closed Snapshot Storage & Fencing (TC-03, TC-05)**
-  - [ ] Step 1: 寫入單一明確失敗測試 (涵蓋 TC-03, TC-05, Erratum 1 projectionSnapshot 嚴格校驗且無虛構填補值、重送防覆蓋)
-  - [ ] Step 2: 執行並確認測試因尚未實作 `claimProjectionOperation` 失敗
-  - [ ] Step 3: 寫入最小實作 (`allocation-assistant/services/projection-worker-service.js`)
-  - [ ] Step 4: 執行並確認 TC-03, TC-05 通過 (有效租約回傳固定 ACK 且 0 寫入，過期接手 claimVersion 遞增)
-  - [ ] Step 5: 執行 G3 子系統回歸測試 (`node tests/simulations/stage-42-g3-projection-worker.sim.js`)
-  - [ ] Step 6: 執行全量既有回歸 (`npm run simulate:all`)
+- [x] **G3-Task 1: Projection Operations State Claim, Fail-Closed Snapshot Storage & Fencing (TC-03, TC-05)**
+  - [x] Step 1: 寫入單一明確失敗測試 (涵蓋 TC-03, TC-05, Erratum 1 projectionSnapshot 嚴格校驗且無虛構填補值、重送防覆蓋)
+  - [x] Step 2: 執行並確認測試因尚未實作 `claimProjectionOperation` 失敗
+  - [x] Step 3: 寫入最小實作 (`allocation-assistant/services/projection-worker-service.js`)
+  - [x] Step 4: 執行並確認 TC-03, TC-05 通過 (有效租約回傳固定 ACK 且 0 寫入，過期接手 claimVersion 遞增)
+  - [x] Step 5: 執行 G3 子系統回歸測試 (`node tests/simulations/stage-42-g3-projection-worker.sim.js`)
+  - [x] Step 6: 執行全量既有回歸 (`npm run simulate:all`)
   - [ ] Step 7: 建議 commit checkpoint: `feat(projection): implement worker claim lease, snapshot storage and fencing (TC-03, TC-05)`
-- [ ] **G3-Task 2: Pre-Sheet-Write Authoritative Firestore Re-Validation with FakeClock (TC-04, TC-06)**
-  - [ ] Step 1: 寫入單一明確失敗測試 (涵蓋 TC-04, TC-06 四項條件校驗與過期拒絕)
-  - [ ] Step 2: 執行並確認測試因尚未實作寫入前權威校驗失敗
-  - [ ] Step 3: 寫入最小實作
-  - [ ] Step 4: 執行並確認 TC-04, TC-06 通過 (使用 FakeClock 推進時間驗證 fail-closed)
-  - [ ] Step 5: 執行 G3 子系統回歸測試
-  - [ ] Step 6: 執行全量既有回歸
+- [x] **G3-Task 2: Pre-Sheet-Write Authoritative Firestore Re-Validation with FakeClock (TC-04, TC-06)**
+  - [x] Step 1: 寫入單一明確失敗測試 (涵蓋 TC-04, TC-06 四項條件校驗與過期拒絕)
+  - [x] Step 2: 執行並確認測試因尚未實作寫入前權威校驗失敗
+  - [x] Step 3: 寫入最小實作
+  - [x] Step 4: 執行並確認 TC-04, TC-06 通過 (使用 FakeClock 推進時間驗證 fail-closed)
+  - [x] Step 5: 執行 G3 子系統回歸測試
+  - [x] Step 6: 執行全量既有回歸
   - [ ] Step 7: 建議 commit checkpoint: `feat(projection): implement pre-sheet-write authoritative check (TC-04, TC-06)`
-- [ ] **G3-Task 3: Fake Google Sheets Client Adapter & Search-and-Append Engine (TC-08, TC-18)**
-  - [ ] Step 1: 寫入單一明確失敗測試 (涵蓋 TC-08 冪等追加、TC-18 403 拒絕、quantity 嚴格有限正整數 > 0 校驗)
-  - [ ] Step 2: 執行並確認測試因尚未實作 Fake Sheets Client 與追加引擎失敗
-  - [ ] Step 3: 寫入最小實作 (`tests/mocks/fake-google-sheets-client-adapter.js`)
-  - [ ] Step 4: 執行並確認 TC-08, TC-18 通過
-  - [ ] Step 5: 執行 G3 子系統回歸測試
-  - [ ] Step 6: 執行全量既有回歸
+- [x] **G3-Task 3: Fake Google Sheets Client Adapter & Search-and-Append Engine (TC-08, TC-18)**
+  - [x] Step 1: 寫入單一明確失敗測試 (涵蓋 TC-08 冪等追加、TC-18 403 拒絕、quantity 嚴格有限正整數 > 0 校驗)
+  - [x] Step 2: 執行並確認測試因尚未實作 Fake Sheets Client 與追加引擎失敗
+  - [x] Step 3: 寫入最小實作 (`tests/mocks/fake-google-sheets-client-adapter.js`)
+  - [x] Step 4: 執行並確認 TC-08, TC-18 通過
+  - [x] Step 5: 執行 G3 子系統回歸測試
+  - [x] Step 6: 執行全量既有回歸
   - [ ] Step 7: 建議 commit checkpoint: `feat(projection): implement fake sheets adapter and search-and-append (TC-08, TC-18)`
-- [ ] **G3-Task 4: Projection Finalization, Snapshot Expiry Setting & Error Taxonomy Dispatcher (TC-09)**
-  - [ ] Step 1: 寫入單一明確失敗測試 (涵蓋 TC-09 不可重試錯誤轉 MANUAL_REVIEW_REQUIRED、SUCCEEDED 時設定 completedAt + 90 天 projectionSnapshotExpiresAt)
-  - [ ] Step 2: 執行並確認測試因尚未實作結案狀態機與錯誤分發失敗
-  - [ ] Step 3: 寫入最小實作
-  - [ ] Step 4: 執行並確認 TC-09 通過且過期時間戳記設定正確
-  - [ ] Step 5: 執行 G3 子系統回歸測試
-  - [ ] Step 6: 執行全量既有回歸
+- [x] **G3-Task 4: Projection Finalization, Snapshot Expiry Setting & Error Taxonomy Dispatcher (TC-09)**
+  - [x] Step 1: 寫入單一明確失敗測試 (涵蓋 TC-09 不可重試錯誤轉 MANUAL_REVIEW_REQUIRED、SUCCEEDED 時設定 completedAt + 90 天 projectionSnapshotExpiresAt)
+  - [x] Step 2: 執行並確認測試因尚未實作結案狀態機與錯誤分發失敗
+  - [x] Step 3: 寫入最小實作
+  - [x] Step 4: 執行並確認 TC-09 通過且過期時間戳記設定正確
+  - [x] Step 5: 執行 G3 子系統回歸測試
+  - [x] Step 6: 執行全量既有回歸
   - [ ] Step 7: 建議 commit checkpoint: `feat(projection): implement projection finalization, snapshot expiry and error taxonomy (TC-09)`
 
 ### G4: DLQ Reconciler & Dead-Letter Handling

@@ -2,6 +2,11 @@
 
 > For agentic workers:
 > REQUIRED SUB-SKILL: use executing-plans or an equivalent task-by-task execution workflow. Do not implement tasks in parallel when they modify shared event schemas or Firestore state contracts.
+>
+> **Status**: `OWNER APPROVED / IMPLEMENTED / TESTED — COMMIT AND PUSH AUTHORIZED`<br>
+> **Authority**: In accordance with Owner Authorization Token `OWNER AUTHORIZATION — STAGE 42-G3 FINAL PROJECT-ID GUARD CORRECTION, COMMIT AND PUSH`<br>
+> **Implementation Authorization**: G1 committed; G2 Owner-Ratified (`17bde3215440f0ce805b04a2af7e56091db2a18e`); G3 Owner Approved / Implemented / Tested — Commit and Push Authorized; G4–G6 `NOT AUTHORIZED`<br>
+> **Next Step**: `Commit and push Stage 42-G3 implementation; G4–G6 remain NOT AUTHORIZED.`<br>
 
 Goal:
 實作 Projection Worker 核心狀態機，包含 180 秒分散式租約認領、初次認領時建立 Erratum 1 `projectionSnapshot`、呼叫 Sheets API 前強制 Firestore 權威租約重新校驗、Fake Google Sheets 12 欄物理結構 Search-and-Append，以及明確之錯誤分類處置。
@@ -54,7 +59,7 @@ Review Focus:
   - `claimProjectionOperation(db: object, envelope: object, workerInstanceId: string, clock: object): Promise<object>`
 
 - **TDD 執行步驟清單**:
-  - [ ] **Step 1: 寫入單一明確失敗測試 (TC-03, TC-05 與 Snapshot Fail-Closed 校驗)**
+  - [x] **Step 1: 寫入單一明確失敗測試 (TC-03, TC-05 與 Snapshot Fail-Closed 校驗)**
     撰寫測試：
     1. 初次認領建立 `status = 'PROCESSING'`、`claimVersion = 1`，並建立 Erratum 1 `projectionSnapshot`。
     2. 有效租約重複抵達（TC-03）：回傳 `action = 'SKIP_ACK'`，產生 0 次寫入。
@@ -71,15 +76,15 @@ Review Focus:
        - 驗證僅當 incoming payloadHash 為合法 64 碼 SHA-256 但內容與既有 hash 不同時，才正確轉為 `MANUAL_REVIEW_REQUIRED`（且不覆蓋既有快照）。
        - 驗證 rejectedDuplicateCount 缺失時初始化為 1，既有值為負數或損毀時 Fail-Closed 拒絕，禁止直接使用 (value || 0) + 1 掩蓋錯誤。
        - 驗證 `quantity === 0` 必須 Fail-Closed 判定為 `INVALID_QUANTITY`。
-  - [ ] **Step 2: 執行並確認指定原因失敗**
+  - [x] **Step 2: 執行並確認指定原因失敗**
     執行 `node tests/simulations/stage-42-g3-projection-worker.sim.js`，預期因找不到 `claimProjectionOperation` 或 `validateAndExtractProjectionSnapshot` 失敗。
-  - [ ] **Step 3: 寫入最小實作**
+  - [x] **Step 3: 寫入最小實作**
     在 `allocation-assistant/services/projection-worker-service.js` 中實作交易認領狀態機與 Snapshot 初始化。
-  - [ ] **Step 4: 執行並確認 TC-03, TC-05 與 Fail-Closed 測試通過**
+  - [x] **Step 4: 執行並確認 TC-03, TC-05 與 Fail-Closed 測試通過**
     確認 TC-03、TC-05 與全部 Fail-Closed 校驗案例通過。
-  - [ ] **Step 5: 執行該子系統回歸測試**
+  - [x] **Step 5: 執行該子系統回歸測試**
     執行 `npm run simulate:stage-42-g3-projection-worker`。
-  - [ ] **Step 6: 執行全量既有回歸**
+  - [x] **Step 6: 執行全量既有回歸**
     執行 `npm run simulate:all`。
   - [ ] **Step 7: 建議 commit checkpoint**
     `feat(projection): implement worker claim lease, snapshot storage and fencing (TC-03, TC-05)`
@@ -322,20 +327,20 @@ async function claimProjectionOperation(db, envelope, workerInstanceId, clock) {
   - `verifyAuthoritativeLeaseBeforeSheetWrite(db: object, operationId: string, claimedVersion: number, currentWorkerId: string, clock: object): Promise<{ valid: boolean, errorCode?: string }>`
 
 - **TDD 執行步驟清單**:
-  - [ ] **Step 1: 寫入單一明確失敗測試 (TC-04, TC-06)**
+  - [x] **Step 1: 寫入單一明確失敗測試 (TC-04, TC-06)**
     撰寫測試：
     1. 驗證四項條件全部符合時回傳 `valid = true`。
     2. 使用 `fakeClock.advanceMillis(181000)` 模擬租約過期，驗證回傳 `LEASE_EXPIRED` (TC-04)。
     3. 模擬其他 Worker 接手導致 `claimVersion` 提升，舊 Worker 驗證回傳 `CLAIM_VERSION_MISMATCH` (TC-06)。
-  - [ ] **Step 2: 執行並確認指定原因失敗**
+  - [x] **Step 2: 執行並確認指定原因失敗**
     執行測試，預期因尚未實作寫入前權威校驗失敗。
-  - [ ] **Step 3: 寫入最小實作**
+  - [x] **Step 3: 寫入最小實作**
     實作 Firestore 權威重新讀取與 4 條件嚴格校驗。
-  - [ ] **Step 4: 執行並確認 TC-04, TC-06 通過**
+  - [x] **Step 4: 執行並確認 TC-04, TC-06 通過**
     確認 TC-04 與 TC-06 測試通過。
-  - [ ] **Step 5: 執行該子系統回歸測試**
+  - [x] **Step 5: 執行該子系統回歸測試**
     執行 `npm run simulate:stage-42-g3-projection-worker`。
-  - [ ] **Step 6: 執行全量既有回歸**
+  - [x] **Step 6: 執行全量既有回歸**
     執行 `npm run simulate:all`。
   - [ ] **Step 7: 建議 commit checkpoint**
     `feat(projection): implement pre-sheet-write authoritative check (TC-04, TC-06)`
@@ -386,20 +391,20 @@ async function verifyAuthoritativeLeaseBeforeSheetWrite(db, operationId, claimed
   - `upsertProjectionLogSheetRow(sheetsClient: object, rowData: any[]): Promise<{ action: string }>`
 
 - **TDD 執行步驟清單**:
-  - [ ] **Step 1: 寫入單一明確失敗測試 (TC-08, TC-18)**
+  - [x] **Step 1: 寫入單一明確失敗測試 (TC-08, TC-18)**
     撰寫測試：
     1. 驗證 12 欄物理資料格式，特別驗證 `quantity` 必須為有限整數，`quantity = 0` 不得被掩蓋。
     2. 模擬 Sheet 成功但後續更新失敗時，重試不產生重複列（TC-08）。
     3. 模擬 403 權限錯誤拋出 `SHEET_PERMISSION_DENIED` Fail-Closed（TC-18）。
-  - [ ] **Step 2: 執行並確認指定原因失敗**
+  - [x] **Step 2: 執行並確認指定原因失敗**
     執行測試，預期因尚未實作追加引擎或配接器失敗。
-  - [ ] **Step 3: 寫入最小實作**
+  - [x] **Step 3: 寫入最小實作**
     實作 Fake Sheets Client 與 12 欄 Search-and-Append 引擎。
-  - [ ] **Step 4: 執行並確認 TC-08, TC-18 通過**
+  - [x] **Step 4: 執行並確認 TC-08, TC-18 通過**
     確認 TC-08 與 TC-18 測試通過。
-  - [ ] **Step 5: 執行該子系統回歸測試**
+  - [x] **Step 5: 執行該子系統回歸測試**
     執行 `npm run simulate:stage-42-g3-projection-worker`。
-  - [ ] **Step 6: 執行全量既有回歸**
+  - [x] **Step 6: 執行全量既有回歸**
     執行 `npm run simulate:all`。
   - [ ] **Step 7: 建議 commit checkpoint**
     `feat(projection): implement fake sheets adapter and search-and-append (TC-08, TC-18)`
@@ -442,19 +447,19 @@ async function upsertProjectionLogSheetRow(sheetsClient, rowData) {
   - `handleProjectionError(db: object, operationId: string, claimVersion: number, error: Error, clock: object): Promise<{ ack: boolean }>`
 
 - **TDD 執行步驟清單**:
-  - [ ] **Step 1: 寫入單一明確失敗測試 (TC-09)**
+  - [x] **Step 1: 寫入單一明確失敗測試 (TC-09)**
     撰寫測試：
     1. 成功結案：更新狀態為 `SUCCEEDED`，設定 `completedAt`，並計算 `projectionSnapshotExpiresAt = completedAt + 90 天`。
     2. 不可重試錯誤（如格式損毀、403、非法欄位）：狀態更新為 `MANUAL_REVIEW_REQUIRED`，回傳 `{ ack: true }`（TC-09）。
-  - [ ] **Step 2: 執行並確認指定原因失敗**
+  - [x] **Step 2: 執行並確認指定原因失敗**
     執行測試，預期因尚未實作結案與分發邏輯失敗。
-  - [ ] **Step 3: 寫入最小實作**
+  - [x] **Step 3: 寫入最小實作**
     實作結案與錯誤分類處置函式。
-  - [ ] **Step 4: 執行並確認 TC-09 通過**
+  - [x] **Step 4: 執行並確認 TC-09 通過**
     確認結案與 TC-09 通過。
-  - [ ] **Step 5: 執行該子系統回歸測試**
+  - [x] **Step 5: 執行該子系統回歸測試**
     執行 `npm run simulate:stage-42-g3-projection-worker`。
-  - [ ] **Step 6: 執行全量既有回歸**
+  - [x] **Step 6: 執行全量既有回歸**
     執行 `npm run simulate:all`。
   - [ ] **Step 7: 建議 commit checkpoint**
     `feat(projection): implement projection finalization and error taxonomy (TC-09)`
@@ -503,7 +508,7 @@ async function handleProjectionError(db, operationId, claimVersion, error, clock
       });
     } else {
       transaction.update(docRef, {
-        status: "FAILED_RETRYABLE",
+        status: "RETRYABLE_FAILED",
         lastAttemptAt: nowTs,
         lastError: { message: error.message, time: nowTs }
       });
