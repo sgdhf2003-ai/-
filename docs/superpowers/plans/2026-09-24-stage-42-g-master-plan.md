@@ -4,9 +4,9 @@
 > REQUIRED SUB-SKILL: use executing-plans or an equivalent task-by-task execution workflow. Do not implement tasks in parallel when they modify shared event schemas or Firestore state contracts.
 >
 > **Stage 42-F Status**: `APPROVED WITH ERRATUM 1`<br>
-> **Stage 42-G Status**: `G1 COMMITTED; G2 OWNER-RATIFIED (17bde3215440f0ce805b04a2af7e56091db2a18e); G3 OWNER APPROVED / IMPLEMENTED / TESTED — COMMIT AND PUSH AUTHORIZED; G4–G6 NOT STARTED`<br>
-> **Implementation Authorization**: `G1 COMMITTED; G2 RATIFIED; G3 OWNER APPROVED / COMMIT AND PUSH AUTHORIZED; G4–G6 NOT AUTHORIZED`<br>
-> **Next Step**: `Commit and push Stage 42-G3 implementation; G4–G6 remain NOT AUTHORIZED.`<br>
+> **Stage 42-G Status**: `G1–G3 COMMITTED AND PUSHED; G4 LOCAL TDD IMPLEMENTED & ALERT FINALIZATION/REDELIVERY HARDENED — AWAITING OWNER REVIEW; G5–G6 NOT STARTED`<br>
+> **Implementation Authorization**: `G1–G3 COMMITTED AND PUSHED; G4 LOCAL TDD IMPLEMENTED AND HARDENED (AWAITING OWNER REVIEW/COMMIT); G5–G6 NOT AUTHORIZED`<br>
+> **Next Step**: `Owner reviews completed Stage 42-G4 implementation and hardening before commit authorization; G5–G6 remain NOT AUTHORIZED.`<br>
 > **安全聲明**：規格與計畫核准不等於程式實作授權；不得建立 GCP 資源或執行部署；Stage 42-H Pilot 仍需獨立 Owner 授權；正式營運表保持 0 修改。
 
 Goal:
@@ -389,29 +389,29 @@ git status --short
   - [ ] Step 7: 建議 commit checkpoint: `feat(projection): implement projection finalization, snapshot expiry and error taxonomy (TC-09)`
 
 ### G4: DLQ Reconciler & Dead-Letter Handling
-- [ ] **G4-Task 1: DLQ Transport Message Parser & Delivery Attempt Assessor (TC-10)**
-  - [ ] Step 1: 寫入單一明確失敗測試 (涵蓋 TC-10 宣告式 dead-letter policy 設定為 5、parser 接受 deliveryAttempt 缺失保存 null)
-  - [ ] Step 2: 執行並確認測試因尚未實作 DLQ 訊息解析器失敗
-  - [ ] Step 3: 寫入最小實作 (`allocation-assistant/adapters/dlq-reconciler-adapter.js`)
-  - [ ] Step 4: 執行並確認 TC-10 通過 (缺失保存 null，不預設為 5)
-  - [ ] Step 5: 執行 G4 子系統回歸測試 (`node tests/simulations/stage-42-g4-dlq-reconciler.sim.js`)
-  - [ ] Step 6: 執行全量既有回歸 (`npm run simulate:all`)
+- [x] **G4-Task 1: DLQ Transport Message Parser & Delivery Attempt Assessor (TC-10)**
+  - [x] Step 1: 寫入單一明確失敗測試 (涵蓋 TC-10 宣告式 dead-letter policy 設定為 5、parser 接受 deliveryAttempt 缺失保存 null)
+  - [x] Step 2: 執行並確認測試因尚未實作 DLQ 訊息解析器失敗
+  - [x] Step 3: 寫入最小實作 (`allocation-assistant/adapters/dlq-reconciler-adapter.js`)
+  - [x] Step 4: 執行並確認 TC-10 通過 (缺失保存 null，不預設為 5)
+  - [x] Step 5: 執行 G4 子系統回歸測試 (`node tests/simulations/stage-42-g4-dlq-reconciler.sim.js`)
+  - [x] Step 6: 執行全量既有回歸 (`npm run simulate:all`)
   - [ ] Step 7: 建議 commit checkpoint: `feat(projection): implement dlq message parser (TC-10)`
-- [ ] **G4-Task 2: Firestore State Transition to DEAD_LETTERED on Actual DLQ Receipt (TC-11)**
-  - [ ] Step 1: 寫入單一明確失敗測試 (涵蓋 TC-11 當且僅當實際收到 DLQ 訊息時才轉移 DEAD_LETTERED)
-  - [ ] Step 2: 執行並確認測試因尚未實作死信狀態轉移失敗
-  - [ ] Step 3: 寫入最小實作
-  - [ ] Step 4: 執行並確認 TC-11 通過
-  - [ ] Step 5: 執行 G4 子系統回歸測試
-  - [ ] Step 6: 執行全量既有回歸
+- [x] **G4-Task 2: Firestore State Transition to DEAD_LETTERED on Actual DLQ Receipt (TC-11)**
+  - [x] Step 1: 寫入單一明確失敗測試 (涵蓋 TC-11 當且僅當實際收到 DLQ 訊息時才轉移 DEAD_LETTERED)
+  - [x] Step 2: 執行並確認測試因尚未實作死信狀態轉移失敗
+  - [x] Step 3: 寫入最小實作
+  - [x] Step 4: 執行並確認 TC-11 通過
+  - [x] Step 5: 執行 G4 子系統回歸測試
+  - [x] Step 6: 執行全量既有回歸
   - [ ] Step 7: 建議 commit checkpoint: `feat(projection): implement dead-lettered state transition (TC-11)`
-- [ ] **G4-Task 3: Alerting Adapter & Notification Dispatcher**
-  - [ ] Step 1: 寫入單一明確失敗測試 (驗證 FakeAlertingAdapter 派送 P1 警報且內容完成 Redaction)
-  - [ ] Step 2: 執行並確認測試因尚未實作告警配接器失敗
-  - [ ] Step 3: 寫入最小實作 (`tests/mocks/fake-alerting-adapter.js`)
-  - [ ] Step 4: 執行並確認測試通過
-  - [ ] Step 5: 執行 G4 子系統回歸測試
-  - [ ] Step 6: 執行全量既有回歸
+- [x] **G4-Task 3: Alerting Adapter & Notification Dispatcher**
+  - [x] Step 1: 寫入單一明確失敗測試 (驗證 FakeAlertingAdapter 派送 P1 警報且內容完成 Redaction)
+  - [x] Step 2: 執行並確認測試因尚未實作告警配接器失敗
+  - [x] Step 3: 寫入最小實作 (`tests/mocks/fake-alerting-adapter.js`)
+  - [x] Step 4: 執行並確認測試通過
+  - [x] Step 5: 執行 G4 子系統回歸測試
+  - [x] Step 6: 執行全量既有回歸
   - [ ] Step 7: 建議 commit checkpoint: `feat(projection): implement alerting adapter and notification dispatcher`
 
 ### G5: Projection Reconciler & Dedicated Lease Recovery
