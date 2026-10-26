@@ -76,6 +76,12 @@ const { LiffMicroEditPopup } = require('./ui/liff-micro-edit-popup');
 const { FulfillmentAdapter } = require('./fulfillment/fulfillment-adapter');
 const { AllocationEndpointDispatcher } = require('./endpoints/allocation-endpoint-dispatcher');
 
+const {
+  ProjectionEngine,
+  createProjectionEngine,
+  validateProjectionEnvironment
+} = require('./projection');
+
 module.exports = {
   // Constants
   DRAFT_STATUSES,
@@ -145,5 +151,10 @@ module.exports = {
   ImageOcrAdapter,
   LiffMicroEditPopup,
   FulfillmentAdapter,
-  AllocationEndpointDispatcher
+  AllocationEndpointDispatcher,
+
+  // Stage 42: Unified Projection Subsystem & Environment Guards
+  ProjectionEngine,
+  createProjectionEngine,
+  validateProjectionEnvironment
 };
