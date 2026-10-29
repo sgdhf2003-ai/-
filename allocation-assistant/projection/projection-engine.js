@@ -63,11 +63,12 @@ const {
 
 class ProjectionEngine {
   constructor(options = {}) {
-    if (!options.firestoreDb) {
+    const firestoreDb = options.firestoreDb || options.db;
+    if (!firestoreDb) {
       throw new Error("FAIL_CLOSED_ENGINE_INIT: firestoreDb is required");
     }
 
-    this.firestoreDb = options.firestoreDb;
+    this.firestoreDb = firestoreDb;
     this.sheetsClient = options.sheetsClient || null;
     this.pubsubClient = options.pubsubClient || null;
     this.alertingClient = options.alertingClient || null;

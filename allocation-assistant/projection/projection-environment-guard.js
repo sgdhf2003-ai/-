@@ -69,9 +69,13 @@ function validateSheetConfig(config) {
   if (!config.spreadsheetId || typeof config.spreadsheetId !== "string" || config.spreadsheetId.trim() === "") {
     throw new Error("FAIL_CLOSED_SHEET_GUARD: spreadsheetId is missing or empty");
   }
+  const cleanSheetName = (config.sheetName && typeof config.sheetName === "string" ? config.sheetName.trim() : "PROJECTION_LOG");
+  if (cleanSheetName !== "PROJECTION_LOG") {
+    throw new Error(`FAIL_CLOSED_SHEET_GUARD: Unauthorized target sheet '${cleanSheetName}'. Only 'PROJECTION_LOG' is permitted.`);
+  }
   return {
     spreadsheetId: config.spreadsheetId.trim(),
-    sheetName: (config.sheetName && typeof config.sheetName === "string" ? config.sheetName.trim() : "PROJECTION_LOG")
+    sheetName: "PROJECTION_LOG"
   };
 }
 
