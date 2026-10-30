@@ -1,13 +1,13 @@
 # JYAI Allocation Assistant - CURRENT HANDOFF
 
 ## 1. 專案基線狀態 (Project Baseline)
-* **交接日期**: 2026-10-16
+* **交接日期**: 2026-10-29
 * **執行目錄**: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 * **目前分支**: `main`
-* **Latest Feature Commit**: `846e68804d6654e219205f05b3ec9be563e1fb10` (`docs: close Stage 42-E projection worker contract`)
-* **Metadata Sync Commit**: `564cd92c3b0411840722cfbe78b4fa68e29623be` (`feat(projection): implement stage 42-g3 projection worker and sheets client`)
+* **Latest Feature Commit**: `9c9f242c083cc9c17aa990cccb1b449e304587c4` (`feat(pilot): implement Stage 42-H pilot deployment validator and E2E rehearsal suite`)
+* **Metadata Sync Commit**: `9c9f242c083cc9c17aa990cccb1b449e304587c4` (`feat(pilot): implement Stage 42-H pilot deployment validator and E2E rehearsal suite`)
 * **分支關係**: `0 ahead / 0 behind` (完全同步)
-* **Working Tree 狀態**: Stage 42-G4 DLQ Reconciler & Dead-Letter Handling local commit authorized; git push, deploy, G5–G6 NOT AUTHORIZED.
+* **Working Tree 狀態**: Stage 42 Concluded; working tree clean; ahead=0/behind=0.
 
 ## 2. 本次完成內容 (Completed Work)
 * 完成 Stage 30 & 31 生產環境 Google Sheet 劃扣與出貨生命週期驗證 (`RES-20260801-001`, `RES-20260801-002`)。
@@ -48,8 +48,11 @@
 * 完成 Stage 42-G1 Event Contracts TDD 測試先行實作、阻礙修正與治理文件一致性校驗 (`allocation-assistant/contracts/projection-contract.js` 與 `tests/simulations/stage-42-g1-event-contracts.sim.js`，包含真 Unicode code-point 字典排序區分 U+E000 與 U+10000、64 碼 SHA-256 雜湊、Fatal UTF-8 解碼器防範、未 monkey-patch 之 Firestore modular Timestamp Clock 抽象、完整 schemaVersion 1.0.0 Application Envelope 建構與雙向一致性校驗、包含 eventId UUIDv4/occurredAt/traceId/projectionKey、operator 脫敏與 payload 嚴格 schema 拒絕額外欄位之 Fail-Closed 守衛、循環引用與過深結構安全脫敏日誌；24/24 G1 模擬測試 PASS；全量 60 Suites, 503/503 PASS；G1 測試 Registry 獨立直接執行驗證 PASS；dry-run deploy 檢查 PASS；已於 `25e75df` commit 與 push)。
 * 完成 Stage 42-G2 Transactional Outbox & Publisher TDD 測試先行實作與本地模擬驗證，並經 Owner 正式追認承認 commit 17bde3215440f0ce805b04a2af7e56091db2a18e (`allocation-assistant/adapters/outbox-publisher-adapter.js`, `tests/mocks/fake-pubsub-client-adapter.js`, `tests/simulations/stage-42-g2-outbox-publisher.sim.js`，包含 Firestore 交易內原子且冪等建立 `projectionOutbox`、相同 hash 沿用 `eventId` 0 寫入、異 hash 拋出 `OUTBOX_IDEMPOTENCY_CONFLICT` fail-closed、交易 abort 保證 0 寫入、`claimOutboxBatchForPublishing` 原子認領 60 秒發布租約與 FakeClock 推進超時接手、`publishOutboxBatch` 發布至 FakePubSubClientAdapter、`markOutboxPublished` Completion Fencing 驗證租約擁有權與到期時間、以及 `reconcileOutboxPendingBatch` 每 5 分鐘補償掃描滯留超過 2 分鐘 PENDING 紀錄安全補發；18/18 G2 模擬測試 PASS；全量 61 Suites, 521/521 PASS；G2 測試 Registry 獨立直接執行驗證 PASS；狀態：`COMMITTED AND OWNER-RATIFIED`；G3–G6 尚未開始且未獲授權)。
 * 完成 Stage 42-G3 Projection Worker State Machine & Sheets Client 授權修正、模擬器/專案環境守衛加固與全量驗證 (`allocation-assistant/services/projection-worker-service.js`, `tests/mocks/fake-google-sheets-client-adapter.js`, `tests/simulations/stage-42-g3-projection-worker.sim.js`，全面採用規範之 `RETRYABLE_FAILED` 列舉、包含獨立檢查 `GCLOUD_PROJECT` 與 `GOOGLE_CLOUD_PROJECT` 防止 shadowing、127.0.0.1:8080 fail-closed 守衛、`validateAndExtractProjectionSnapshot` 嚴格校驗且拒絕虛構值、`claimProjectionOperation` 180 秒分散式租約認領與 Erratum 1 `projectionSnapshot` 快照原子持久化、重複 delivery 防破壞機制不覆蓋快照與狀態、`verifyAuthoritativeLeaseBeforeSheetWrite` 寫入前 4 條件權威租約校驗、`FakeGoogleSheetsClientAdapter` 12 欄物理結構 Search-and-Append 引擎與 hash 不符拋出 `PAYLOAD_HASH_MISMATCH` fail-closed、`finalizeProjectionSuccess` 成功結案與 6 條件 fencing 及 90 天快照到期時間設定、以及 `handleProjectionError` 可重試與不可重試錯誤分類處置與日誌脫敏；23/23 G3 模擬測試 PASS；全量 62 Suites, 544/544 PASS；G3 測試 Registry 獨立直接執行驗證 PASS；已於 `564cd92` commit 與 push；G4–G6 尚未開始且未獲授權)。
-* 完成 Stage 42-G4 DLQ Reconciler & Dead-Letter Handling TDD 實作、fail-closed 防護加固、異常告警合約校正、告警結案/redelivery 跨派發身份加固與異常訊息 Payload Identity 校正驗證 (`allocation-assistant/adapters/dlq-reconciler-adapter.js`, `tests/mocks/fake-alerting-adapter.js`, `tests/simulations/stage-42-g4-dlq-reconciler.sim.js`，包含宣告式死信政策校驗 `maxDeliveryAttempts === 5`、Eventarc CloudEvent 雙層嚴格解包重用 G1 fatal UTF-8 TextDecoder；權威身分 fail-closed 校驗 `operationId`、`eventId`、`payloadHash` 全量驗證（`payloadHash` 必須為 256 位元／64 碼小寫十六進位 SHA-256）；合法狀態白名單嚴格限制僅 `PENDING`、`PROCESSING`、`RETRYABLE_FAILED` 可轉入 `DEAD_LETTERED`、損壞/未知狀態 0 狀態變更 fail-closed 拒絕；終態保護機制：`SUCCEEDED` 與 `MANUAL_REVIEW_REQUIRED` 絕對嚴禁降級或覆蓋回傳固定 ACK、重複 `DEAD_LETTERED` 冪等防護跳過 0 狀態更動、Fencing 租約撤銷清除 `leaseOwner` 與 `leaseExpiresAt`；二階段狀態轉移與 256 位元／64 碼小寫十六進位 SHA-256 確定性去重金鑰生成、交易 commit 後派發脫敏告警；告警結案路徑嚴格僅允許一般 `DEAD_LETTERED` 與 `RETRY_ALERT_PENDING` 進入 Firestore 結案交易，異常告警絕不執行 Firestore 結案寫入；`RETRY_ALERT_PENDING` 嚴禁未持久化之 fallback key，缺少 stored key 即 fail-closed `ack: false`；跨 Active Mismatch 重新派送保持告警身份：初次 active mismatch 轉入 `MANUAL_REVIEW_REQUIRED` 時持久化保存 `anomalyAlertIdempotencyKey`、`anomalyAlertReasonCode`、`anomalyAlertEventId` 與 `anomalyAlertPayloadHash`（256 位元／64 碼小寫十六進位 SHA-256），不覆寫 authoritative payloadHash 或 projectionSnapshot；依 doc(operationId) 定位文件後，只有當訊息之 eventId 與 payloadHash 與先前持久化之 anomalyAlertEventId 及 anomalyAlertPayloadHash 完全一致時才重用原告警 key（重送分支不額外進行未實作的 operationId 欄位檢查）；相同 eventId 但不同 payloadHash 保持終態 0 mutation 並以包含訊息 payloadHash 之確定性 key（256 位元／64 碼小寫十六進位 SHA-256）派發獨立 `PAYLOAD_CONTENT_CONFLICT` 內容衝突告警，相同衝突內容再次重送依同 key 去重；舊文件缺少異常 payloadHash 時保守處理維持 0 mutation 且不誤判為同異常；告警暫時失敗重試 key 維持穩定；已完成驗證：43/43 G4 模擬測試 PASS；全量 63 Suites, 587/587 PASS；G4 測試 Registry 依序直接執行驗證 PASS；狀態：`STAGE 42-G4 LOCAL COMMIT AUTHORIZED`；git push=0、deploy=0、G5–G6 未獲授權）。
-* 本機檢查、全量模擬測試與部署 Dry Run 全數通過（沿用已完成之 `npm run simulate:all` 63 Suites, 587/587 PASS 證據，本輪執行靜態語法與 context gate 檢查；`python3 deploy.py backend --check`, `python3 deploy.py line-bot --check` PASS）。
+* 完成 Stage 42-G4 DLQ Reconciler & Dead-Letter Handling TDD 實作、fail-closed 防護加固、異常告警合約校正、告警結案/redelivery 跨派發身份加固與異常訊息 Payload Identity 校正驗證 (`allocation-assistant/adapters/dlq-reconciler-adapter.js`, `tests/mocks/fake-alerting-adapter.js`, `tests/simulations/stage-42-g4-dlq-reconciler.sim.js`；43/43 G4 模擬測試 PASS；全量 63 Suites, 587/587 PASS；已於 `7452db4` commit 與 push)。
+* 完成 Stage 42-G5 Projection Reconciler & Retention Engine TDD 測試先行實作、快照資料重建、租約防護、負向補償銷扣與資料保存過期修剪機制 (`allocation-assistant/adapters/projection-reconciler-adapter.js`, `tests/simulations/stage-42-g5-reconciler.sim.js`，包含穩定複合游標分頁、獨立對帳租約協議、Erratum 1 快照重建 PROJECTION_LOG 12 欄、表單列去重冪等、已取消預約之負向補償記錄、90 天快照到期修剪與 400 天不可變終態封套保留；17/17 G5 模擬測試 PASS，包括 TC-13；已於 `487e7ce` commit 與 push)。
+* 完成 Stage 42-G6 System Packaging, Projection Engine Unified Facade, and Environment Guards 系統封裝、單一入口外觀門面與環境守衛實作 (`allocation-assistant/projection/projection-engine.js`, `allocation-assistant/projection/projection-environment-guard.js`，嚴格 fail-closed 檢驗 Node.js runtime、模擬器 127.0.0.1:8080 與獨立 GCLOUD_PROJECT/GOOGLE_CLOUD_PROJECT；封裝完整生命週期：Outbox 暫存、Pub/Sub 發布、Worker 攝入、DLQ 處理與 Reconciler 修復；14/14 G6 模擬測試 PASS；已於 `2f182ee` commit 與 push)。
+* 完成 Stage 42-H Pilot Deployment Validator & E2E Rehearsal Suite 試驗部署驗證器與端到端排練套件 (`allocation-assistant/validators/pilot-deployment-validator.js`, `tests/simulations/stage-42-h-pilot-rehearsal.sim.js`，包含宣告式試驗參數校驗 TC-15、最小權限 10 大 IAM 身分角色白名單 TC-16 嚴禁 secretmanager、Phase 1~5 全流程排練包含正常合成探針 E2E 攝入、DLQ 攝入與真正 Worker 租約撤銷 Fencing、TC-13 快照自我修復與負向補償且死信記錄 0 異動、以及黃金基線「客戶業務業績」222 筆客戶 NT$ 6,846,122 SHA-256 指紋 `a26264e04ef283ba0f77a27a56f372b8697d854c5f1de47b31636ec430545cb0` 全程 100% 零變更 Zero Mutation；28/28 checks PASS；已於 `9c9f242c` commit 與 push，圓滿結案 Stage 42)。
+* 本機檢查、全量模擬測試與部署 Dry Run 全數通過（完成全量 63 Suites 回歸測試與 Stage 42-H 28 項端到端驗證；`python3 deploy.py backend --check`, `python3 deploy.py line-bot --check` PASS）。
 
 ## 3. 未完成內容與未啟用功能 (Deactivated Features)
 * LINE API 主動 Push/Send 維持關閉 (`notificationBypassed: true`)。
@@ -61,10 +64,10 @@
 
 ## 5. 安全聲明 (Safety Declaration)
 > [!IMPORTANT]
-> 本次交接確無未授權之 LINE 機器人發送通知、無 OneSignal 警報、無真實庫存銷扣損壞。所有安全性防護邊界、Server-Side Role Guard 與 UI 角色防護控制項均完好。
+> 本次交接確無未授權之 LINE 機器人發送通知、無 OneSignal 警報、無真實庫存銷扣損壞。黃金基線「客戶業務業績」全流程 0 變更保護完好。所有安全性防護邊界、Server-Side Role Guard 與 UI 角色防護控制項均完好。
 
 ## 6. 下一個精確步驟 (Next Recommended Step)
-* **Stage 42-G4 local commit authorized — execute local commit; git push, deploy, Stage 42-G5/G6 remain NOT AUTHORIZED.** (規格與計畫核准不等於程式實作授權；不得建立 GCP 資源或執行部署；Stage 42-H Pilot 仍需獨立 Owner 授權；正式營運表保持 0 修改)。
+* **Stage 42 已圓滿結案（Stage 42 Concluded）。靜待 Owner 指示後續階段規劃、生產環境正式發布評估或下一階段里程碑。** (黃金基線「客戶業務業績」100% 零變更保護；所有環境守衛與 Fail-Closed 防護完好；未經 Owner 明確授權嚴禁執行正式 GCP 資源建立、外部部署或生產試算表寫入)。
 
 ## 7. 禁止下一位 Agent 自行執行的事項 (Prohibited Actions)
 * 嚴禁在未經 Owner 審查同意前進行未授權之 Google Sheet 寫入。

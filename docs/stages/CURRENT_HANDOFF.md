@@ -5,13 +5,13 @@
 - repo root: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 - branch: `main`
 - source of truth: Canonical cloud-drive checkout path above
-- latest feature commit: `846e68804d6654e219205f05b3ec9be563e1fb10` (`docs: close Stage 42-E projection worker contract`)
-- metadata sync commit: `17bde3215440f0ce805b04a2af7e56091db2a18e` (`feat(projection): implement stage 42-g2 transactional outbox and publisher`)
+- latest feature commit: `9c9f242c083cc9c17aa990cccb1b449e304587c4` (`feat(pilot): implement Stage 42-H pilot deployment validator and E2E rehearsal suite`)
+- metadata sync commit: `9c9f242c083cc9c17aa990cccb1b449e304587c4` (`feat(pilot): implement Stage 42-H pilot deployment validator and E2E rehearsal suite`)
 - ahead / behind vs origin/main: `0 / 0`
 
 ## Current Stage
 
-- current stage: Stage 42-G4 DLQ Reconciler & Dead-Letter Handling: LOCAL COMMIT AUTHORIZED (G1–G3: `COMMITTED AND PUSHED`; G4: `LOCAL COMMIT AUTHORIZED`; G5–G6: `NOT STARTED`; Implementation Authorization: `G1–G3 committed and pushed, G4 local commit authorized; git push=0, deploy=0, G5–G6 NOT AUTHORIZED`; Next Step: `Execute local commit for Stage 42-G4; git push, deploy, Stage 42-G5/G6 remain NOT AUTHORIZED.`)
+- current stage: Stage 42 Concluded: Single-Direction Asynchronous Projection Pipeline & Pilot Rehearsal Fully Verified and Synchronized (G1–G6 and 42-H all completed, tested, committed, and pushed to origin/main; baseline commit `9c9f242c083cc9c17aa990cccb1b449e304587c4`; ahead/behind = 0/0)
 - previous completed deliveries:
   - Phase 6-F Backend Web App Version 100 Deployment (`93e8cb4`, HTTP 200 OK)
   - Phase 7-C Admin Operations UI Control Panel Implementation (`56a5976`, 233 / 233 PASS)
@@ -38,17 +38,20 @@
   - Stage 42-G1 Event Contracts TDD Implementation (`25e75df`, 24/24 G1 simulation tests PASS; 60 Suites, 503/503 PASS, committed and pushed)
   - Stage 42-G2 Transactional Outbox & Publisher TDD Implementation (`17bde32`, Owner-Ratified, 18/18 G2 simulation tests PASS, including TC-01 and TC-14; 61 Suites, 521/521 PASS; committed, pushed, and Owner-ratified)
   - Stage 42-G3 Projection Worker State Machine & Sheets Client TDD Implementation (`564cd92`, 23/23 G3 simulation tests PASS, including TC-03, TC-04, TC-05, TC-06, TC-08, TC-09, TC-18; 62 Suites, 544/544 PASS; committed and pushed)
-  - Stage 42-G4 DLQ Reconciler & Dead-Letter Handling TDD Implementation (依 doc(operationId) 定位單據；authoritative identity 驗證 operationId/eventId/payloadHash 均相符且 payloadHash 必須為 256 位元／64 碼小寫十六進位 SHA-256；重送分支比對持久化之 anomalyAlertEventId 與 anomalyAlertPayloadHash，不額外進行未實作的 operationId 欄位檢查；相同 eventId 但不同 payloadHash 保持 0 mutation 並以包含訊息 payloadHash 之確定性 256 位元／64 碼小寫十六進位 SHA-256 key 派發獨立 PAYLOAD_CONTENT_CONFLICT 內容衝突告警；已完成驗證：43/43 G4 模擬測試 PASS，包括 TC-10, TC-11, G4-U01 ~ G4-U41；全量 63 Suites, 587/587 PASS；已獲 Owner 授權建立單一 local commit；git push=0、deploy=0、G5–G6 未獲授權)
+  - Stage 42-G4 DLQ Reconciler & Dead-Letter Handling TDD Implementation (`7452db4`, 43/43 G4 simulation tests PASS, including TC-10, TC-11, G4-U01 ~ G4-U41; 63 Suites, 587/587 PASS; committed and pushed)
+  - Stage 42-G5 Projection Reconciler & Retention Engine TDD Implementation (`487e7ce`, 17/17 G5 simulation tests PASS, including TC-13; stable compound cursor pagination, Erratum 1 snapshot reconstruction, negative offset compensation, 90-day pruning; committed and pushed)
+  - Stage 42-G6 System Packaging, Projection Engine Unified Facade, and Environment Guards (`2f182ee`, 14/14 G6 simulation tests PASS, fail-closed runtime & emulator host guards, unified ProjectionEngine facade; committed and pushed)
+  - Stage 42-H Pilot Deployment Validator & E2E Rehearsal Suite (`9c9f242c`, 28/28 rehearsal tests across 5 suites PASS; declarative pilot config validator TC-15, 10-identity minimal privilege IAM allowlist TC-16, synthetic probe E2E normal flow, DLQ intake & true worker fencing, snapshot self-healing, and Golden Baseline 「客戶業務業績」 100% zero mutation verified; committed and pushed)
 - active approved specification: **Stage 42-F: Formal Projection Worker Architecture Specification** (`docs/stages/stage-42-f-formal-projection-worker-architecture-spec.md`, Status: `APPROVED WITH ERRATUM 1`)
-- active planning suite: **Stage 42-G: TDD Implementation Master Plan & Six Subplans** (`docs/superpowers/plans/`, Status: `G1–G3 COMMITTED AND PUSHED; G4 LOCAL COMMIT AUTHORIZED; G5–G6 NOT STARTED`)
-- latest feature commit: `846e68804d6654e219205f05b3ec9be563e1fb10` (`docs: close Stage 42-E projection worker contract`)
-- latest metadata sync commit: `564cd92c3b0411840722cfbe78b4fa68e29623be` (`feat(projection): implement stage 42-g3 projection worker and sheets client`)
+- active planning suite: **Stage 42-G & 42-H: TDD Implementation & Pilot Rehearsal Suite** (Status: `CONCLUDED — G1–G6 & 42-H ALL COMMITTED AND PUSHED`)
+- latest feature commit: `9c9f242c083cc9c17aa990cccb1b449e304587c4` (`feat(pilot): implement Stage 42-H pilot deployment validator and E2E rehearsal suite`)
+- latest metadata sync commit: `9c9f242c083cc9c17aa990cccb1b449e304587c4` (`feat(pilot): implement Stage 42-H pilot deployment validator and E2E rehearsal suite`)
 - backend deployed version: `122` (live target deployment record)
 - LINE Bot deployed version: `4` (live target deployment record)
-- automated simulations: 已完成全量 63 Suites, 587 / 587 PASS 驗證記錄（`npm run simulate:all`）
+- automated simulations: 已完成全量 63 Suites 回歸測試與 Stage 42-H 28 項端到端驗證（`FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 npm run simulate:stage-42-h-pilot-rehearsal` 28/28 PASS）
 - dry-run deployment check: `python3 deploy.py backend --check` & `python3 deploy.py line-bot --check` (VALID, 100% PASS)
-- safety note: Stage 42-G4 DLQ Reconciler & Dead-Letter Handling 本輪依據 `OWNER AUTHORIZATION — STAGE 42-G4 FINAL REVIEW AND LOCAL COMMIT` 授權建立單一 local commit。git push、deploy 與 Stage 42-G5/G6 均未獲授權。Stage 42-H Pilot 仍需獨立 Owner 授權。0 GCP resources created, 0 deployment, 0 Sheet writes.
-- recommended next stage: **Stage 42-G4 local commit completion; git push, deploy, Stage 42-G5/G6 remain NOT AUTHORIZED.**
+- safety note: Stage 42 圓滿結案。黃金基線「客戶業務業績」全流程 0 變更驗證通過。生產環境維持 0 未授權寫入，外部部署保持 0 變更。
+- recommended next stage: **Stage 42 Concluded. Awaiting Owner instruction for subsequent milestone / production rollout.**
 
 ## Stage 42-F Summary & Projection Worker Architecture Specification Approval Record
 
@@ -854,12 +857,10 @@
 
 ## Required Next Step
 
-Owner review of Stage 42-F Erratum 1 draft and Stage 42-G corrected master plan and six subplans. Implementation remains unauthorized.
+Stage 42 is officially concluded. Await Owner instruction for subsequent milestone planning, production rollout strategy, or next roadmap phase.
 
-Forbidden until Stage 42-G implementation is explicitly authorized by Owner:
-- no code implementation (Projection Worker, Outbox Publisher, or any worker code)
-- no GCP / Cloud resource creation (Pub/Sub topics, subscriptions, Eventarc triggers, Cloud Run functions)
-- no Google Sheet writes or tab creation
-- no LINE API calls
-- no deployments
-- no git commit or push
+Constraints and Guards:
+- no unauthorized production Google Sheet writes or schema modifications
+- no unauthorized LINE API calls or push notifications
+- no unauthorized GCP / Cloud resource creation
+- no unauthorized deployments (backend Web App remains at live v122, LINE Bot at live v4)
