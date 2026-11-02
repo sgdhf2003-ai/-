@@ -72,6 +72,7 @@ class ProjectionEngine {
     this.sheetsClient = options.sheetsClient || null;
     this.pubsubClient = options.pubsubClient || null;
     this.alertingClient = options.alertingClient || null;
+    this.notifier = options.notifier || null; // Stage 43: Real-Time Sales Notifier Adapter
     this.clock = options.clock || getProductionClock();
     this.topic = options.topic || "projects/demo-jy-stage42/topics/projection-events";
     this.engineId = options.engineId || `ENGINE_${Math.random().toString(36).substring(2, 10)}`;
@@ -202,6 +203,16 @@ class ProjectionEngine {
         this.clock
       );
 
+      // 6. Stage 43: Non-duplicate SUCCEEDED notification hook (Fail-Safe Isolation)
+      if (this.notifier) {
+        try {
+          await this._dispatchNotification(envelope, snapshot, operationId);
+        } catch (notifyErr) {
+          // Strictly fail-safe: log warning with sanitized message, never abort SUCCEEDED
+          console.warn(`[ProjectionEngine] Sales notification failed safely: ${notifyErr.message}`);
+        }
+      }
+
       return { status: "ACK", outcome: "PROJECTION_SUCCEEDED", operationId };
     } catch (err) {
       const errorResult = await handleProjectionError(
@@ -298,6 +309,50 @@ class ProjectionEngine {
    */
   async runRetentionPruning() {
     return await pruneExpiredSnapshotsAndTombstones(this.firestoreDb, this.clock);
+  }
+
+  /**
+   * 8. Stage 43: Internal Dispatcher for Sales Notifications.
+   * Extracts notification parameters and routes to the injected Sales Notifier.
+   * Enforces fail-safe isolation: catches errors and never throws outward.
+   *
+   * @private
+   */
+  async _dispatchNotification(envelope, snapshot, operationId) {
+    if (!this.notifier) {
+      return;
+    }
+    try {
+      const payload = (envelope && envelope.payload) || {};
+      const snap = snapshot || {};
+      const eventType = (envelope && envelope.eventType) || snap.eventType || "RESERVATION_CREATED";
+
+      const notificationData = {
+        operationId,
+        reservationNumber: snap.reservationNumber || payload.reservationNumber || operationId,
+        clientId: snap.storeId || payload.storeId || payload.clientId,
+        clientName: payload.clientName || payload.storeName,
+        salesRep: payload.salesRep || payload.salesPerson || (envelope && envelope.operator && envelope.operator.pseudonymousActorId),
+        itemNo: snap.productCode || payload.productCode || payload.itemNo,
+        productCode: snap.productCode || payload.productCode,
+        quantity: snap.quantity != null ? snap.quantity : payload.quantity,
+        unit: payload.unit || "支",
+        remainingQuota: payload.remainingQuota,
+        monthlySales: payload.monthlySales || payload.monthlyPerformance,
+        warehouse: payload.warehouse || "林口倉",
+        cancelReason: payload.cancelReason,
+        recipientLineUserId: payload.salesRepLineUserId || payload.recipientLineUserId,
+        deepLinkUrl: payload.deepLinkUrl
+      };
+
+      if (typeof this.notifier.dispatchSalesNotification === "function") {
+        await this.notifier.dispatchSalesNotification(eventType, notificationData);
+      } else if (typeof this.notifier.notifySalesFulfillment === "function") {
+        await this.notifier.notifySalesFulfillment(notificationData);
+      }
+    } catch (notifyErr) {
+      console.warn(`[ProjectionEngine] Sales notification failed safely: ${notifyErr.message}`);
+    }
   }
 }
 
