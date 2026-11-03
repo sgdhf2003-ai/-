@@ -1,6 +1,6 @@
 # Project Memory — jingyang-sales-app
 
-Last verified: 2026-10-29 18:30 CST
+Last verified: 2026-11-03 17:00 CST
 Source of truth: PROJECT_LOCATION.md + AGENTS.md + PROJECT_BOUNDARIES.md + docs/stages/CURRENT_HANDOFF.md
 
 ## Identity
@@ -34,17 +34,18 @@ Source of truth: PROJECT_LOCATION.md + AGENTS.md + PROJECT_BOUNDARIES.md + docs/
 
 ## Current state
 
-- Current stage/release: Stage 42 Concluded: Single-Direction Asynchronous Projection Pipeline & Pilot Rehearsal Fully Verified and Synchronized (G1–G6 and 42-H all completed, tested, committed, and pushed to origin/main; baseline commit `9c9f242c083cc9c17aa990cccb1b449e304587c4`; ahead/behind = 0/0).
+- Current stage/release: Stage 43: Real-Time Sales Notifier Pipeline: INITIAL BASELINE COMMITTED AND PUSHED (Stage 42 Concluded; Stage 43 Initial Baseline commit `9fb43b57a3fe980b8954d7288ae23b1971cc1b0a`; 110/110 regressions pass; ahead/behind = 0/0).
 - Current handoff: docs/stages/CURRENT_HANDOFF.md
-- Last verified commit: 9c9f242c083cc9c17aa990cccb1b449e304587c4
-- Upstream state: HEAD == origin/main (9c9f242c083cc9c17aa990cccb1b449e304587c4)
-- Working-tree state: Stage 42 officially concluded. All adapters (Outbox, Projection Worker, DLQ Reconciler, Projection Reconciler), unified facade (`ProjectionEngine`), environment guards, declarative pilot config validator (TC-15), full 10-identity IAM allowlist (TC-16), and 28-check rehearsal suite implemented and verified. Golden Baseline 「客戶業務業績」 (222 clients, NT$ 6,846,122) verified invariant across all phases.
+- Last verified commit: 9fb43b57a3fe980b8954d7288ae23b1971cc1b0a
+- Upstream state: HEAD == origin/main (9fb43b57a3fe980b8954d7288ae23b1971cc1b0a)
+- Working-tree state: Stage 43 initial modules implemented, verified, committed, and pushed. Parameterized LINE Flex templates (`line-flex-templates.js`), `SalesNotifierAdapter` (with 3s timeout, `operationId` cache dedup, and fail-safe isolation), and `ProjectionEngine` SUCCEEDED notification hook initialized. Full regression (G4: 43/43, G5: 17/17, G6: 14/14, 42-H: 28/28, Stage 43: 8/8, total 110/110 checks) PASS. Golden Baseline 「客戶業務業績」 invariant.
 - Production/deployment state: Backend Web App Version 122 (Deployment ID: AKfycbw6p15f3mfeOmnVjvp4niO05J3A_YGMRhmJXqGQ6Jcg_7VQiWZ_4lskjBCZQ2gqbmUKKw), LINE Bot Version 4 (Deployment ID: AKfycbwskF_c2VpW6Cv3yR-wUevRXdrG754ZzxyYMorroqjwkjJZT10wp3DqIZ2kA-GrKK0a)
-- Known blockers: None. Stage 42 is concluded. Production spreadsheets maintained at 0 unapproved writes. External deployments remain unexecuted.
+- Known blockers: None. Stage 43 initial baseline in place. `notificationBypassed: true` enforced by default. Production spreadsheets maintained at 0 unapproved writes. External deployments remain unexecuted.
 
 ## Verification commands
 
 - Context gate: `./scripts/workbench-context-gate.sh --check`
+- Stage 43 Notifier test: `npm run simulate:stage-43-sales-notifier` (8/8 checks PASS)
 - Stage 42 Rehearsal suite: `FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 npm run simulate:stage-42-h-pilot-rehearsal` (28/28 checks PASS)
 - Tests: `npm run simulate:all`
 - Dry-run commands: `python3 deploy.py backend --check`, `python3 deploy.py line-bot --check`
@@ -76,6 +77,7 @@ Source of truth: PROJECT_LOCATION.md + AGENTS.md + PROJECT_BOUNDARIES.md + docs/
 - 2026-10-20: Stage 42-G5 Projection Reconciler & Retention Engine TDD implementation committed (`487e7cedfbcf5be609f8d5d6b5c24d177239e6f5`) and pushed to origin/main. Implemented `allocation-assistant/adapters/projection-reconciler-adapter.js` with stable compound cursor pagination (`completedAt` asc, `__name__` asc) avoiding skip-scan drift; dedicated distributed lease protocol (`reconciliationLeaseOwner`, `reconciliationLeaseExpiresAt`, `reconciliationClaimVersion`) strictly separated from worker leases; Erratum 1 snapshot reconstruction reading `projectionSnapshot` (rejecting fallback values "N/A", "USR_ANONYMOUS", or 0) to re-append missing Google Sheet `PROJECTION_LOG` rows; sheet row deduplication idempotency; negative offset compensation for cancelled reservations; 90-day retention pruning purging expired snapshots while preserving immutable 400-day terminal audit envelopes; and fail-closed transaction guards. 17 simulation tests implemented in `tests/simulations/stage-42-g5-reconciler.sim.js` (17/17 PASS, including TC-13).
 - 2026-10-23: Stage 42-G6 System Packaging, Projection Engine Unified Facade, and Environment Guards committed (`2f182eeff391efb8bfaa7a2bba9edb586af9e4f6`) and pushed to origin/main. Implemented `allocation-assistant/projection/projection-environment-guard.js` enforcing fail-closed checks on Node.js runtime, Firestore emulator host (`127.0.0.1:8080`), and independent `GCLOUD_PROJECT` / `GOOGLE_CLOUD_PROJECT` matching without shadowing. Implemented `allocation-assistant/projection/projection-engine.js` as unified facade providing single-entrypoint lifecycle orchestrator for outbox staging, batch publishing, worker ingestion, DLQ reconciliation, and projection reconciliation. 14 simulation tests implemented in `tests/simulations/stage-42-g6-packaging.sim.js` (14/14 PASS).
 - 2026-10-29: Stage 42-H Pilot Deployment Validator & E2E Rehearsal Suite committed (`9c9f242c083cc9c17aa990cccb1b449e304587c4`) and pushed to origin/main, concluding Stage 42. Implemented `allocation-assistant/validators/pilot-deployment-validator.js` with declarative pilot deployment configuration validation (`validatePilotDeploymentConfig`, TC-15) enforcing `max-instances=1`, `concurrency=1`, `timeout=120s`, `ack-deadline=600s`, `max-delivery-attempts=5`, and full 10-identity minimal privilege IAM allowlist verification (`validateIamServiceAccountAllowlist`, TC-16) separating 5 Runtime SAs, 4 Trigger SAs, and 1 System SA while forbidding `secretmanager` permissions across all identities. Implemented `tests/simulations/stage-42-h-pilot-rehearsal.sim.js` with 28 E2E checks across 5 suites: Phase 1 IAM allowlist & pilot deployment config validation (TC-15, TC-16); Phase 2 synthetic probe E2E normal flow (Outbox -> Pub/Sub -> Worker -> PROJECTION_LOG 12-column verification); Phase 3 DLQ intake, true worker fencing revocation, and deterministic alerting; Phase 4 TC-13 snapshot self-healing, negative offset compensation, and zero mutation on dead-lettered records; Phase 5 baseline checksum verification on 「客戶業務業績」 (`a26264e04ef283ba0f77a27a56f372b8697d854c5f1de47b31636ec430545cb0`, 222 clients, NT$ 6,846,122.00) confirming 100% zero mutation across all rehearsals. Stage 42 is officially concluded.
+- 2026-11-03: Stage 43 Real-Time Sales Notifier initial baseline committed (`9fb43b57a3fe980b8954d7288ae23b1971cc1b0a`) and pushed to origin/main. Implemented parameterized LINE Flex message templates (`allocation-assistant/templates/line-flex-templates.js`) supporting locked, cancelled, and committed events with warehouse guards (林口倉 / 忠義倉 only) and units (支, 包, 片, 箱). Implemented `SalesNotifierAdapter` (`allocation-assistant/adapters/sales-notifier-adapter.js`) enforcing default `notificationBypassed: true`, 3000ms fail-fast timeout (Promise.race), in-memory `operationId` deduplication cache, and fail-safe isolation with token/PII sanitization. Extended `ProjectionEngine` (`allocation-assistant/projection/projection-engine.js`) to support optional notifier injection and trigger `_dispatchNotification` upon non-duplicate `PROJECTION_SUCCEEDED` status with complete fail-safe isolation (notification failure never degrades core business transactions). 110/110 regression assertions across G4 (43/43), G5 (17/17), G6 (14/14), 42-H (28/28), and Stage 43 (8/8) verified 100% PASS with 0 mutation on Golden Baseline 「客戶業務業績」.
 
 ## Recovery procedure
 

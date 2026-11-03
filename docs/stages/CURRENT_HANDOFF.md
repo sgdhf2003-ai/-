@@ -5,13 +5,13 @@
 - repo root: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 - branch: `main`
 - source of truth: Canonical cloud-drive checkout path above
-- latest feature commit: `9c9f242c083cc9c17aa990cccb1b449e304587c4` (`feat(pilot): implement Stage 42-H pilot deployment validator and E2E rehearsal suite`)
-- metadata sync commit: `9c9f242c083cc9c17aa990cccb1b449e304587c4` (`feat(pilot): implement Stage 42-H pilot deployment validator and E2E rehearsal suite`)
+- latest feature commit: `9fb43b57a3fe980b8954d7288ae23b1971cc1b0a` (`feat(notifier): implement Stage 43 sales Flex templates, notifier adapter, and engine hook`)
+- metadata sync commit: `9fb43b57a3fe980b8954d7288ae23b1971cc1b0a` (`feat(notifier): implement Stage 43 sales Flex templates, notifier adapter, and engine hook`)
 - ahead / behind vs origin/main: `0 / 0`
 
 ## Current Stage
 
-- current stage: Stage 42 Concluded: Single-Direction Asynchronous Projection Pipeline & Pilot Rehearsal Fully Verified and Synchronized (G1–G6 and 42-H all completed, tested, committed, and pushed to origin/main; baseline commit `9c9f242c083cc9c17aa990cccb1b449e304587c4`; ahead/behind = 0/0)
+- current stage: Stage 43: Real-Time Sales Notifier Pipeline: Initial Baseline Verified & Synchronized (Commit 9fb43b5; 110/110 regressions pass; ahead/behind = 0/0)
 - previous completed deliveries:
   - Phase 6-F Backend Web App Version 100 Deployment (`93e8cb4`, HTTP 200 OK)
   - Phase 7-C Admin Operations UI Control Panel Implementation (`56a5976`, 233 / 233 PASS)
@@ -42,16 +42,17 @@
   - Stage 42-G5 Projection Reconciler & Retention Engine TDD Implementation (`487e7ce`, 17/17 G5 simulation tests PASS, including TC-13; stable compound cursor pagination, Erratum 1 snapshot reconstruction, negative offset compensation, 90-day pruning; committed and pushed)
   - Stage 42-G6 System Packaging, Projection Engine Unified Facade, and Environment Guards (`2f182ee`, 14/14 G6 simulation tests PASS, fail-closed runtime & emulator host guards, unified ProjectionEngine facade; committed and pushed)
   - Stage 42-H Pilot Deployment Validator & E2E Rehearsal Suite (`9c9f242c`, 28/28 rehearsal tests across 5 suites PASS; declarative pilot config validator TC-15, 10-identity minimal privilege IAM allowlist TC-16, synthetic probe E2E normal flow, DLQ intake & true worker fencing, snapshot self-healing, and Golden Baseline 「客戶業務業績」 100% zero mutation verified; committed and pushed)
+  - Stage 43 Initial Sales Notifier Baseline (`9fb43b5`, 8/8 Stage 43 simulation tests PASS; 110/110 cross-stage regression PASS; parameterized Flex templates, SalesNotifierAdapter with 3s timeout & dedup cache, ProjectionEngine non-duplicate SUCCEEDED hook with fail-safe isolation; committed and pushed)
 - active approved specification: **Stage 42-F: Formal Projection Worker Architecture Specification** (`docs/stages/stage-42-f-formal-projection-worker-architecture-spec.md`, Status: `APPROVED WITH ERRATUM 1`)
-- active planning suite: **Stage 42-G & 42-H: TDD Implementation & Pilot Rehearsal Suite** (Status: `CONCLUDED — G1–G6 & 42-H ALL COMMITTED AND PUSHED`)
-- latest feature commit: `9c9f242c083cc9c17aa990cccb1b449e304587c4` (`feat(pilot): implement Stage 42-H pilot deployment validator and E2E rehearsal suite`)
-- latest metadata sync commit: `9c9f242c083cc9c17aa990cccb1b449e304587c4` (`feat(pilot): implement Stage 42-H pilot deployment validator and E2E rehearsal suite`)
+- active planning suite: **Stage 43: Real-Time Sales Notifier Pipeline** (Status: `INITIAL BASELINE COMMITTED AND PUSHED`)
+- latest feature commit: `9fb43b57a3fe980b8954d7288ae23b1971cc1b0a` (`feat(notifier): implement Stage 43 sales Flex templates, notifier adapter, and engine hook`)
+- latest metadata sync commit: `9fb43b57a3fe980b8954d7288ae23b1971cc1b0a` (`feat(notifier): implement Stage 43 sales Flex templates, notifier adapter, and engine hook`)
 - backend deployed version: `122` (live target deployment record)
 - LINE Bot deployed version: `4` (live target deployment record)
-- automated simulations: 已完成全量 63 Suites 回歸測試與 Stage 42-H 28 項端到端驗證（`FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 npm run simulate:stage-42-h-pilot-rehearsal` 28/28 PASS）
+- automated simulations: 已完成全量跨階段回歸測試（G4: 43/43, G5: 17/17, G6: 14/14, 42-H: 28/28, Stage 43: 8/8，共 110/110 checks 100% PASS）
 - dry-run deployment check: `python3 deploy.py backend --check` & `python3 deploy.py line-bot --check` (VALID, 100% PASS)
-- safety note: Stage 42 圓滿結案。黃金基線「客戶業務業績」全流程 0 變更驗證通過。生產環境維持 0 未授權寫入，外部部署保持 0 變更。
-- recommended next stage: **Stage 42 Concluded. Awaiting Owner instruction for subsequent milestone / production rollout.**
+- safety note: Stage 43 通知模組預設啟用 notificationBypassed: true，未授權前零外網 LINE 呼叫。黃金基線「客戶業務業績」全流程 0 變更保護完好。生產環境維持 0 未授權寫入，外部部署保持 0 變更。
+- recommended next stage: **Stage 43 Follow-up: 根據業務需求評估受控 LINE Webhook 接線、推播授權 Pilot、或推進後續功能里程碑。**
 
 ## Stage 42-F Summary & Projection Worker Architecture Specification Approval Record
 
@@ -857,9 +858,10 @@
 
 ## Required Next Step
 
-Stage 42 is officially concluded. Await Owner instruction for subsequent milestone planning, production rollout strategy, or next roadmap phase.
+Stage 43 initial sales notifier baseline is established and verified. Await Owner instruction for subsequent real-time notification workflow integration, webhook routing, or production rollout strategy.
 
 Constraints and Guards:
+- `notificationBypassed: true` must remain enforced by default
 - no unauthorized production Google Sheet writes or schema modifications
 - no unauthorized LINE API calls or push notifications
 - no unauthorized GCP / Cloud resource creation

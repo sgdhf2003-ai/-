@@ -1,13 +1,13 @@
 # JYAI Allocation Assistant - CURRENT HANDOFF
 
 ## 1. 專案基線狀態 (Project Baseline)
-* **交接日期**: 2026-10-29
+* **交接日期**: 2026-11-03
 * **執行目錄**: `/Users/chenhaoan/Library/CloudStorage/GoogleDrive-sgdhf2003@gmail.com/我的雲端硬碟/jingyang-sales-app`
 * **目前分支**: `main`
-* **Latest Feature Commit**: `9c9f242c083cc9c17aa990cccb1b449e304587c4` (`feat(pilot): implement Stage 42-H pilot deployment validator and E2E rehearsal suite`)
-* **Metadata Sync Commit**: `9c9f242c083cc9c17aa990cccb1b449e304587c4` (`feat(pilot): implement Stage 42-H pilot deployment validator and E2E rehearsal suite`)
+* **Latest Feature Commit**: `9fb43b57a3fe980b8954d7288ae23b1971cc1b0a` (`feat(notifier): implement Stage 43 sales Flex templates, notifier adapter, and engine hook`)
+* **Metadata Sync Commit**: `9fb43b57a3fe980b8954d7288ae23b1971cc1b0a` (`feat(notifier): implement Stage 43 sales Flex templates, notifier adapter, and engine hook`)
 * **分支關係**: `0 ahead / 0 behind` (完全同步)
-* **Working Tree 狀態**: Stage 42 Concluded; working tree clean; ahead=0/behind=0.
+* **Working Tree 狀態**: Stage 43 Initial Notifier Baseline Synchronized; working tree clean; ahead=0/behind=0.
 
 ## 2. 本次完成內容 (Completed Work)
 * 完成 Stage 30 & 31 生產環境 Google Sheet 劃扣與出貨生命週期驗證 (`RES-20260801-001`, `RES-20260801-002`)。
@@ -52,7 +52,8 @@
 * 完成 Stage 42-G5 Projection Reconciler & Retention Engine TDD 測試先行實作、快照資料重建、租約防護、負向補償銷扣與資料保存過期修剪機制 (`allocation-assistant/adapters/projection-reconciler-adapter.js`, `tests/simulations/stage-42-g5-reconciler.sim.js`，包含穩定複合游標分頁、獨立對帳租約協議、Erratum 1 快照重建 PROJECTION_LOG 12 欄、表單列去重冪等、已取消預約之負向補償記錄、90 天快照到期修剪與 400 天不可變終態封套保留；17/17 G5 模擬測試 PASS，包括 TC-13；已於 `487e7ce` commit 與 push)。
 * 完成 Stage 42-G6 System Packaging, Projection Engine Unified Facade, and Environment Guards 系統封裝、單一入口外觀門面與環境守衛實作 (`allocation-assistant/projection/projection-engine.js`, `allocation-assistant/projection/projection-environment-guard.js`，嚴格 fail-closed 檢驗 Node.js runtime、模擬器 127.0.0.1:8080 與獨立 GCLOUD_PROJECT/GOOGLE_CLOUD_PROJECT；封裝完整生命週期：Outbox 暫存、Pub/Sub 發布、Worker 攝入、DLQ 處理與 Reconciler 修復；14/14 G6 模擬測試 PASS；已於 `2f182ee` commit 與 push)。
 * 完成 Stage 42-H Pilot Deployment Validator & E2E Rehearsal Suite 試驗部署驗證器與端到端排練套件 (`allocation-assistant/validators/pilot-deployment-validator.js`, `tests/simulations/stage-42-h-pilot-rehearsal.sim.js`，包含宣告式試驗參數校驗 TC-15、最小權限 10 大 IAM 身分角色白名單 TC-16 嚴禁 secretmanager、Phase 1~5 全流程排練包含正常合成探針 E2E 攝入、DLQ 攝入與真正 Worker 租約撤銷 Fencing、TC-13 快照自我修復與負向補償且死信記錄 0 異動、以及黃金基線「客戶業務業績」222 筆客戶 NT$ 6,846,122 SHA-256 指紋 `a26264e04ef283ba0f77a27a56f372b8697d854c5f1de47b31636ec430545cb0` 全程 100% 零變更 Zero Mutation；28/28 checks PASS；已於 `9c9f242c` commit 與 push，圓滿結案 Stage 42)。
-* 本機檢查、全量模擬測試與部署 Dry Run 全數通過（完成全量 63 Suites 回歸測試與 Stage 42-H 28 項端到端驗證；`python3 deploy.py backend --check`, `python3 deploy.py line-bot --check` PASS）。
+* 完成 Stage 43 即時業務通知模組第一階段（Stage 43 Real-Time Sales Notifier Initial Baseline）：包含參數化 LINE Flex 範本（`allocation-assistant/templates/line-flex-templates.js`）、安全業務通知配接器（`allocation-assistant/adapters/sales-notifier-adapter.js`，內建預設 `notificationBypassed: true`、3 秒快速超時斷路、`operationId` 去重快取與 Fail-Safe 隔離）、以及 `ProjectionEngine` 非重複 `SUCCEEDED` 事件通知掛載接線。通過專屬 8 項模擬測試（`tests/simulations/stage-43-sales-notifier.sim.js`）以及跨階段全量 110/110 回歸驗證（Stage 42-G4 43/43, G5 17/17, G6 14/14, 42-H 28/28, Stage 43 8/8）；黃金基線「客戶業務業績」維持 100% 零變更；已於 `9fb43b5` commit 並 push 至 origin/main。
+* 本機檢查、全量模擬測試與部署 Dry Run 全數通過（完成跨階段 110 項全量回歸驗證；`python3 deploy.py backend --check`, `python3 deploy.py line-bot --check` PASS）。
 
 ## 3. 未完成內容與未啟用功能 (Deactivated Features)
 * LINE API 主動 Push/Send 維持關閉 (`notificationBypassed: true`)。
@@ -67,7 +68,7 @@
 > 本次交接確無未授權之 LINE 機器人發送通知、無 OneSignal 警報、無真實庫存銷扣損壞。黃金基線「客戶業務業績」全流程 0 變更保護完好。所有安全性防護邊界、Server-Side Role Guard 與 UI 角色防護控制項均完好。
 
 ## 6. 下一個精確步驟 (Next Recommended Step)
-* **Stage 42 已圓滿結案（Stage 42 Concluded）。靜待 Owner 指示後續階段規劃、生產環境正式發布評估或下一階段里程碑。** (黃金基線「客戶業務業績」100% 零變更保護；所有環境守衛與 Fail-Closed 防護完好；未經 Owner 明確授權嚴禁執行正式 GCP 資源建立、外部部署或生產試算表寫入)。
+* **Stage 43 後續受控推播試辦或 Webhook 接線評估（靜待 Owner 指示下一階段精確步驟；`notificationBypassed: true` 嚴格保持開啟，未經授權嚴禁對真實 LINE 發送請求或進行 Google Sheet 寫入）。**
 
 ## 7. 禁止下一位 Agent 自行執行的事項 (Prohibited Actions)
 * 嚴禁在未經 Owner 審查同意前進行未授權之 Google Sheet 寫入。
